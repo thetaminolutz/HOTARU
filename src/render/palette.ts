@@ -46,7 +46,7 @@ export function paletteAt(hour: number): RGB[] {
 }
 
 /** OKLab palette → sRGB bytes (RGBA8, PALETTE_SIZE×1). */
-export function paletteToBytes(lab: RGB[], out = new Uint8Array(lab.length * 4)): Uint8Array {
+export function paletteToBytes(lab: RGB[], out: Uint8Array = new Uint8Array(lab.length * 4)): Uint8Array {
   lab.forEach((c, i) => {
     const [r, g, b] = oklabToSrgb(c);
     out[i * 4] = Math.round(r * 255); out[i * 4 + 1] = Math.round(g * 255); out[i * 4 + 2] = Math.round(b * 255); out[i * 4 + 3] = 255;
@@ -58,7 +58,7 @@ export function paletteToBytes(lab: RGB[], out = new Uint8Array(lab.length * 4))
  * Build the LUT: for each sRGB cell, the two nearest palette colours in OKLab and the
  * projection weight of the input onto the segment between them (for ordered dither).
  */
-export function buildLut(lab: RGB[], size = LUT_SIZE, out = new Uint8Array(size * size * size * 4)): Uint8Array {
+export function buildLut(lab: RGB[], size = LUT_SIZE, out: Uint8Array = new Uint8Array(size * size * size * 4)): Uint8Array {
   const n = lab.length;
   const pl = new Float32Array(n * 3);
   lab.forEach((c, i) => { pl[i * 3] = c[0]; pl[i * 3 + 1] = c[1]; pl[i * 3 + 2] = c[2]; });
