@@ -7,6 +7,7 @@ import { U, MAX_LIGHTS } from './uniforms';
 import { FS_VERT, BRIGHT_FRAG, DOWN_FRAG, UP_FRAG, COMPOSITE_FRAG, PIXEL_FRAG, UPSCALE_FRAG } from './shaders/post';
 import { LUT_SIZE, PALETTE_SIZE, buildLut, paletteAt, paletteToBytes } from './palette';
 import type { Quality } from '../config';
+import { chooseInternal } from './resolution';
 import type { Water } from '../water/water';
 import type { PointLight } from '../buildings/dockScene';
 import type { TodState } from '../sky/timeOfDay';
@@ -67,6 +68,9 @@ export class PixelPipeline {
   private lutId = 0;
   private hidden: THREE.Object3D[] = [];
   readonly renderCam = new THREE.PerspectiveCamera();
+  /** Reflection camera angles, snapped to whole reflection texels (set by the game). */
+  readonly reflectAngles = { yaw: 0, pitch: 0, use: false };
+  private reflSrc = new THREE.PerspectiveCamera();
 
   constructor(readonly renderer: THREE.WebGLRenderer, quality: Quality) {
     const gl = renderer.getContext() as WebGL2RenderingContext;
@@ -155,10 +159,11 @@ export class PixelPipeline {
 
   /** Choose internal resolution for an integer scale and (re)allocate targets. */
   resize(deviceW: number, deviceH: number, quality: Quality, water: Water | null): void {
-    const k = Math.max(1, Math.round(deviceH / quality.internalHeight));
+    const r = chooseInternal(deviceW, deviceH, quality.internalHeight);
+    const k = r.scale;
     this.scale = k;
-    this.width = Math.ceil(deviceW / k);
-    this.height = Math.ceil(deviceH / k);
+    this.width = r.width;
+    this.height = r.height;
     const W = this.width + MARGIN * 2, H = this.height + MARGIN * 2;
     this.sceneRT?.dispose();
     this.ldrRT?.dispose();
@@ -278,7 +283,18 @@ export class PixelPipeline {
 
     if (water) {
       water.update(rc);
-      if (this.toggles.reflections) water.renderReflection(r, scene, rc, sky);
+      if (this.toggles.reflections) {
+        let src = rc;
+        if (this.reflectAngles.use) {
+          src = this.reflSrc;
+          src.copy(rc, false);
+          src.projectionMatrix.copy(rc.projectionMatrix);
+          src.projectionMatrixInverse.copy(rc.projectionMatrixInverse);
+          src.rotation.set(this.reflectAngles.pitch, this.reflectAngles.yaw, 0, 'YXZ');
+          src.updateMatrixWorld();
+        }
+        water.renderReflection(r, scene, src, sky);
+      }
     }
 
     r.setRenderTarget(this.sceneRT);

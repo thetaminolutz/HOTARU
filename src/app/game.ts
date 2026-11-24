@@ -18,7 +18,7 @@ export class Game {
   readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.1, 9000);
   readonly tod: TodState = createTodState();
   readonly input: InputState;
-  controller!: Controller;
+  readonly controller: Controller;
   quality: Quality;
   /** Time used for animation; frozen for deterministic shots. */
   frozenElapsed: number | null = null;
@@ -37,15 +37,16 @@ export class Game {
     this.pipeline = new PixelPipeline(this.renderer, this.quality);
     this.world = new TestWorld(seed, this.quality);
     this.input = new InputState(canvas);
-  }
-
-  /** Finish building after all world steps ran. */
-  finishInit(hour: number): void {
     const w = this.world;
     this.controller = new Controller(
       (x, z) => w.groundHeight(x, z),
       (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.terrain.height(x, z) > -0.3,
     );
+  }
+
+  /** Finish building after all world steps ran. */
+  finishInit(hour: number): void {
+    const w = this.world;
     const S = w.dock.anchors.shore!;
     this.controller.position.set(S.x + 1, w.groundHeight(S.x + 1, S.z + 3) + 1.6, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
@@ -131,8 +132,12 @@ export class Game {
       yaw = yi * q; pitch = pi * q;
       this.pipeline.shift.set(((c.yaw - yaw) / q), -((c.pitch - pitch) / q));
       this.pipeline.ditherOffset.set(-yi, pi);
+      // reflections render at a lower resolution: snap them to whole reflection texels
+      const rq = q / this.quality.reflectionScale;
+      Object.assign(this.pipeline.reflectAngles, { yaw: Math.round(c.yaw / rq) * rq, pitch: Math.round(c.pitch / rq) * rq, use: true });
     } else {
       this.pipeline.shift.set(0, 0);
+      this.pipeline.reflectAngles.use = false;
     }
     this.camera.position.copy(c.position);
     this.camera.rotation.set(pitch, yaw, 0, 'YXZ');

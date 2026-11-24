@@ -73,10 +73,16 @@ void main(){
   vec3 V = Vv / dist;
   float t = uTime;
 
-  // camera-aligned ripple rows → horizontal streaks on screen
-  vec2 fwd = normalize(uCamFwd + 1e-4);
+  // ripple rows in camera-centred polar coordinates: radial = 'along', arc length = 'across'.
+  // Anchored to world angles, so turning the camera only shifts the image (no shimmer),
+  // while rows stay perpendicular to every view ray → horizontal streaks on screen.
+  vec2 rel = P.xz - uCamPos.xz;
+  float along = length(rel);
+  float theta = atan(rel.x, rel.y);
+  float across = theta * along / (1.0 + dist / 35.0);
+  // radial / tangential basis around the camera (rotation-invariant)
+  vec2 fwd = rel / max(along, 1e-3);
   vec2 rt = vec2(-fwd.y, fwd.x);
-  float along = dot(P.xz, fwd), across = dot(P.xz, rt) / (1.0 + dist / 35.0);
   float n1 = vnoise(vec2(across * 0.06 + t * 0.03, along * 0.55 - t * 0.35));
   float n2 = vnoise(vec2(across * 0.22 - t * 0.07, along * 1.9 + t * 0.55));
   float n3 = vnoise(vec2(across * 0.6, along * 4.5 - t * 0.9));
@@ -91,7 +97,7 @@ void main(){
   // reflection lookup with vertical displacement
   vec4 rc = uReflMatrix * vec4(P, 1.0);
   vec2 ruv = rc.xy / rc.w;
-  float amp = 0.012 + 0.05 / (1.0 + dist * 0.04);
+  float amp = 0.01 + 0.022 / (1.0 + dist * 0.05);
   ruv.y += wy * amp;
   ruv.x += wx * amp * 0.25;
   vec3 refl = texture2D(uReflection, clamp(ruv, 0.001, 0.999)).rgb;
@@ -105,7 +111,7 @@ void main(){
 
   // ripple highlight dashes (crest rows catching the sky)
   float crest = step(0.8, vnoise(vec2(across * 0.35 + t * 0.05, along * 3.2 - t * 0.8))) * step(0.45, n1);
-  col += uHighlight * crest * 0.3 * min(uWaves, 1.0) * (1.0 - smoothstep(60.0, 250.0, dist));
+  col += uHighlight * crest * 0.22 * min(uWaves, 1.0) * (1.0 - smoothstep(60.0, 250.0, dist));
 
   // perturbed normal for glints
   vec3 N = normalize(vec3(rt.x * wx * 0.5 + fwd.x * wy * 1.2, 1.0, rt.y * wx * 0.5 + fwd.y * wy * 1.2));
@@ -113,7 +119,7 @@ void main(){
   // moon/sun glitter path
   float g = pow(max(dot(R, uKeyDir), 0.0), 220.0);
   float sparkle = step(0.55, hash12(floor(P.xz * 3.0) + floor(t * 4.0)));
-  col += uKeyColor2 * step(0.25, g) * sparkle * 3.0;
+  col += uKeyColor2 * step(0.5, g) * sparkle * 1.4;
   // lantern glitter: golden pixels along each light's reflection line
   for (int i = 0; i < MAX_LIGHTS; i++) {
     if (i >= uLightCount) break;
@@ -122,7 +128,7 @@ void main(){
     if (d > 140.0) continue;
     float s = pow(max(dot(R, L / d), 0.0), 160.0);
     float sp = step(0.5, hash12(floor(P.xz * 4.0) + float(i) * 7.0 + floor(t * 3.0 + float(i))));
-    col += uLightCol[i].rgb * uLightCol[i].a * step(0.3, s) * sp * 0.9 * uLamps / (1.0 + d * 0.02);
+    col += uLightCol[i].rgb * uLightCol[i].a * step(0.35, s) * sp * 0.55 * uLamps / (1.0 + d * 0.03);
   }
 
   // shore foam and lapping

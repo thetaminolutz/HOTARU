@@ -16,6 +16,12 @@ export class InputState {
     addEventListener('keydown', (e: KeyboardEvent) => { this.keys.add(e.code); });
     addEventListener('keyup', (e: KeyboardEvent) => { this.keys.delete(e.code); });
     addEventListener('blur', () => this.keys.clear());
+    this.attachLookElement(el);
+  }
+
+  /** The element that captures the mouse (the UI canvas sits on top of the game canvas). */
+  attachLookElement(el: HTMLElement): void {
+    this.el = el;
     el.addEventListener('mousemove', (e) => {
       if (!this.enabled || document.pointerLockElement !== el) return;
       this.lookDX -= e.movementX * this.mouseSensitivity;

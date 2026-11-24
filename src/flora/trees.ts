@@ -43,10 +43,13 @@ void main(){
   center.xz += wd * sway;
   center += vec3(sin(uTime * 3.1 + aCenter.x * 3.0 + ph * 9.0), 0.0, cos(uTime * 2.7 + aCenter.z * 3.0)) * 0.05 * g * s;
 
-  vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
-  vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
+  // face the camera POSITION (not its rotation): turning the head never re-renders the cards
+  vec3 camWorld = (inverse(viewMatrix) * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  vec3 toCam = normalize(camWorld - center);
+  vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), toCam) + vec3(1e-4, 0.0, 0.0));
+  vec3 up = cross(toCam, right);
   // painterly LOD: far away, clusters grow so each stays a few pixels wide (no speckle)
-  float camDist = length(center - uCamPos);
+  float camDist = length(center - camWorld);
   float sz = max(aSize * s, camDist * uPixelAngle * 3.0);
   vec3 wp = center + (right * aCorner.x + up * aCorner.y) * sz * 0.5;
 

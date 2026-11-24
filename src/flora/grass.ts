@@ -17,8 +17,9 @@ varying vec3 vColor;
 varying float vH;
 void main(){
   float h = iPos.w;
-  vec3 camRight = vec3(viewMatrix[0][0], 0.0, viewMatrix[2][0]);
-  camRight = normalize(camRight + 1e-5);
+  vec3 camWorld = (inverse(viewMatrix) * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+  vec2 tc = normalize(camWorld.xz - iPos.xz + 1e-4);
+  vec3 camRight = vec3(-tc.y, 0.0, tc.x);
   float w = h * 0.55;
   vec3 wp = iPos.xyz + camRight * aCorner.x * w * 0.5 + vec3(0.0, aCorner.y * h, 0.0);
   float top = aCorner.y;
