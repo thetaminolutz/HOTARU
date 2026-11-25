@@ -35,7 +35,7 @@ export const EFFECTS: EffectDef[] = [
   { id: 'petals', count: 320, box: [60, 20, 60], vel: [0, -0.6, 0], wind: 4, swirl: 0.8, size: [2, 1], colors: ['#f4c8d4', '#ffe4ea'], emissive: 0, opacity: 1, motion: 'flutter' },
   { id: 'pollen', count: 260, box: [40, 6, 40], vel: [0, 0.05, 0], wind: 1.2, swirl: 0.8, size: [1, 1], colors: ['#fff0a0', '#ffffff'], emissive: 0.4, opacity: 1, motion: 'drift' },
   { id: 'motes', count: 200, box: [30, 10, 30], vel: [0, -0.02, 0], wind: 0.2, swirl: 0.5, size: [1, 1], colors: ['#fff4d0', '#ffe8b0'], emissive: 0.6, opacity: 1, motion: 'drift' },
-  { id: 'rain', count: 1400, box: [40, 24, 40], vel: [0, -9, 0], wind: 2, swirl: 0, size: [1, 1], colors: ['#a8b8c8', '#c8d4e0'], emissive: 0, opacity: 1, motion: 'fall' },
+  { id: 'rain', count: 2200, box: [36, 20, 36], vel: [0, -9, 0], wind: 2, swirl: 0, size: [3, 3], colors: ['#a8b8c8', '#c8d4e0'], emissive: 0, opacity: 1, motion: 'fall' },
   { id: 'snow', count: 900, box: [50, 24, 50], vel: [0, -0.9, 0], wind: 2.2, swirl: 0.7, size: [2, 1], colors: ['#ffffff', '#e8eef8'], emissive: 0.15, opacity: 1, motion: 'flutter' },
   { id: 'spray', count: 260, box: [60, 6, 60], vel: [0, 0.3, 0], wind: 4, swirl: 0.6, size: [1, 1], colors: ['#ffffff', '#dce8f0'], emissive: 0.1, opacity: 1, motion: 'drift' },
   { id: 'moths', count: 60, box: [40, 6, 40], vel: [0, 0, 0], wind: 0.2, swirl: 0.6, size: [1, 1], colors: ['#e8dcc0', '#c8b898'], emissive: 0, opacity: 1, motion: 'drift' },

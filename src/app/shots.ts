@@ -1,6 +1,8 @@
 /** Fixed camera shots for screenshots, teleports and the title-screen drift. */
 import * as THREE from 'three';
 import type { GameWorld } from '../scene/gameWorld';
+import type { WeatherId } from '../sky/weather';
+import type { SeasonName } from '../flora/data/seasons';
 
 export type Shot = {
   name: string;
@@ -14,6 +16,9 @@ export type Shot = {
   wind?: number;
   /** Rowing boat position relative to the shore point: [x, z, heading]. */
   boat?: [number, number, number];
+  /** weather and season for the shot (default: clear autumn, the reference look) */
+  weather?: WeatherId;
+  season?: SeasonName;
   /** animals placed in view: [species, metres ahead, metres to the right, count] */
   fauna?: [string, number, number, number][];
 };
@@ -108,5 +113,20 @@ export const SHOTS: Shot[] = [
   { name: 'reed-marsh', label: 'Reed marsh at dusk', hour: 19.6, elapsed: 1200, wind: 0.3, pos: (w) => at(w, 3700, 1700, 1.7), look: (w) => at(w, 3790, 1650, 1), fov: 70 },
   { name: 'hydrangea-hills', label: 'Hydrangea hills', hour: 11, elapsed: 1200, pos: (w) => at(w, -1300, 2300, 1.7), look: (w) => at(w, -1370, 2240, 3), fov: 70 },
 ];
+
+/** M6: the same places through the seasons and weathers. */
+const like = (name: string, o: Partial<Shot> & { name: string; label: string }): Shot => ({ ...SHOTS.find((s) => s.name === name)!, ...o });
+SHOTS.push(
+  like('cherry-hills', { name: 'spring-cherry', label: 'Cherry hills in spring', season: 'spring', hour: 11 }),
+  like('rice-valley', { name: 'summer-rice', label: 'Rice valley in summer', season: 'summer', weather: 'partly' }),
+  like('thatch-village', { name: 'winter-village', label: 'Inaho under snow', season: 'winter', weather: 'snow', hour: 15 }),
+  like('lake-dusk', { name: 'winter-lake', label: 'Lantern Lake in winter', season: 'winter', weather: 'clear' }),
+  like('market-dusk', { name: 'rain-market', label: 'Rain in Ichiba', weather: 'rain', hour: 18.6 }),
+  like('lake-dusk', { name: 'storm-lake', label: 'Storm over the lake', season: 'summer', weather: 'storm', hour: 16.5, wind: undefined }),
+  like('cedar-forest', { name: 'fog-cedar', label: 'Fog in the cedar forest', weather: 'fog' }),
+  like('meadow-flowers', { name: 'sunshower', label: 'Sunshower with a rainbow', season: 'spring', weather: 'sunshower', hour: 16.6 }),
+  like('onsen-village', { name: 'snow-onsen', label: 'Heavy snow at Yukemuri', season: 'winter', weather: 'heavySnow', hour: 16 }),
+  like('dock-night', { name: 'summer-night', label: 'A summer night at the dock', season: 'summer' }),
+);
 
 export const shotByName = (n: string | undefined) => SHOTS.find((s) => s.name === n);

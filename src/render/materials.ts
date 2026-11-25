@@ -88,6 +88,9 @@ void main(){
   vec3 albedo = tex.rgb * uTint * vColor.rgb;
   vec3 N = normalize(vNormal);
   if (!gl_FrontFacing) N = -N;
+  // snow on up-facing surfaces (roofs, decks), darker when wet
+  float snowy = smoothstep(0.3, 0.7, N.y) * uSnowCover * (1.0 - indoorAt(vWorldPos));
+  albedo = mix(albedo * (1.0 - uWet * 0.28), vec3(0.78, 0.8, 0.86), step(0.45, snowy));
   vec3 col = shade(albedo, N, vWorldPos, uSss, 1.0, uWrap);
   float em = vColor.a * uEmissiveI;
   if (uLampDriven > 0.5) em *= max(uLamps, uDayGlow);

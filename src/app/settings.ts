@@ -24,6 +24,11 @@ export type Settings = {
   volSfx: number;
   /** How often music arcs come between stretches of pure ambience. */
   musicFrequency: 'often' | 'occasional' | 'rare' | 'off';
+  /** Seasons cycle every `seasonDays` in-game days, or stay locked ("eternal autumn"). */
+  seasonMode: 'cycle' | 'spring' | 'summer' | 'autumn' | 'winter';
+  seasonDays: number;
+  /** Changing weather, or always fair. */
+  weatherMode: 'dynamic' | 'fair';
 };
 
 const KEY = 'hotaru.settings.v1';
@@ -32,6 +37,7 @@ const DEFAULTS: Settings = {
   fov: 75, sensitivity: 1, invertY: false, toggleJog: false,
   bindings: structuredClone(DEFAULT_BINDINGS),
   volMaster: 0.8, volMusic: 0.7, volAmbience: 0.8, volSfx: 0.7, musicFrequency: 'occasional',
+  seasonMode: 'cycle', seasonDays: 7, weatherMode: 'dynamic',
 };
 
 function load(): Settings {

@@ -38,6 +38,12 @@ export class AudioSystem {
     c.onJump = () => this.sfx.jump();
     c.onLand = (impact) => this.sfx.land(this.surface(), impact);
     c.onStroke = () => this.sfx.stroke();
+    game.weather.onThunder = (delay, loud) => {
+      const a = this.rng.next() * Math.PI * 2;
+      const out = this.mix.spatial('ambience', Math.cos(a) * 400, 300, Math.sin(a) * 400, delay + 8, 0.6);
+      const g = this.mix.ctx.createGain(); g.gain.value = 0.6 + loud * 1.4; g.connect(out);
+      playVoice('thunder', this.mix.ctx, g, this.mix.now + delay, this.rng, this.mix.noise.brown);
+    };
     game.onSplash = (pos) => {
       const p = game.controller.position;
       const out = this.mix.spatial('nature', pos.x - p.x, pos.y - p.y, pos.z - p.z, 2, 0.4);

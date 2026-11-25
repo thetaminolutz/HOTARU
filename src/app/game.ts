@@ -12,6 +12,9 @@ import { clock } from '../core/clock';
 import { QUALITY, type Quality, type QualityName } from '../config';
 import { SHOTS, shotByName, type Shot } from './shots';
 import { srgbToLinear } from '../render/color';
+import { Weather, type WeatherId } from '../sky/weather';
+import { lookAt as seasonLook, type SeasonName } from '../flora/data/seasons';
+import { REGIONS } from '../world/data/regions';
 
 export class Game {
   readonly renderer: THREE.WebGLRenderer;
@@ -63,6 +66,10 @@ export class Game {
   onSplash: ((pos: THREE.Vector3) => void) | null = null;
   private rippleT = 0;
   private fishT = 8;
+  readonly weather = new Weather();
+  /** wind fixed by a screenshot (else the weather decides) */
+  private shotWind: number | null = null;
+  private lastSeason = -1;
   /** Bow gesture timer (s); the camera dips and comes back up. */
   bowT = 0;
   /** Time-lapse is active (sitting + holding the button/key). */
@@ -131,6 +138,9 @@ export class Game {
     this.controller.position.copy(s.pos(this.world));
     this.controller.lookAt(s.look(this.world));
     this.windStrength = s.wind ?? 0.5;
+    this.weather.forced = s.weather ?? 'clear';
+    this.weather.seasonLock = s.season ?? 'autumn';
+    this.shotWind = s.wind ?? null;
     const S = this.world.dock.anchors.shore!;
     this.world.dock.rowOverride = s.boat ? { x: S.x + s.boat[0], z: S.z + s.boat[1], heading: s.boat[2] } : null;
     this.pipeline.buildLutNow(s.hour);
@@ -188,6 +198,7 @@ export class Game {
     const phase = this.frozenElapsed !== null ? 0.5 : moonPhase(clock.day + 4, clock.hour);
     this.world.sky.uniforms.uMoonPhase.value = phase;
     evaluateTod(clock.hour, this.tod, phase);
+    this.applyWeather(dt);
     U.uCloudCover.value = this.cloudCover * (this.tod.stars > 0.5 ? 0.6 : 1);
     this.applyTod();
 
@@ -267,6 +278,48 @@ export class Game {
         this.onSplash?.(new THREE.Vector3(x, 0, z));
       }
     }
+  }
+
+  /** Weather & seasons: adjust the time-of-day light, set the shared uniforms and effects. */
+  private applyWeather(dt: number): void {
+    const p = this.controller.position, w = this.world;
+    const reg = w.world.regionAt(p.x, p.z), rid = reg >= 0 ? REGIONS[reg]!.id : 'none';
+    const cold = Math.max(rid === 'snow' ? 0.7 : 0, Math.min(1, (w.height(p.x, p.z) - 650) / 300));
+    const dtH = clock.paused ? 0 : dt * clock.timeScale * (24 / (clock.dayLengthMinutes * 60));
+    const W = this.weather.update(dtH, dt, clock.day, clock.hour, rid, cold, this.frozenElapsed !== null);
+    // seasons: tree colours and bareness, grass tint
+    if (Math.abs(W.season - this.lastSeason) > 0.002) {
+      this.lastSeason = W.season;
+      for (const [id, kit] of w.kits) { const L = seasonLook(id, W.season); kit.setSeason(L.col, L.mix, L.bare); }
+    }
+    this.weather.grassTint(U.uSeasonTint.value);
+    U.uSeasonW.value.set(...W.weights);
+    U.uSnowCover.value = W.snowCover;
+    U.uWet.value = W.wet;
+    this.cloudCover = W.cloud;
+    this.windStrength = this.shotWind ?? W.wind;
+    w.fx.rain = W.rain; w.fx.snow = W.snow; w.fx.season = W.weights;
+    w.water.material.uniforms.uRain!.value = W.rain;
+    // overcast light: dimmer sun, greyer sky and ambient; lightning lifts everything for a moment
+    const s = this.tod, d = W.dark, f = W.flash;
+    const grey = (c: THREE.Color, k: number) => { const l = c.r * 0.3 + c.g * 0.55 + c.b * 0.15; c.lerp(new THREE.Color(l, l, l * 1.05), k); };
+    s.keyColor.multiplyScalar(1 - d * 0.8);
+    s.sunGlow.multiplyScalar(1 - d);
+    grey(s.ambSky, d * 0.6); grey(s.zenith, d * 0.85); grey(s.horizon, d * 0.8); grey(s.clouds, d * 0.85); grey(s.cloudLit, d * 0.9);
+    s.zenith.multiplyScalar(1 - d * 0.25); s.horizon.multiplyScalar(1 - d * 0.15);
+    s.clouds.multiplyScalar(1 - d * 0.45); s.cloudLit.multiplyScalar(1 - d * 0.55);
+    s.fog *= 1 + W.fog * 3;
+    if (f > 0) { const fl = new THREE.Color(0.8, 0.85, 1.0).multiplyScalar(f * 1.6); s.ambSky.add(fl); s.zenith.add(fl); s.horizon.add(fl); }
+    w.rainbow.update(this.camera.position, s.sunDir, W.rainbow);
+  }
+
+  /** Lock the season or let it cycle; force or free the weather (settings, debug). */
+  setClimate(season: SeasonName | null, days: number, weather: WeatherId | null): void {
+    this.weather.seasonLock = season;
+    this.weather.seasonDays = days;
+    this.weather.forced = weather;
+    this.shotWind = null;
+    this.lastSeason = -1;
   }
 
   private applyTod(): void {

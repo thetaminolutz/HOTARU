@@ -28,7 +28,7 @@ void main(){
   float d = length(iPos.xz - camWorld.xz);
   // shrink plants towards the field's edge (no visible border)
   float fade = (1.0 - smoothstep(uRadius * 0.7, uRadius, d)) * smoothstep(0.6, 2.2, length(iPos.xyz - camWorld));
-  float h = iPos.w * fade;
+  float h = iPos.w * fade * (1.0 - uSnowCover * 0.85);
   vec2 tc = normalize(camWorld.xz - iPos.xz + 1e-4);
   vec3 camRight = vec3(-tc.y, 0.0, tc.x);
   float w = max(iPos.w, 0.5) * 0.75;
@@ -72,7 +72,8 @@ void main(){
   if (t.a < 0.5 || vFade < 0.02) discard;
   // greyscale pixels take the region's grass colour; coloured pixels (flowers) keep theirs
   float sat = abs(t.r - t.g) + abs(t.g - t.b);
-  vec3 albedo = sat < 0.03 ? vColor * (0.3 + 0.95 * t.r) : t.rgb * 1.1;
+  vec3 albedo = sat < 0.03 ? vColor * uSeasonTint * (0.3 + 0.95 * t.r) : t.rgb * 1.1;
+  albedo *= 1.0 - uWet * 0.25;
   // shaded with an upward normal so fields read as soft painted strokes
   vec3 col = shade(albedo, vec3(0.0, 1.0, 0.0), vWorldPos, 0.5, 0.55 + 0.45 * vH, 0.25);
   col = min(col, vec3(1.2));

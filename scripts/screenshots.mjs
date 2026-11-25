@@ -63,11 +63,14 @@ const M7_SHOTS = ['market-street', 'market-dusk', 'villages-night', 'interior-da
 const M8_SHOTS = ['temple-deer', 'village-cats', 'farm-animals', 'lake-ducks', 'onsen-macaques', 'marsh-cranes', 'meadow-wildlife', 'forest-night']
   .map((n) => ({ name: n, q: 'shot=' + n }));
 
+const M6_SHOTS = ['spring-cherry', 'summer-rice', 'maple-golden', 'winter-village', 'winter-lake', 'rain-market', 'storm-lake', 'fog-cedar', 'sunshower', 'snow-onsen', 'summer-night']
+  .map((n) => ({ name: n, q: 'shot=' + n }));
+
 const M13_SHOTS = [
   { name: 'settings-sound', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'sound'; }) },
 ];
 
-const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();

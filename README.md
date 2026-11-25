@@ -17,10 +17,10 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M3 | Player controller & controls | ✅ Done | [M3](docs/screenshots/M3/) | pending (run on iPad) |
 | M4 | Water | ✅ Done | [M4](docs/screenshots/M4/) | pending (run on iPad) |
 | M5 | Vegetation, wind & particles | ✅ Done | [M5](docs/screenshots/M5/) | pending (run on iPad) |
-| M6 | Regions, weather & seasons | 🔨 In progress | — | — |
+| M6 | Regions, weather & seasons | ✅ Done | [M6](docs/screenshots/M6/) | pending (run on iPad) |
 | M7 | Buildings, villages & interiors | ✅ Done | [M7](docs/screenshots/M7/) | pending (run on iPad) |
 | M8 | Fauna | ✅ Done | [M8](docs/screenshots/M8/) | pending (run on iPad) |
-| M9 | Villagers & wanderers | ⬜ Not started | — | — |
+| M9 | Villagers & wanderers | 🔨 In progress | — | — |
 | M10 | Castle, shrines, caves & secrets | ⬜ Not started | — | — |
 | M11 | Items, journal, map, photo, boats, fishing | ⬜ Not started | — | — |
 | M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
@@ -30,6 +30,34 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M6 at a glance (weather & seasons)
+
+**Four seasons.** A new journey starts in autumn. Each season lasts 3, 7 or 14 days, or you can lock one (*eternal autumn*) in **Settings → World**.
+- **Spring:** cherries and plums blossom, the grass is fresh green, and the rice terraces are flooded.
+- **Summer:** deep green, green rice, and the most fireflies.
+- **Autumn:** red maples and golden rice.
+- **Winter:** bare trees, red camellias, and snow on ground, roofs and treetops.
+
+**Changing weather:** clear, cloudy, overcast, drizzle, rain, heavy rain, thunderstorms, fog, sunshowers and snow.
+- Weather changes slowly, and each season and region has its own climate.
+- In rain everything darkens and puddles mirror the sky. Rain rings spread on the lake.
+- Lightning comes first and the thunder follows by distance.
+- A rainbow appears after rain.
+
+| Cherry hills in spring | Inaho under snow |
+|---|---|
+| ![](docs/screenshots/M6/spring-cherry.png) | ![](docs/screenshots/M6/winter-village.png) |
+| **Storm over the lake** | **Sunshower with a rainbow** |
+| ![](docs/screenshots/M6/storm-lake.png) | ![](docs/screenshots/M6/sunshower.png) |
+| **Rice valley in summer** | **Fog in the cedar forest** |
+| ![](docs/screenshots/M6/summer-rice.png) | ![](docs/screenshots/M6/fog-cedar.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 57 passed (season blending, tree looks, weather cycling, rain → snow in winter, thunder after lightning) |
+| All e2e | ✅ offline, stability, controls, audio, houses, fauna, water |
+| Draw calls · triangles (Medium) | 331 · 1.65 M |
 
 ### M4 at a glance (water)
 

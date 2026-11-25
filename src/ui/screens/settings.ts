@@ -10,14 +10,19 @@ import { settings, setSetting } from '../../app/settings';
 import type { QualityName } from '../../config';
 import { ACTIONS, ACTION_LABELS, keyName, type Action } from '../../player/bindings';
 
-type Tab = 'graphics' | 'camera' | 'sound' | 'keys';
-const TABS: Tab[] = ['graphics', 'camera', 'sound', 'keys'];
+type Tab = 'graphics' | 'camera' | 'sound' | 'world' | 'keys';
+const TABS: Tab[] = ['graphics', 'camera', 'sound', 'world', 'keys'];
+const SEASON_MODES = ['cycle', 'spring', 'summer', 'autumn', 'winter'] as const;
+const SEASON_DAYS = [3, 7, 14] as const;
 const FREQS = ['often', 'occasional', 'rare', 'off'] as const;
 
 export class SettingsScreen {
   tab: Tab = 'graphics';
   private tabs: Button[];
   private vols: Slider[];
+  private seasonBtns: Button[];
+  private dayBtns: Button[];
+  private weatherBtns: Button[];
   private freq: Button[];
   private q: Button[];
   private dither: Slider;
@@ -37,7 +42,10 @@ export class SettingsScreen {
   persisted = true;
 
   constructor(onBack: () => void) {
-    this.tabs = TABS.map((t) => new Button(t[0]!.toUpperCase() + t.slice(1), () => (this.tab = t), 52, 15));
+    this.tabs = TABS.map((t) => new Button(t[0]!.toUpperCase() + t.slice(1), () => (this.tab = t), 44, 15));
+    this.seasonBtns = SEASON_MODES.map((m) => new Button(m === 'cycle' ? 'Cycle' : m[0]!.toUpperCase() + m.slice(1), () => setSetting('seasonMode', m), 42));
+    this.dayBtns = SEASON_DAYS.map((d) => new Button(d + ' days', () => setSetting('seasonDays', d), 50));
+    this.weatherBtns = (['dynamic', 'fair'] as const).map((m) => new Button(m === 'dynamic' ? 'Changing' : 'Always fair', () => setSetting('weatherMode', m), 70));
     const vol = (label: string, key: 'volMaster' | 'volMusic' | 'volAmbience' | 'volSfx') => {
       const sl = new Slider(label, settings[key], (v) => setSetting(key, v), 150);
       sl.format = (v) => Math.round(v * 100) + '%';
@@ -74,6 +82,7 @@ export class SettingsScreen {
     if (this.tab === 'graphics') return [...common, ...this.q, this.dither, this.outlines, this.fps];
     if (this.tab === 'camera') return [...common, this.fov, this.sens, this.invert, this.bob, this.toggleJog];
     if (this.tab === 'sound') return [...common, ...this.vols, ...this.freq];
+    if (this.tab === 'world') return [...common, ...this.seasonBtns, ...this.dayBtns, ...this.weatherBtns];
     return [...common, ...this.keys];
   }
 
@@ -82,7 +91,7 @@ export class SettingsScreen {
     const x = Math.round(ui.w / 2 - pw / 2), y = Math.round(ui.h / 2 - ph / 2);
     panel(ui, 'indigo', x, y, pw, ph);
     ui.text(headingFont, 'Settings', x + pw / 2, y + 5, C.amberCore, { align: 'center', shadow: C.indigoDark });
-    this.tabs.forEach((b, i) => { b.selected = this.tab === TABS[i]; b.place(x + 10 + i * 56, y + 29); b.draw(ui); });
+    this.tabs.forEach((b, i) => { b.selected = this.tab === TABS[i]; b.place(x + 6 + i * 46, y + 29); b.draw(ui); });
     const cy = y + 52;
     if (this.tab === 'graphics') {
       ui.text(bodyFont, 'Quality', x + 14, cy, C.moon, { shadow: C.indigoDark });
@@ -97,6 +106,13 @@ export class SettingsScreen {
       this.invert.place(x + 14, cy + 54).draw(ui, t);
       this.bob.place(x + 120, cy + 54).draw(ui, t);
       this.toggleJog.place(x + 14, cy + 74).draw(ui, t);
+    } else if (this.tab === 'world') {
+      ui.text(bodyFont, 'Seasons', x + 14, cy, C.moon, { shadow: C.indigoDark });
+      this.seasonBtns.forEach((b, i) => { b.selected = settings.seasonMode === SEASON_MODES[i]; b.place(x + 10 + i * 44, cy + 12); b.draw(ui); });
+      ui.text(bodyFont, 'A season lasts', x + 14, cy + 38, C.moon, { shadow: C.indigoDark });
+      this.dayBtns.forEach((b, i) => { b.selected = settings.seasonDays === SEASON_DAYS[i]; b.place(x + 14 + i * 54, cy + 50); b.draw(ui); });
+      ui.text(bodyFont, 'Weather', x + 14, cy + 76, C.moon, { shadow: C.indigoDark });
+      this.weatherBtns.forEach((b, i) => { b.selected = settings.weatherMode === (['dynamic', 'fair'] as const)[i]; b.place(x + 14 + i * 76, cy + 88); b.draw(ui); });
     } else if (this.tab === 'sound') {
       this.vols.forEach((sl, i) => sl.place(x + 14, cy + i * 24).draw(ui));
       ui.text(bodyFont, 'Music', x + 14, cy + 98, C.moon, { shadow: C.indigoDark });

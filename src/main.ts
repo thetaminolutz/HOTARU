@@ -78,6 +78,7 @@ function updateAudio(dt: number): void {
 }
 
 function applySettings(): void {
+  if (state.mode !== 'shot') game.setClimate(settings.seasonMode === 'cycle' ? null : settings.seasonMode, settings.seasonDays, settings.weatherMode === 'fair' ? 'clear' : null);
   game.pipeline.settings.dither = settings.dither;
   game.pipeline.toggles.outlines = settings.outlines;
   ui.hud.showFps = settings.showFps;
