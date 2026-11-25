@@ -45,6 +45,31 @@ Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 �
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
 
+### Feedback round 3 at a glance (a wanderer in old Japan)
+
+- **Ruins with secrets:**
+  - Takamine Fort, Kitayama Castle and the sea fort Umi-toride: broken walls and keep bases
+    you can climb.
+  - A moor watchtower you can climb, Kirinoya (an empty hamlet whose lanterns light
+    themselves at night), a forgotten shrine and an old temple gate.
+  - 11 relics to find with "Look closer". They have their own journal category, "Ruins &
+    relics".
+- **On the road:** jizo, milestones, wayside shrines, three teahouses to rest at, and an open
+  sekisho checkpoint.
+- **Village streams:** Ichiba, Inaho, Yukemuri and Sakuraoka have streams running through
+  them, with bridges on the streets.
+- **Villagers** (clothed):
+  - Faces that blink and smile, four hairstyles, work clothes and headbands, straw rain
+    capes.
+  - Children swim in summer, evening soaks at the Yukemuri onsen, naps in the grass.
+- **Also:** fish schools in the lake, rivers and ponds; trees with branches into every leaf
+  cluster; no more wall clipping.
+
+| | | |
+|---|---|---|
+| ![Takamine](docs/screenshots/wanderer/ruin-takamine.png) | ![Watchtower](docs/screenshots/wanderer/ruin-susuki.png) | ![Hamlet](docs/screenshots/wanderer/hamlet.png) |
+| ![Villagers](docs/screenshots/wanderer/villagers.png) | ![Teahouse](docs/screenshots/wanderer/teahouse.png) | ![Fish](docs/screenshots/wanderer/fish.png) |
+
 ### M14 at a glance (polish & release)
 
 - **Performance:**
