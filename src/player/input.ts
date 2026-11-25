@@ -22,6 +22,11 @@ export class InputState {
   jumpPressed = false;
   interactPressed = false;
   menuPressed = false;
+  /** edge-triggered: journal, map, photo mode, use the current tool */
+  journalPressed = false;
+  mapPressed = false;
+  photoPressed = false;
+  toolPressed = false;
   private keys = new Set<string>();
   private jogToggled = false;
   private padPrev: boolean[] = [];
@@ -55,6 +60,10 @@ export class InputState {
     if (this.is('jump', code)) this.jumpPressed = true;
     if (this.is('interact', code)) this.interactPressed = true;
     if (this.is('menu', code)) this.menuPressed = true;
+    if (this.is('journal', code)) this.journalPressed = true;
+    if (this.is('map', code)) this.mapPressed = true;
+    if (this.is('photo', code)) this.photoPressed = true;
+    if (this.is('tool', code)) this.toolPressed = true;
     if (this.is('jog', code) && settings.toggleJog) this.jogToggled = !this.jogToggled;
   }
 
@@ -127,5 +136,5 @@ export class InputState {
   }
 
   /** Clear edge-triggered actions after the frame consumed them. */
-  endFrame(): void { this.jumpPressed = false; this.interactPressed = false; }
+  endFrame(): void { this.jumpPressed = false; this.interactPressed = false; this.toolPressed = false; }
 }
