@@ -84,9 +84,12 @@ export class TestWorld {
         { x: S.x + 15, y: H(S.x + 15, S.z + 6), z: S.z + 6, scale: 1.0, rot: 1.0 },
         { x: S.x - 30, y: H(S.x - 30, S.z + 8), z: S.z + 8, scale: 1.3, rot: 2.2 },
       );
+      const NEAR = 260;
       TREE_SPECIES.forEach((sp, i) => {
         const inst = list[sp.id]!;
-        this.scene.add(createTrees(sp, inst, atlas, seed + i * 101));
+        const isNear = (t: TreeInstance) => Math.hypot(t.x - S.x, t.z - S.z) < NEAR;
+        this.scene.add(createTrees(sp, inst.filter(isNear), atlas, seed + i * 101, true));
+        this.scene.add(createTrees(sp, inst.filter((t) => !isNear(t)), atlas, seed + i * 101, false));
       });
     });
     this.steps.push(() => {

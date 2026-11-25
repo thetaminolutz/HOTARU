@@ -11,7 +11,8 @@
     "icons": "node scripts/gen-icons.mjs",
     "shots": "node scripts/screenshots.mjs",
     "e2e:offline": "node scripts/offline-test.mjs",
-    "e2e:stability": "node scripts/stability-test.mjs"
+    "e2e:stability": "node scripts/stability-test.mjs",
+    "perf": "node scripts/perf.mjs"
   },
   "dependencies": {
     "three": "0.187.0"

@@ -163,7 +163,7 @@ export function createTerrain(seed: number): Terrain {
   };
 
   // Warped grid: dense near the dock, coarse at the horizon.
-  const N = 320, R = 2800, A = 0.11, cx = 0, cz = 230;
+  const N = 256, R = 2800, A = 0.09, cx = 0, cz = 230;
   const warp = (u: number) => R * (A * u + (1 - A) * u * u * u);
   const verts = (N + 1) * (N + 1);
   const pos = new Float32Array(verts * 3), nor = new Float32Array(verts * 3);
@@ -191,7 +191,8 @@ export function createTerrain(seed: number): Terrain {
   mat.userData.depth = new THREE.ShaderMaterial({ uniforms: { ...U }, vertexShader: TERRAIN_VERT, fragmentShader: DEPTH_FRAG });
   const mesh = new THREE.Mesh(g, mat);
   mesh.name = 'terrain';
-  mesh.userData.castShadow = true;
+  // terrain self-shadowing is negligible at the shadow map's 110 m range: skip it (budget)
+  mesh.userData.castShadow = false;
 
   // Height texture of the lake area for the water shader (depth tint, shore foam).
   const HS = 256, hx0 = -640, hz0 = -480, hsize = 1280;

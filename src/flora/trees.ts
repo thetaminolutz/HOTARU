@@ -187,7 +187,11 @@ export function mergeSimple(parts: THREE.BufferGeometry[]): THREE.BufferGeometry
   return g;
 }
 
-export function createTrees(sp: TreeSpecies, instances: TreeInstance[], atlas: THREE.Texture, seed: number): THREE.Group {
+/**
+ * near = true: trunks + shadow casting (trees around the player).
+ * near = false: crowns only, no shadows — distant trees never show their trunks or shadows.
+ */
+export function createTrees(sp: TreeSpecies, instances: TreeInstance[], atlas: THREE.Texture, seed: number, near = true): THREE.Group {
   const group = new THREE.Group();
   group.name = 'trees-' + sp.id;
   if (instances.length === 0) return group;
@@ -231,9 +235,10 @@ export function createTrees(sp: TreeSpecies, instances: TreeInstance[], atlas: T
   mat.userData.depth = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: DEPTH_FRAG, side: THREE.DoubleSide });
   const crowns = new THREE.Mesh(g, mat);
   crowns.frustumCulled = false;
-  crowns.userData.castShadow = true;
+  crowns.userData.castShadow = near;
   crowns.name = 'crowns-' + sp.id;
   group.add(crowns);
+  if (!near) return group;
 
   const trunkMat = litMaterial({ outline: false, sway: 0 });
   const trunks = new THREE.InstancedMesh(trunkGeometry(sp), trunkMat, instances.length);
