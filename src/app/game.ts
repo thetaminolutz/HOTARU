@@ -13,6 +13,7 @@ import { QUALITY, type Quality, type QualityName } from '../config';
 import { SHOTS, shotByName, type Shot } from './shots';
 import { srgbToLinear } from '../render/color';
 import { Weather, type WeatherId } from '../sky/weather';
+import { deckAt } from '../buildings/villages';
 import { lookAt as seasonLook, type SeasonName } from '../flora/data/seasons';
 import { REGIONS } from '../world/data/regions';
 import { talk } from '../people/dialogue';
@@ -54,9 +55,9 @@ export class Game {
     const w = this.world;
     const colliders: Collider[] = [];
     this.controller = new Controller({
-      ground: (x, z) => w.groundHeight(x, z),
+      ground: (x, z, feet) => w.groundHeight(x, z, feet),
       terrain: (x, z) => w.height(x, z),
-      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity,
+      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity || deckAt(w.landmarks.decks, x, z) > -Infinity,
       snowy: (x, z, h) => h > 980 || (h > 620 && w.world.biome(x, z).special === 3),
       colliders,
       water: (x, z) => w.world.hydro.waterAt(x, z),
@@ -98,7 +99,7 @@ export class Game {
         use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
       });
     }
-    this.colliders.push(...w.villages.colliders);
+    this.colliders.push(...w.villages.colliders, ...w.landmarks.colliders);
     for (const sp of w.villages.sits) {
       this.interactions.add({
         id: 'sit-' + sp.x.toFixed(1) + ',' + sp.z.toFixed(1), kind: 'sit', label: sp.label, pos: new THREE.Vector3(sp.x, sp.y + 0.4, sp.z), reach: 2.2, yaw: sp.yaw,
@@ -241,7 +242,8 @@ export class Game {
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt, this.world.people.openers());
     this.world.rivers.update(this.camera, this.tod.sunDir, 1 - this.tod.stars);
-    const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights);
+    const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights, this.world.landmarks.lights as typeof this.world.dock.lights);
+    this.world.landmarks.update(dt);
     this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
 
