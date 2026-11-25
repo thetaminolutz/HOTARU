@@ -273,3 +273,31 @@ Non-obvious decisions and why. Newest at the bottom.
   gulls, owls, pigeons and frogs call from where they are (spatial audio).
 - Ecosystem touches beyond habitat choice (herons hunting, crows following farmers, cats at
   the fish market) wait for villagers and water in M9/M4.
+
+## M4
+
+- **Hydrology = authored main river + simulated tributaries:** the main river follows valley
+  points (snowy pass → maple mountains → Lantern Lake → past Ichiba → the marsh → the sea, as in
+  SPEC §6.15). Ten mountain springs flow by steepest descent (with a little inertia; small bumps
+  are cut through) until they meet a river, the lake or the sea — or a real basin, which becomes
+  a pond. Water levels are a running minimum of the land, so water only ever flows downhill.
+- **Waterfalls** are compact drops (≥ 6 m within 50 m): the level holds to the lip and falls in
+  one step; longer steep stretches stay rapids (faster streaks, white water). The tallest
+  main-river fall is the Great Waterfall (a falling sheet, mist at its foot, a rainbow when the
+  sun is behind you).
+- **Carving lives in the heightfield** (after village grading and the water-line clamp), so the
+  terrain, workers, trees, grass, roads and the player all see the same riverbeds. Banks widen
+  with the depth of the cut (valleys, not trenches); levees only fill small dips (a big drop with
+  a held level once raised an aqueduct-like ridge). A segment grid keeps it cheap: the whole
+  hydrology takes ~35 ms and every worker computes the same result.
+- **Rendering:** rivers, ponds and falls above 0.3 m are one merged mesh with a flowing shader
+  (streaks in metres along the flow, white water on rapids and at the banks, sky reflection with a
+  fresnel, darker banks standing in for reflected woods). At lake level the existing lake/sea
+  plane with planar reflections takes over, so the outflow river gets real reflections.
+- **Lake & sea:** ripple rings (8 slots) from wading and swimming, ducks and jumping fish (with a
+  splash sound, more at dusk); rain rings ready for M6; caustic light nets over sunny shallows;
+  the open sea gets longer swells with darker troughs, and surf breaks white where a second baked
+  depth texture says the coast gets shallow.
+- **Player:** wading and swimming work at any water level (rivers and ponds too). Roads bridge
+  rivers at the river's own height; trees and plants stay out of riverbeds.
+- Not yet: lake ice (winter, M6) and puddles (rain, M6).

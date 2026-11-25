@@ -40,6 +40,26 @@ const above = (w: GameWorld, id: string, dist: number, ang: number, dy: number) 
   return new THREE.Vector3(x, Math.max(w.height(x, z), 0) + dy, z);
 };
 
+/** First x (going east) where the land meets the sea at this z. */
+const shoreX = (w: GameWorld, z: number) => { let x = 3800; while (x < 5200 && w.height(x, z) > 0.2) x += 2; return x; };
+const bigFall = (w: GameWorld) => [...w.world.hydro.falls].sort((a, b) => (b.top - b.bottom) * (b.river === 'upper' ? 3 : 1) - (a.top - a.bottom) * (a.river === 'upper' ? 3 : 1))[0]!;
+const fallView = (w: GameWorld, dist: number, side: number, dy: number) => {
+  const f = bigFall(w), x = f.x + f.dx * dist - f.dz * side, z = f.z + f.dz * dist + f.dx * side;
+  return new THREE.Vector3(x, Math.max(w.height(x, z), f.bottom) + dy, z);
+};
+/** A point on a river (fraction along it), `dy` above the water, `side` metres off the centre. */
+const onRiver = (w: GameWorld, id: string, f: number, side: number, dy: number) => {
+  const r = w.world.hydro.rivers.find((r) => r.id === id)!, i = Math.round(f * (r.pts.length - 1));
+  const p = r.pts[i]!, q = r.pts[Math.min(r.pts.length - 1, i + 1)]!;
+  const tx = q.x - p.x, tz = q.z - p.z, tl = Math.hypot(tx, tz) || 1;
+  const x = p.x - (tz / tl) * side, z = p.z + (tx / tl) * side;
+  return new THREE.Vector3(x, Math.max(w.height(x, z), p.level) + dy, z);
+};
+const pond = (w: GameWorld, k: number, dist: number, dy: number) => {
+  const p = w.world.hydro.ponds[k % w.world.hydro.ponds.length]!;
+  return new THREE.Vector3(p.x + dist, Math.max(w.height(p.x + dist, p.z + dist * 0.4), p.level) + dy, p.z + dist * 0.4);
+};
+
 export const SHOTS: Shot[] = [
   { name: 'dock-night', label: 'Dock at night', hour: 21.6, elapsed: 4200, pos: (w) => off(w, 8, 3, 3), look: (w) => off(w, -8, 1.8, -18), fov: 70 },
   { name: 'dock-golden', label: 'Dock, golden hour', hour: 17.7, elapsed: 4200, pos: (w) => off(w, 8, 3, 3), look: (w) => off(w, -8, 1.8, -18), fov: 70 },
@@ -65,6 +85,12 @@ export const SHOTS: Shot[] = [
   { name: 'harbour', label: 'Shiomachi fishing village', hour: 8.5, elapsed: 1200, pos: (w) => street(w, 'shiomachi', 0.25, 1.7), look: (w) => street(w, 'shiomachi', 0.6, 2), fov: 70 },
   { name: 'onsen-village', label: 'Yukemuri hot-spring village', hour: 17.8, elapsed: 1200, pos: (w) => street(w, 'yukemuri', 0.35, 1.7), look: (w) => street(w, 'yukemuri', 0.65, 2), fov: 70 },
   { name: 'shrine-torii', label: 'Torii at Kumoji', hour: 15, elapsed: 1200, pos: (w) => street(w, 'kumoji', 0.82, 1.7), look: (w) => street(w, 'kumoji', 1, 2.6), fov: 70 },
+  // M4: water
+  { name: 'great-waterfall', label: 'The Great Waterfall', hour: 15.5, elapsed: 1200, pos: (w) => fallView(w, 38, 8, 2.5), look: (w) => { const f = bigFall(w); return new THREE.Vector3(f.x, (f.top + f.bottom) / 2, f.z); }, fov: 70 },
+  { name: 'mountain-river', label: 'River through the maple mountains', hour: 10.5, elapsed: 1200, wind: 0.4, pos: (w) => onRiver(w, 'upper', 0.62, 6, 2.2), look: (w) => onRiver(w, 'upper', 0.66, 0, 0.5), fov: 70 },
+  { name: 'river-dusk', label: 'River at dusk', hour: 18.3, elapsed: 1200, wind: 0.1, pos: (w) => onRiver(w, 'upper', 0.88, 5, 2), look: (w) => onRiver(w, 'upper', 0.93, -2, 0.5), fov: 70 },
+  { name: 'forest-pond', label: 'A pond in the hills', hour: 9, elapsed: 1200, wind: 0.05, pos: (w) => pond(w, 0, 22, 1.8), look: (w) => pond(w, 0, 0, 0), fov: 70 },
+  { name: 'coast-surf', label: 'Surf on the eastern coast', hour: 16, elapsed: 1200, wind: 0.8, pos: (w) => at(w, shoreX(w, -980) - 30, -980, 7), look: (w) => new THREE.Vector3(shoreX(w, -980) + 45, 0, -1010), fov: 70 },
   // M8: fauna
   { name: 'temple-deer', label: 'Deer at the temple', hour: 9.5, elapsed: 1200, pos: (w) => street(w, 'kumoji', 0.6, 1.7), look: (w) => street(w, 'kumoji', 0.8, 0.8), fov: 70, fauna: [['sikaDeer', 7, 0, 5], ['pigeon', 4, -2, 6]] },
   { name: 'village-cats', label: 'Cats and sparrows in Ichiba', hour: 15.5, elapsed: 1200, pos: (w) => street(w, 'ichiba', 0.5, 1.7), look: (w) => street(w, 'ichiba', 0.6, 0.4), fov: 70, fauna: [['cat', 3.5, 0.6, 1], ['calico', 4.5, -1.2, 1], ['shiba', 6, 1.5, 1], ['sparrow', 5, -0.5, 7]] },

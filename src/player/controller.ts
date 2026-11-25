@@ -23,6 +23,8 @@ export type WorldQuery = {
   /** Snowy ground for sliding. */
   snowy(x: number, z: number, h: number): boolean;
   colliders: Collider[];
+  /** Water surface at (x, z): rivers and ponds above the lake (optional; default the lake/sea at 0). */
+  water?(x: number, z: number): number;
 };
 
 const WATER = 0;
@@ -67,6 +69,11 @@ export class Controller {
   sitHint: 'sit' | 'lie' | 'stand' | null = null;
 
   constructor(private q: WorldQuery) {}
+
+  /** The water surface where the player stands (lake/sea at 0, or a river or pond above it). */
+  waterLevel(): number {
+    return Math.max(WATER, this.q.water?.(this.position.x, this.position.z) ?? -Infinity);
+  }
 
   lookAt(target: THREE.Vector3): void {
     const d = target.clone().sub(this.position);
@@ -147,7 +154,8 @@ export class Controller {
 
     const ground = this.q.ground(this.position.x, this.position.z);
     const deck = this.q.onDeck(this.position.x, this.position.z);
-    const depth = deck ? 0 : WATER - this.q.terrain(this.position.x, this.position.z);
+    const W = this.waterLevel();
+    const depth = deck ? 0 : W - this.q.terrain(this.position.x, this.position.z);
     const airborne = this.feet > ground + 0.05 && this.pose !== 'swim';
 
     // pose from surroundings
@@ -198,7 +206,7 @@ export class Controller {
     // vertical
     const g = this.q.ground(this.position.x, this.position.z);
     if (this.pose === 'swim') {
-      const target = WATER - 1.25 + Math.sin(this.t * 1.6) * 0.04;
+      const target = this.waterLevel() - 1.25 + Math.sin(this.t * 1.6) * 0.04;
       this.feet = lerp(this.feet, target, 1 - Math.exp(-dt * 3));
       this.vel.y = 0;
     } else {
@@ -222,7 +230,7 @@ export class Controller {
         this.vel.y = 0;
       }
       // water slows wading
-      if (this.feet < WATER - 1.3 && !deck) this.pose = 'swim';
+      if (this.feet < this.waterLevel() - 1.3 && !deck) this.pose = 'swim';
     }
     this.sitHint = this.pose === 'stand' && !moving ? 'sit' : null;
     this.applyEye(dt, Math.hypot(this.vel.x, this.vel.z), yawRate);

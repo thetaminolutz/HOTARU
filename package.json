@@ -17,6 +17,7 @@
     "e2e:audio": "node scripts/audio-test.mjs",
     "e2e:houses": "node scripts/houses-test.mjs",
     "e2e:fauna": "node scripts/fauna-test.mjs",
+    "e2e:water": "node scripts/water-test.mjs",
     "audio:samples": "node scripts/audio-samples.mjs"
   },
   "dependencies": {

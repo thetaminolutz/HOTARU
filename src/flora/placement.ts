@@ -68,6 +68,7 @@ export function placeTrees(w: World, x0: number, z0: number, size: number, clear
     if (slope > 1.2) continue;
     if (keepOpen(px, pz)) continue;
     if (inClearing(clear, px, pz, 2.5)) continue;
+    if (w.hydro.waterAt(px, pz) > h - 1.5) continue; // not in rivers and ponds
     w.biome(px, pz, b);
     // treeline: fewer trees high up, none on snowy peaks
     const alt = h > 1050 ? 0 : h > 750 ? 1 - (h - 750) / 300 : 1;
