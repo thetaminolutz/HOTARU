@@ -29,6 +29,8 @@ export class Hud {
   lastUse = 0;
   /** What the interact button / bubble shows: an icon name and a label (or null). */
   prompt: { icon: string; label: string } | null = null;
+  /** A conversation in progress: who, their portrait, the lines, the current line and how much is shown. */
+  dialogue: { name: string; title: string; portrait: Pixmap; lines: string[]; index: number; shown: number } | null = null;
   /** Sitting: show the time-lapse token. */
   canTimelapse = false;
   timelapseHeld = false;
@@ -45,7 +47,24 @@ export class Hud {
     this.toasts.push({ text, until: now + seconds, onTap });
   }
 
+  /** The dialogue box: a washi scroll along the bottom with a portrait and typewriter text. */
+  private drawDialogue(ui: UICanvas, t: number): void {
+    const d = this.dialogue;
+    if (!d) return;
+    const s = ui.safe;
+    const w = Math.min(ui.w - 16, 300), h = 62;
+    const x = Math.round(ui.w / 2 - w / 2), y = ui.h - s.bottom - h - 8;
+    panel(ui, 'washi', x, y, w, h);
+    ui.sprite(d.portrait, x + 8, y + 8);
+    ui.text(bodyFont, cleanText(d.name), x + 42, y + 7, C.ink);
+    if (d.title) ui.text(tinyFont, cleanText(d.title).toUpperCase(), x + 42 + bodyFont.measure(cleanText(d.name)) + 5, y + 9, C.inkSoft);
+    const line = cleanText(d.lines[d.index] ?? '');
+    ui.textBlock(bodyFont, line.slice(0, Math.floor(d.shown)), x + 42, y + 21, w - 52, C.ink);
+    if (d.shown >= line.length && Math.sin(t * 5) > 0) ui.text(tinyFont, d.index < d.lines.length - 1 ? '>' : 'x', x + w - 12, y + h - 12, C.vermilion);
+  }
+
   draw(ui: UICanvas, t: number, controls = true): void {
+    this.drawDialogue(ui, t);
     const s = ui.safe;
     if (this.showFps) {
       const txt = Math.round(this.fps) + ' FPS';
@@ -159,4 +178,9 @@ export class Hud {
     if (!this.stick.active) return { x: 0, z: 0, active: false };
     return { x: (this.stick.x - this.stick.cx) / 16, z: -(this.stick.y - this.stick.cy) / 16, active: true };
   }
+}
+
+/** Map typographic characters to ones the pixel font has. */
+export function cleanText(s: string): string {
+  return s.replace(/[\u2018\u2019]/g, "'").replace(/[\u201c\u201d]/g, '"').replace(/\u2014/g, ' - ').replace(/\u2026/g, '...').replace(/\u014d/g, 'o').replace(/\u016b/g, 'u');
 }

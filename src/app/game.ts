@@ -15,6 +15,13 @@ import { srgbToLinear } from '../render/color';
 import { Weather, type WeatherId } from '../sky/weather';
 import { lookAt as seasonLook, type SeasonName } from '../flora/data/seasons';
 import { REGIONS } from '../world/data/regions';
+import { talk } from '../people/dialogue';
+import { NICKNAMES } from '../people/dialogue';
+import { portrait } from '../people/portrait';
+import type { Person } from '../people/people';
+import { createRng, hashString } from '../core/rng';
+import { SEASONS } from '../flora/data/seasons';
+import type { Pixmap } from '../render/pixmap';
 
 export class Game {
   readonly renderer: THREE.WebGLRenderer;
@@ -67,6 +74,11 @@ export class Game {
   private rippleT = 0;
   private fishT = 8;
   readonly weather = new Weather();
+  /** a conversation in progress (the HUD draws it) */
+  dialogue: { who: Person; name: string; title: string; portrait: Pixmap; lines: string[]; index: number; shown: number } | null = null;
+  /** a few letters were spoken: the audio system babbles in their voice */
+  onBabble: ((pitch: number) => void) | null = null;
+  private talkSeed = 1;
   /** wind fixed by a screenshot (else the weather decides) */
   private shotWind: number | null = null;
   private lastSeason = -1;
@@ -102,6 +114,11 @@ export class Game {
         id, kind: bow ? 'bow' : 'pet', label: (bow ? 'Bow to the ' : 'Pet the ') + a.sp.name.toLowerCase(), pos: a.pos, reach: 3.4,
         use: () => { if (bow) { this.bowT = 1.6; w.fauna.bow(a); } else w.fauna.pet(a); },
       });
+    };
+    w.people.onNear = (p, near) => {
+      const id = 'person-' + p.id;
+      if (!near) { this.interactions.remove(id); return; }
+      this.interactions.add({ id, kind: 'talk', label: 'Talk to ' + p.name.split(' ')[0], pos: p.pos, reach: 3.2, use: () => this.talkTo(p) });
     };
     this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
@@ -180,7 +197,12 @@ export class Game {
       // interact: a targeted thing, else sit / lie / stand where you are
       const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(c0.pitch, c0.yaw, 0, 'YXZ'));
       this.interactions.update(c0.position, dir);
-      if (this.input.interactPressed && c0.mode === 'walk') {
+      if (this.input.interactPressed && this.dialogue) {
+        const d = this.dialogue, line = d.lines[d.index] ?? '';
+        if (d.shown < line.length) d.shown = line.length;
+        else if (++d.index >= d.lines.length) this.dialogue = null;
+        else d.shown = 0;
+      } else if (this.input.interactPressed && c0.mode === 'walk') {
         const t = this.interactions.target;
         if (t && !c0.sitting) t.use();
         else c0.cyclePose();
@@ -213,9 +235,11 @@ export class Game {
     const cp = this.controller.position;
     const pv = this.controller.vel;
     this.world.fauna.update(dt, cp, Math.hypot(pv.x, pv.z), clock.hour);
+    this.world.people.update(dt, cp, clock.hour, clock.day, this.weather.out);
+    this.updateDialogue(dt);
     this.updateRipples(dt);
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
-    this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt);
+    this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt, this.world.people.openers());
     this.world.rivers.update(this.camera, this.tod.sunDir, 1 - this.tod.stars);
     const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights);
     this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
@@ -251,6 +275,35 @@ export class Game {
     this.stats.drawCalls = this.renderer.info.render.calls;
     this.stats.triangles = this.renderer.info.render.triangles;
     this.stats.frameMs = performance.now() - t0;
+  }
+
+  /** Start a conversation with someone (greeting + topical lines from the dialogue bank). */
+  talkTo(p: Person): void {
+    const mem = this.world.people.memory;
+    const met = mem.met[p.id] ?? 0;
+    if (met >= 4 && !mem.nick[p.id]) mem.nick[p.id] = NICKNAMES[hashString(p.id) % NICKNAMES.length]!;
+    const W = this.weather.out;
+    const weather = W.storm > 0.5 ? 'storm' : W.snow > 0.3 ? 'snow' : W.rain > 0.2 ? 'rain' : W.fog > 0.6 ? 'fog' : 'fair';
+    const season = SEASONS[W.weights.indexOf(Math.max(...W.weights))]!;
+    const others = this.world.people.people.filter((o) => o.village === p.village && o.id !== p.id && !o.wanderer);
+    const friend = others.length ? others[hashString(p.id + clock.day) % others.length]!.name.split(' ')[0]! : 'Akari';
+    const lines = talk({ name: p.name.split(' ')[0]!, job: p.job, personality: p.personality, age: p.age, met, nick: mem.nick[p.id] ?? 'friend', hour: clock.hour, season, weather, village: p.villageName || 'Tomoshibi', friend, wanderer: p.wanderer?.id }, createRng(hashString(p.id) + this.talkSeed++ * 7919));
+    mem.met[p.id] = met + 1;
+    this.dialogue = { who: p, name: p.name, title: p.wanderer?.title ?? '', portrait: portrait(p), lines, index: 0, shown: 0 };
+    // they turn to you and greet you
+    p.greetT = 0;
+  }
+
+  private updateDialogue(dt: number): void {
+    const d = this.dialogue;
+    if (!d) return;
+    if (d.who.pos.distanceTo(this.controller.position) > 5) { this.dialogue = null; return; }
+    const line = d.lines[d.index] ?? '';
+    if (d.shown < line.length) {
+      const before = Math.floor(d.shown);
+      d.shown = Math.min(line.length, d.shown + dt * 38);
+      if (Math.floor(d.shown / 3) !== Math.floor(before / 3) && line[Math.floor(d.shown)] !== ' ') this.onBabble?.(d.who.pitch);
+    }
   }
 
   /** Ripples on the lake and sea: the player wading or swimming, ducks, jumping fish. */

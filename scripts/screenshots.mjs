@@ -66,11 +66,23 @@ const M8_SHOTS = ['temple-deer', 'village-cats', 'farm-animals', 'lake-ducks', '
 const M6_SHOTS = ['spring-cherry', 'summer-rice', 'maple-golden', 'winter-village', 'winter-lake', 'rain-market', 'storm-lake', 'fog-cedar', 'sunshower', 'snow-onsen', 'summer-night']
   .map((n) => ({ name: n, q: 'shot=' + n }));
 
+const M9_SHOTS = [
+  ...['plaza-evening', 'lantern-round', 'farm-work', 'rain-umbrellas', 'children-play', 'shrine-monk'].map((n) => ({ name: n, q: 'shot=' + n })),
+  { name: 'talk', q: 'play=1', wait: 3500, action: setup(() => {
+    const h = window.__hotaru, g = h.game, c = g.controller;
+    h.clock.setHour(10.5); h.clock.paused = true; g.pipeline.buildLutNow(10.5);
+    const akari = g.world.people.people.find((p) => p.wanderer?.id === 'akari');
+    akari.pos.set(c.position.x + 2, c.position.y - 1.6, c.position.z - 0.5); akari.visible = true;
+    c.lookAt(akari.pos.clone().setY(akari.pos.y + 1.4));
+    g.talkTo(akari); g.dialogue.shown = 999;
+  }) },
+];
+
 const M13_SHOTS = [
   { name: 'settings-sound', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'sound'; }) },
 ];
 
-const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();
@@ -87,7 +99,7 @@ for (const s of SHOTS) {
   await waitReady(page, 240000);
   if (s.action) await s.action(page);
   await page.waitForTimeout(s.wait ?? 2000);
-  await page.screenshot({ path: new URL(`${s.name}.png`, out).pathname });
+  await page.screenshot({ path: new URL(`${s.name}.png`, out).pathname, timeout: 180000 });
   console.log(`${s.name}: ${((Date.now() - t0) / 1000).toFixed(1)}s${errors.length ? ' ERRORS: ' + errors.join(' | ') : ''}`);
   await context.close();
 }

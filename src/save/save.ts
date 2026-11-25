@@ -15,6 +15,10 @@ export type SaveV1 = {
   hour: number;
   day: number;
   savedAt: number;
+  /** villagers you've met and the nicknames they gave you (M9) */
+  memory?: { met: Record<string, number>; nick: Record<string, string> };
+  /** trust per animal species (M8) */
+  trust?: Record<string, number>;
 };
 
 export type SaveData = SaveV1;

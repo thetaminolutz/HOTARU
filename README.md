@@ -20,8 +20,8 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M6 | Regions, weather & seasons | ✅ Done | [M6](docs/screenshots/M6/) | pending (run on iPad) |
 | M7 | Buildings, villages & interiors | ✅ Done | [M7](docs/screenshots/M7/) | pending (run on iPad) |
 | M8 | Fauna | ✅ Done | [M8](docs/screenshots/M8/) | pending (run on iPad) |
-| M9 | Villagers & wanderers | 🔨 In progress | — | — |
-| M10 | Castle, shrines, caves & secrets | ⬜ Not started | — | — |
+| M9 | Villagers & wanderers | ✅ Done | [M9](docs/screenshots/M9/) | pending (run on iPad) |
+| M10 | Castle, shrines, caves & secrets | 🔨 In progress | — | — |
 | M11 | Items, journal, map, photo, boats, fishing | ⬜ Not started | — | — |
 | M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
 | M13 | Audio | ✅ Done | [M13](docs/screenshots/M13/) · [listen](docs/audio/) | pending (run on iPad) |
@@ -30,6 +30,41 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M9 at a glance (villagers)
+
+The villages are inhabited: **117 villagers** and **16 wanderers**. Among the wanderers are a travelling poet, a pilgrim with a bell, a peddler, a painter, Akari the lantern maker, a masked stranger at dusk, a star watcher and the postman.
+
+**Daily routines by trade:**
+- Farmers work the terraces.
+- Fishers go out before dawn.
+- Potters, weavers and carpenters work in their workshops.
+- Shopkeepers and tea masters sweep their step and then open.
+- Monks pray at dawn and dusk.
+- Children play by the well and the river.
+- Elders sit on the plaza.
+- In the evening everyone gathers to chat.
+
+**At dusk the lantern maker walks the village and lights every lantern, one by one,** and puts them out again at dawn.
+
+**How they react:**
+- Umbrellas come out in the rain, and everyone goes home in a storm.
+- They turn to you: a bow the first time, a wave later, and eventually a nickname.
+
+**Talking:** 518 different gentle lines depend on who they are, how well they know you, the time, the weather, the season and the village, plus gossip about the neighbours. Each speaker has a pixel portrait and soft voice babble.
+
+| Evening on the plaza | Umbrellas in the rain |
+|---|---|
+| ![](docs/screenshots/M9/plaza-evening.png) | ![](docs/screenshots/M9/rain-umbrellas.png) |
+| **Children at the well** | **Talking to Akari** |
+| ![](docs/screenshots/M9/children-play.png) | ![](docs/screenshots/M9/talk.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 61 passed (518 distinct lines, schedules, first meeting vs. nickname, weather-aware talk) |
+| People e2e (`npm run e2e:people`) | ✅ 133 people; they move through the day, the lantern maker lights lanterns, umbrellas in rain, talking works and is remembered |
+| All e2e | ✅ offline, stability, controls, audio, houses, fauna, water, people |
+| Draw calls · triangles (Medium) | 334 · 1.65 M (everyone is one draw) |
 
 ### M6 at a glance (weather & seasons)
 
@@ -334,6 +369,7 @@ npm run e2e:audio      # audio unlock, output and per-place mix
 npm run e2e:houses     # walk into a house
 npm run e2e:fauna      # animals: presence, fleeing, petting, bowing
 npm run e2e:water      # swim in a river, ripples
+npm run e2e:people     # villagers through a day, lantern round, talking
 npm run audio:samples  # render music samples → docs/audio/
 npm run icons          # regenerate app icons & launch images
 ```
