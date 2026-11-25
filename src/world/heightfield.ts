@@ -93,7 +93,7 @@ export function createWorld(seed: number): World {
     // mountains: broad massifs (squared low-frequency fbm) carved by soft ridges, not spires
     const mass = n.fbm2(x / 1700 + 3.1, z / 1700 - 1.7, 4) * 0.5 + 0.5;
     const rid = n.ridged2(x / 1300, z / 1300, 4);
-    let h = base + hill * hills + ridge * (mass * mass * 1.5 + rid * 0.35 * mass) + 6 * n.noise2(x / 60, z / 60);
+    let h = base + hill * hills + ridge * (mass * mass + rid * 0.25 * mass) + 6 * n.noise2(x / 60, z / 60);
 
     // rice terraces: stepped slopes
     if (terrace > 0.05) {
@@ -129,7 +129,8 @@ export function createWorld(seed: number): World {
     const edgeW = HALF + 200 - Math.max(-x, Math.abs(z)); // distance to W/N/S border
     if (edgeW < 900 && x < coastX - 300) {
       const k = smoothstep(900, -1600, edgeW);
-      h += k * (900 + 900 * n.ridged2(x / 1100, z / 1100, 5));
+      const m = n.fbm2(x / 1500 + 9.3, z / 1500 - 4.1, 4) * 0.5 + 0.5;
+      h += k * (800 + 1100 * m * m + 260 * n.ridged2(x / 1100, z / 1100, 4) * m);
     }
 
     // keep land above the water line outside the lake and the sea (no accidental floods)
@@ -162,7 +163,9 @@ export function createWorld(seed: number): World {
     for (let k = 1; k < 8; k++) if (sp[k]! > spW) { spW = sp[k]!; spI = k; }
     // forest density varies in groves
     const grove = n.fbm2(x / 260, z / 260, 3);
-    out.forest = clamp(forest + grove * 0.45, 0, 1);
+    // the meadow around the Tomoshibi dock stays open
+    const dockD = Math.hypot(x, z - 284);
+    out.forest = clamp(forest + grove * 0.45, 0, 1) * smoothstep(70, 220, dockD);
     out.moisture = clamp(moist + 0.15 * n.noise2(x / 500, z / 500), 0, 1);
     out.autumn = clamp(aut, 0, 1);
     out.special = spI; out.specialW = spW;

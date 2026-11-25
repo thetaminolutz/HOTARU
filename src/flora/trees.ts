@@ -8,6 +8,24 @@ import { COMMON_PARS, FOG_FN, LIGHTING, NOISE, SKY_FN, WIND } from '../render/sh
 import { litMaterial, ensureColor } from '../render/materials';
 import { hexToLinear } from '../render/color';
 import { createRng } from '../core/rng';
+import { toTexture } from '../render/textures';
+import { Pixmap, rngFor } from '../render/pixmap';
+
+let bark: THREE.Texture | null = null;
+/** Greyscale bark: vertical furrows (tinted by the species' trunk colour). */
+function barkTexture(): THREE.Texture {
+  if (bark) return bark;
+  const p = new Pixmap(16, 32), r = rngFor('bark');
+  for (let y = 0; y < 32; y++) for (let x = 0; x < 16; x++) {
+    let v = 0.62 + (r.next() - 0.5) * 0.08;
+    if ((x + Math.floor(y / 6)) % 4 === 0) v = 0.4;
+    if (r.chance(0.05)) v = 0.8;
+    const g = Math.round(v * 255);
+    p.set(x, y, (g << 16) | (g << 8) | g);
+  }
+  bark = toTexture(p);
+  return bark;
+}
 import type { TreeSpecies } from './data/trees';
 
 export type TreeInstance = { x: number; y: number; z: number; scale: number; rot: number; color?: string };
@@ -56,7 +74,7 @@ void main(){
   vec3 crownC = iPos.xyz + vec3(0.0, uCrownY * s, 0.0);
   vec3 cn = normalize(center - crownC + vec3(0.0, 0.3, 0.0) * s);
   vNormal = normalize(cn + (right * aCorner.x + up * aCorner.y) * 0.55);
-  vAo = 0.55 + 0.45 * clamp(length(lc - vec3(0.0, uCrownY * s, 0.0)) / (uHeight * s * 0.5), 0.0, 1.0);
+  vAo = 0.7 + 0.3 * clamp(length(lc - vec3(0.0, uCrownY * s, 0.0)) / (uHeight * s * 0.5), 0.0, 1.0);
   vWorldPos = wp;
   vec2 cell = vec2(mod(aAtlas, 2.0), floor(aAtlas / 2.0)) * 0.5;
   vUv = cell + vec2(aCorner.x * 0.5 + 0.5, 0.5 - aCorner.y * 0.5) * 0.5;
@@ -81,8 +99,9 @@ void main(){
   clipCheck(vWorldPos);
   vec4 t = texture2D(uAtlas, vUv);
   if (t.a < 0.5) discard;
-  vec3 albedo = vColor * (0.55 + 0.75 * t.r);
-  vec3 col = shade(albedo, normalize(vNormal), vWorldPos, 0.7, vAo, 0.3);
+  vec3 albedo = vColor * (0.55 + 0.75 * t.r) * 1.6;
+  vec3 col = shade(albedo, normalize(vNormal), vWorldPos, 0.4, vAo, 0.3);
+  col = min(col, vec3(1.15)); // leaves never bloom like lamps
   col = applyFog(col, vWorldPos);
   gl_FragColor = vec4(col, 0.5);
 }
@@ -112,11 +131,11 @@ function clusterLayout(sp: TreeSpecies, seed: number): { c: THREE.Vector3; size:
         break;
       }
       case 'cone': {
-        const y = sp.trunkHeight + crownH * (0.08 + 0.86 * t);
-        const rr = sp.radius * (1 - t) * 0.85 + 0.2;
+        const y = sp.trunkHeight + crownH * (0.05 + 0.88 * t);
+        const rr = sp.radius * (1 - t) * 0.9 + 0.25;
         const a = i * 2.39996 + r.next() * 0.5;
-        p = new THREE.Vector3(Math.cos(a) * rr * 0.75, y, Math.sin(a) * rr * 0.75);
-        out.push({ c: p, size: size * (1 - t * 0.55) });
+        p = new THREE.Vector3(Math.cos(a) * rr * 0.6, y, Math.sin(a) * rr * 0.6);
+        out.push({ c: p, size: size * (1 - t * 0.6) });
         continue;
       }
       case 'pads': {
@@ -140,8 +159,10 @@ function clusterLayout(sp: TreeSpecies, seed: number): { c: THREE.Vector3; size:
 function trunkGeometry(sp: TreeSpecies): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   const top = sp.shape === 'cone' ? sp.height * 0.75 : sp.height * 0.7;
-  const g = new THREE.CylinderGeometry(sp.trunkRadius * 0.45, sp.trunkRadius, top, 6, 3);
+  const g = new THREE.CylinderGeometry(sp.trunkRadius * 0.45, sp.trunkRadius, top, 8, 3);
   g.translate(0, top / 2, 0);
+  const guv = g.getAttribute('uv') as THREE.BufferAttribute;
+  for (let i = 0; i < guv.count; i++) guv.setXY(i, guv.getX(i) * 2, guv.getY(i) * top / 1.2);
   // slight bend for character
   const pos = g.getAttribute('position') as THREE.BufferAttribute;
   for (let i = 0; i < pos.count; i++) {
@@ -161,7 +182,7 @@ function trunkGeometry(sp: TreeSpecies): THREE.BufferGeometry {
     }
   }
   const [r, gg, bb] = hexToLinear(sp.trunkColor);
-  for (const p of parts) ensureColor(p, [r * 2.2, gg * 2.2, bb * 2.2]);
+  for (const p of parts) ensureColor(p, [r * 3.6, gg * 3.6, bb * 3.6]);
   return mergeSimple(parts);
 }
 
@@ -240,7 +261,7 @@ export class TreeKit {
     this.mat = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide });
     this.mat.userData.depth = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: DEPTH_FRAG, side: THREE.DoubleSide });
     this.trunkGeo = trunkGeometry(sp);
-    this.trunkMat = litMaterial({ outline: false });
+    this.trunkMat = litMaterial({ outline: false, map: barkTexture() });
     this.colors = sp.colors.map((c) => hexToLinear(c));
   }
 
@@ -285,6 +306,7 @@ export class TreeKit {
     const near = build(this.near), far = build(this.far);
     near.userData.castShadow = true;
     far.userData.castShadow = false;
+    far.userData.noReflect = true; // distant crowns are pixel-sized in the mirror anyway
     const trunks = new THREE.InstancedMesh(this.trunkGeo, this.trunkMat, count);
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
     for (let i = 0; i < count; i++) {
@@ -295,6 +317,7 @@ export class TreeKit {
     }
     trunks.boundingSphere = sphere.clone();
     trunks.userData.castShadow = true;
+    trunks.userData.noReflect = true;
     trunks.name = 'trunks-' + this.sp.id;
     return { near, far, trunks, sphere };
   }

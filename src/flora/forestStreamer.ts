@@ -11,6 +11,7 @@ import { hash3 } from '../core/rng';
 
 type Tile = { key: string; x0: number; z0: number; group: THREE.Group | null; loading: boolean; parts: { near: THREE.Mesh; far: THREE.Mesh; trunks: THREE.InstancedMesh }[] };
 
+/** 256 m tiles: fine-grained culling and near/far LOD. */
 export const TILE = 256;
 
 export class ForestStreamer {

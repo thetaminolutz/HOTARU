@@ -34,6 +34,8 @@ export const U = {
   uBands: { value: 4 },
   /** 0 = fully banded light, 1 = smooth Lambert (terrain uses a blend to avoid triangle patterns). */
   uSmoothLight: { value: 0 },
+  /** 0..1 cloud cover (cloud shadows on the ground; weather drives it from M6). */
+  uCloudCover: { value: 0.5 },
   uLamps: { value: 1 },
   uStars: { value: 1 },
   uClouds: { value: col() },

@@ -26,6 +26,7 @@ uniform mat4 uReflMatrix;
 uniform sampler2D uHeightTex;
 uniform vec3 uHeightRect;
 uniform float uWaves;
+uniform float uReflOn;
 uniform vec2 uCamFwd;
 uniform vec4 uBoats[MAX_BOATS];
 uniform int uBoatCount;
@@ -100,7 +101,8 @@ void main(){
   float amp = 0.01 + 0.022 / (1.0 + dist * 0.05);
   ruv.y += wy * amp;
   ruv.x += wx * amp * 0.25;
-  vec3 refl = texture2D(uReflection, clamp(ruv, 0.001, 0.999)).rgb;
+  vec3 refl = uReflOn > 0.5 ? texture2D(uReflection, clamp(ruv, 0.001, 0.999)).rgb
+    : skyColor(normalize(vec3(-V.x, abs(V.y) + 0.02, -V.z))) * 0.9; // far away: reflected sky
 
   float cosT = max(V.y, 0.0);
   float fres = 0.04 + 0.96 * pow(1.0 - cosT, 5.0);
@@ -166,6 +168,7 @@ export class Water {
         uHeightTex: { value: heightTex },
         uHeightRect: { value: new THREE.Vector3(...heightRect) },
         uWaves: { value: 1 },
+        uReflOn: { value: 1 },
         uCamFwd: { value: new THREE.Vector2(0, -1) },
         uBoats: { value: [new THREE.Vector4(), new THREE.Vector4()] },
         uBoatCount: { value: 0 },
@@ -185,6 +188,25 @@ export class Water {
     this.mesh.name = 'water';
   }
 
+  /**
+   * Is reflective water close enough to matter? Planar reflections re-render the scene, so
+   * they only run near Lantern Lake or the eastern sea; farther away water uses the sky.
+   */
+  visibleFrom(p: THREE.Vector3): boolean {
+    const lake = Math.hypot(p.x / 440, (p.z + 10) / 300);
+    const nearLake = lake < 1 + 1800 / 300 && p.y < 700 + 0.4 * Math.hypot(p.x, p.z);
+    const nearSea = p.x > 3300;
+    return nearLake || nearSea;
+  }
+
+  /** Reflection field of view for a render-camera fov (degrees). */
+  static reflFov(camFov: number): number { return Math.min(150, camFov * 1.35); }
+
+  /** Angle of one reflection texel (radians) for a render-camera fov — used to snap rotation. */
+  texelAngle(camFov: number): number {
+    return (2 * Math.tan(THREE.MathUtils.degToRad(Water.reflFov(camFov)) / 2)) / Math.max(1, this.target.height);
+  }
+
   setSize(w: number, h: number): void {
     this.target.setSize(Math.max(1, w), Math.max(1, h));
   }
@@ -195,7 +217,7 @@ export class Water {
     rc.copy(cam, false);
     // a wider frustum than the main camera, so rippled lookups near the screen edges never
     // fall outside the reflection (clamping would smear the edge into vertical bars)
-    rc.fov = Math.min(150, cam.fov * 1.35);
+    rc.fov = Water.reflFov(cam.fov);
     rc.updateProjectionMatrix();
     const camPos = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);

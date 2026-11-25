@@ -8,7 +8,7 @@ const milestone = process.argv[2] ?? 'M1';
 const out = new URL(`../docs/screenshots/${milestone}/`, import.meta.url);
 mkdirSync(out, { recursive: true });
 
-const SHOTS = [
+const M1_SHOTS = [
   { name: 'dock-night', q: 'shot=dock-night' },
   { name: 'lake-dusk', q: 'shot=lake-dusk' },
   { name: 'dock-golden', q: 'shot=dock-golden' },
@@ -20,6 +20,21 @@ const SHOTS = [
   { name: 'settings', q: '', wait: 1500, action: async (page) => page.evaluate(() => window.__hotaru.ui.show('settings')) },
   { name: 'play-touch-hud', q: 'play=1', touch: true, wait: 2500 },
 ];
+
+const M2_SHOTS = [
+  { name: 'dock-night', q: 'shot=dock-night' },
+  { name: 'lake-dusk', q: 'shot=lake-dusk' },
+  { name: 'castle-view', q: 'shot=castle-view' },
+  { name: 'maple-golden', q: 'shot=maple-golden' },
+  { name: 'cedar-forest', q: 'shot=cedar-forest' },
+  { name: 'coast-day', q: 'shot=coast-day' },
+  { name: 'snow-pass', q: 'shot=snow-pass' },
+  { name: 'rice-valley', q: 'shot=rice-valley' },
+  { name: 'flyover', q: 'shot=flyover' },
+  { name: 'dock-day', q: 'shot=dock-day' },
+];
+
+const SHOTS = milestone === 'M1' ? M1_SHOTS : M2_SHOTS;
 
 const server = await serve();
 const browser = await launch();

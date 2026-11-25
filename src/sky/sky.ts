@@ -88,7 +88,9 @@ void main(){
       vec3 right = normalize(cross(md, vec3(0.0, 1.0, 0.0)));
       vec3 up = cross(right, md);
       vec2 q = vec2(dot(d - md, right), dot(d - md, up)) / mr;
-      float lit = step(uMoonPhase, q.x * 0.5 + 0.5 + sqrt(max(0.0, 1.0 - q.y * q.y)) * 0.0);
+      // phase: 0 new → 0.5 full → 1 new; waxing lit from the right, waning from the left
+      float side = uMoonPhase < 0.5 ? q.x : -q.x;
+      float lit = step(cos(6.2831853 * uMoonPhase) * sqrt(max(0.0, 1.0 - q.y * q.y)), side);
       float crater = step(0.62, vnoise(floor(q * 6.0) + 4.0));
       vec3 mc = mix(vec3(1.25, 1.22, 1.08), vec3(0.95, 0.95, 1.0), crater) * (0.85 + 0.15 * q.y);
       c = mix(c, mc * 1.6, max(lit, 0.08) * smoothstep(0.0, 0.08, md.y + 0.05));
@@ -163,14 +165,14 @@ export function createBackdrop(seed: number, center = new THREE.Vector2(0, 0)): 
     { r: 14000, h: 1300, v: 1700 },
     { r: 17000, h: 1700, v: 2200 },
   ];
-  const SEG = 360;
+  const SEG = 900;
   const pos: number[] = [], layerA: number[] = [], topA: number[] = [], idx: number[] = [];
   layers.forEach((L, li) => {
     const base = pos.length / 3;
     for (let s = 0; s <= SEG; s++) {
       const a = (s / SEG) * Math.PI * 2;
       const x = center.x + Math.cos(a) * L.r, z = center.y + Math.sin(a) * L.r;
-      const ridge = n.ridged2(Math.cos(a) * 3 + li * 7, Math.sin(a) * 3 + li * 3, 5);
+      const ridge = 0.35 + 0.65 * (n.fbm2(Math.cos(a) * 4 + li * 7, Math.sin(a) * 4 + li * 3, 5) * 0.5 + 0.5) + 0.25 * n.ridged2(Math.cos(a) * 9 + li, Math.sin(a) * 9, 3);
       // taller to the north, a gap towards the sea in the east (SPEC §6.15)
       const north = 0.6 + 0.6 * Math.max(0, -Math.sin(a));
       const east = 1 - 0.95 * Math.exp(-(((a - 0) / 0.5) ** 2)) - 0.95 * Math.exp(-(((a - Math.PI * 2) / 0.5) ** 2));

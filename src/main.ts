@@ -191,6 +191,8 @@ async function boot(): Promise<void> {
     }
     if (params.hour !== undefined) { clock.setHour(params.hour); game.pipeline.buildLutNow(params.hour); }
     clock.paused = true;
+    // stream the world around the shot before reporting ready
+    await game.world.preload(game.controller.position);
   } else if (params.play) startPlay(state.save !== null);
   else { state.mode = 'title'; game.startDrift(); ui.show('title'); }
   if (params.freeze !== undefined) game.frozenElapsed = params.freeze;

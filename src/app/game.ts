@@ -4,7 +4,7 @@ import { PixelPipeline } from '../render/pipeline';
 import { GameWorld } from '../scene/gameWorld';
 import { Controller } from '../player/controller';
 import { InputState } from '../player/input';
-import { createTodState, evaluateTod, type TodState } from '../sky/timeOfDay';
+import { createTodState, evaluateTod, moonPhase, type TodState } from '../sky/timeOfDay';
 import { U } from '../render/uniforms';
 import { clock } from '../core/clock';
 import { QUALITY, type Quality, type QualityName } from '../config';
@@ -27,6 +27,8 @@ export class Game {
   private driftT = 0;
   stats = { drawCalls: 0, triangles: 0, frameMs: 0 };
   windStrength = 0.5;
+  /** Cloud cover 0..1 (until the weather system in M6). */
+  cloudCover = 0.45;
 
   constructor(readonly canvas: HTMLCanvasElement, seed: number, quality: QualityName) {
     this.quality = QUALITY[quality];
@@ -111,7 +113,11 @@ export class Game {
     if (this.controller.mode === 'drift') this.updateDrift(dt);
     else this.controller.update(dt, this.input);
 
-    evaluateTod(clock.hour, this.tod);
+    // M1 look shots use a full moon; the running game follows the 8-day cycle
+    const phase = this.frozenElapsed !== null ? 0.5 : moonPhase(clock.day + 4, clock.hour);
+    this.world.sky.uniforms.uMoonPhase.value = phase;
+    evaluateTod(clock.hour, this.tod, phase);
+    U.uCloudCover.value = this.cloudCover * (this.tod.stars > 0.5 ? 0.6 : 1);
     this.applyTod();
 
     // wind: calm at dusk (mirror lake), a light breeze otherwise
@@ -135,7 +141,9 @@ export class Game {
       this.pipeline.shift.set(((c.yaw - yaw) / q), -((c.pitch - pitch) / q));
       this.pipeline.ditherOffset.set(-yi, pi);
       // reflections render at a lower resolution: snap them to whole reflection texels
-      const rq = q / this.quality.reflectionScale;
+      const H = this.pipeline.height, M = 2;
+      const renderFov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * (H + 2 * M) / H));
+      const rq = this.world.water.texelAngle(renderFov);
       Object.assign(this.pipeline.reflectAngles, { yaw: Math.round(c.yaw / rq) * rq, pitch: Math.round(c.pitch / rq) * rq, use: true });
     } else {
       this.pipeline.shift.set(0, 0);

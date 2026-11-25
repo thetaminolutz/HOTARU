@@ -60,7 +60,7 @@ void main(){
   float mat = 0.0;
 
   // --- forest: floor near the camera (trees stand on it), painted canopy far away
-  float treeLine = smoothstep(1100.0, 850.0, P.y);
+  float treeLine = smoothstep(1050.0, 750.0, P.y);
   float fMask = step(0.42 + 0.12 * (td - 0.5), forest * treeLine * (0.8 + 0.5 * fbm(P.xz * 0.01 + 5.0)));
   float canopyT = smoothstep(uTreeRadius * 0.75, uTreeRadius, dist);
   vec3 floorC = mix(lin(vec3(0.3, 0.26, 0.18)), lin(vec3(0.42, 0.3, 0.18)), autumn) * detail(autumn > 0.5 ? 7.0 : 1.0, uv);
@@ -81,9 +81,13 @@ void main(){
   ao *= mix(1.0, 0.7, fMask * (1.0 - canopyT)); // darker under the trees
 
   // --- specials
-  if (sp == 1.0 && spW > 0.25) { // rice terraces: golden rice in autumn, water-mud edges
-    vec3 rice = mix(lin(vec3(0.72, 0.6, 0.26)), lin(vec3(0.62, 0.5, 0.2)), step(0.5, vnoise(P.xz * 0.8)));
-    col = mix(col, rice * detail(0.0, uv * 2.0), step(0.5 + 0.2 * (td - 0.5), spW) * (1.0 - fMask));
+  if (sp == 1.0 && spW > 0.25) { // rice terraces: golden rice in autumn, green bunds at every step
+    vec3 rice = mix(lin(vec3(0.66, 0.56, 0.28)), lin(vec3(0.56, 0.5, 0.24)), step(0.5, vnoise(P.xz * 0.8)));
+    float stepF = fract(P.y / 2.4);
+    float bund = step(0.88, stepF) + step(0.4, slope);
+    vec3 bundC = lin(vec3(0.3, 0.42, 0.2)) * detail(0.0, uv);
+    vec3 terr = mix(rice * detail(0.0, uv * 2.0), bundC, clamp(bund, 0.0, 1.0));
+    col = mix(col, terr, step(0.5 + 0.2 * (td - 0.5), spW) * (1.0 - fMask));
   }
   if (sp == 6.0 && spW > 0.25) { // tea rows: round dark-green bushes in contour lines
     float row = step(0.45, fract(P.y * 0.9 + vnoise(P.xz * 0.05) * 0.5));
@@ -107,9 +111,9 @@ void main(){
   col = mix(col, rockC, step(0.5 + 0.12 * (td - 0.5), smoothstep(0.4, 0.62, slope)));
 
   // --- snow high up (and in the snowy pass lower down)
-  float snowLine = sp == 3.0 ? 620.0 - 200.0 * spW : 900.0;
+  float snowLine = sp == 3.0 ? 700.0 - 200.0 * spW : 1000.0;
   float snow = step(0.5 + 0.2 * (td - 0.5), smoothstep(snowLine, snowLine + 140.0, P.y + 70.0 * (patchN - 0.5)) * (1.0 - smoothstep(0.72, 0.9, slope)));
-  col = mix(col, lin(vec3(0.86, 0.87, 0.95)) * detail(3.0, uv), snow);
+  col = mix(col, lin(vec3(0.74, 0.76, 0.84)) * detail(3.0, uv), snow);
 
   // --- shores: sand and pebbles, wet darkening just above the water; sea beaches wider
   float beach = sp == 2.0 ? 4.0 : 0.75;
@@ -118,6 +122,10 @@ void main(){
   col = mix(col, sand, shore * (1.0 - snow));
   col = mix(col, col * 0.62, 1.0 - step(0.25 + 0.1 * td, P.y));
   col = mix(col, lin(vec3(0.24, 0.24, 0.22)) * detail(5.0, uv), 1.0 - step(-0.6, P.y));
+
+  // macro variation so wide slopes never read as smooth plastic: broad light/dark patches
+  float macro = fbm(P.xz * 0.03 + 7.0);
+  col *= 0.86 + 0.28 * step(0.5 + 0.1 * (td - 0.5), macro) + 0.08 * (vnoise(P.xz * 0.15) - 0.5);
 
   vec3 c = shade(col, N, P, 0.0, ao, 0.0);
   c = applyFog(c, P);

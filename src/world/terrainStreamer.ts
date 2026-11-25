@@ -1,5 +1,5 @@
 /**
- * Quadtree terrain streaming (SPEC §5 streaming, §28): every node is a 32×32 grid built in a
+ * Quadtree terrain streaming (SPEC §5 streaming, §28): every node is a 64×64 grid built in a
  * worker. Nodes split by distance (screen-space-error style) so the ground near the camera
  * has 2 m cells and the horizon a few large nodes. A node is drawn only when all four
  * children are ready — no holes, no overlaps. Every node is frustum-culled (draw only what
@@ -13,7 +13,7 @@ import { EXTENT } from './data/regions';
 type NodeData = { pos: Float32Array; nor: Float32Array; bio: Float32Array; grass: Float32Array; spec: Float32Array; minY: number; maxY: number };
 type Node = { key: string; x0: number; z0: number; size: number; level: number; mesh: THREE.Mesh | null; loading: boolean; lastUsed: number };
 
-const MIN_SIZE = 64;
+const MIN_SIZE = 128;
 
 export class TerrainStreamer {
   readonly group = new THREE.Group();

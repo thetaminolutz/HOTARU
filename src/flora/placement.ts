@@ -62,12 +62,12 @@ export function placeTrees(w: World, x0: number, z0: number, size: number): Reco
     if (h < 0.9 || h > 1500) continue;
     const e = 2;
     const slope = Math.hypot(w.height(px + e, pz) - w.height(px - e, pz), w.height(px, pz + e) - w.height(px, pz - e)) / (2 * e);
-    if (slope > 0.75) continue;
+    if (slope > 1.2) continue;
     if (keepOpen(px, pz)) continue;
     w.biome(px, pz, b);
     // treeline: fewer trees high up, none on snowy peaks
-    const alt = h > 900 ? 0 : h > 650 ? 0.35 : 1;
-    let dens = b.forest * b.forest * 1.15 * alt;
+    const alt = h > 1050 ? 0 : h > 750 ? 1 - (h - 750) / 300 : 1;
+    let dens = Math.pow(b.forest, 1.3) * 1.25 * alt;
     if (b.special === 1 && b.specialW > 0.4) dens *= 0.15; // rice terraces stay open
     if (b.special === 6 && b.specialW > 0.4) dens *= 0.1; // tea rows
     if (b.special === 7 && b.specialW > 0.4) dens *= 0.2; // marsh
@@ -76,7 +76,7 @@ export function placeTrees(w: World, x0: number, z0: number, size: number): Reco
     const reg = w.regionAt(px, pz);
     const mix = MIX[reg >= 0 ? REGIONS[reg]!.id : 'none'] ?? MIX.none!;
     let id = pick(mix, u2);
-    if (h > 700 && id !== 'fir' && id !== 'birch') id = u3 < 0.7 ? 'fir' : 'pine';
+    if (h > 800 && id !== 'fir' && id !== 'birch') id = u3 < 0.7 ? 'fir' : 'pine';
     (lists[id] ??= []).push(px, h, pz, 0.72 + u3 * 0.6, u4 * Math.PI * 2);
   }
   // the hand-placed framing trees of the M1 dock (reference 1's maple over the boathouse)

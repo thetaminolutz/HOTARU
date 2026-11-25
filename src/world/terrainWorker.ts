@@ -6,7 +6,7 @@
 import { createWorld, type World } from './heightfield';
 import { placeTrees } from '../flora/placement';
 
-export const RES = 32;
+export const RES = 64;
 
 type NodeReq = { kind: 'node'; id: number; seed: number; x0: number; z0: number; size: number };
 type TreeReq = { kind: 'trees'; id: number; seed: number; x0: number; z0: number; size: number };

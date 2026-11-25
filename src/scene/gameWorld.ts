@@ -21,6 +21,8 @@ import { createNoise } from '../core/noise';
 import { createRng } from '../core/rng';
 import { srgbToLinear } from '../render/color';
 import type { Quality } from '../config';
+import { registerPoi } from '../secrets/poi';
+import { REGIONS } from '../world/data/regions';
 
 export class GameWorld {
   readonly scene = new THREE.Scene();
@@ -46,6 +48,7 @@ export class GameWorld {
     this.steps.push(() => {
       this.terrainMaterial = createTerrainMaterial(terrainTextureArray());
       this.terrain = new TerrainStreamer(this.pool, seed, this.terrainMaterial);
+      this.terrain.splitFactor = quality.name === 'low' ? 0.8 : quality.name === 'high' ? 1.3 : 1.0;
       this.scene.add(this.terrain.group);
     });
     this.steps.push(() => {
@@ -64,6 +67,11 @@ export class GameWorld {
     });
     this.steps.push(() => {
       this.dock = new DockScene(this.world.height, glow);
+      for (const r of REGIONS) registerPoi({ x: r.x, z: r.z, kind: 'region', name: r.sub });
+      for (const [k, v] of Object.entries(this.dock.anchors)) registerPoi({ x: v.x, z: v.z, kind: 'dock', name: k });
+      registerPoi({ x: -150, z: 40, kind: 'island', name: 'Wooded island' });
+      registerPoi({ x: 140, z: -30, kind: 'island', name: 'Island of the lone pine' });
+      registerPoi({ x: -10, z: -150, kind: 'island', name: 'Little island' });
       this.scene.add(this.dock.group);
       this.water.boats = this.dock.boats;
     });
@@ -125,7 +133,7 @@ export class GameWorld {
     if (!this.forest) return;
     this.forest.radius = q.name === 'low' ? 450 : q.name === 'high' ? 1000 : 700;
     this.terrainMaterial.uniforms.uTreeRadius!.value = this.forest.radius;
-    this.terrain.splitFactor = q.name === 'low' ? 1.3 : q.name === 'high' ? 2.0 : 1.7;
+    this.terrain.splitFactor = q.name === 'low' ? 0.8 : q.name === 'high' ? 1.3 : 1.0;
   }
 
   /** Per-frame streaming around the camera. */

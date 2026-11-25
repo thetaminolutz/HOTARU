@@ -65,7 +65,9 @@ export const FOG_FN = /* glsl */ `
 vec3 applyFog(vec3 col, vec3 P){
   vec3 D = P - uCamPos;
   float d = length(D);
-  float f = 1.0 - exp(-d * uFog);
+  // fog thins with altitude: integrate an exponential height profile along the ray
+  float hAvg = max(0.5 * (uCamPos.y + P.y), 0.0);
+  float f = 1.0 - exp(-d * uFog * exp(-hAvg / 700.0));
   float hf = uHeightFog * exp(-max(P.y, 0.0) * 0.05) * (1.0 - exp(-d * 0.002));
   f = clamp(f + hf * 0.3, 0.0, 0.92);
   vec3 dir = D / max(d, 1e-3);
@@ -84,6 +86,15 @@ uniform vec4 uLightPos[MAX_LIGHTS];
 uniform vec4 uLightCol[MAX_LIGHTS];
 uniform int uLightCount;
 uniform float uSmoothLight;
+uniform float uCloudCover;
+
+/** Moving cloud shadows: a cloud layer ~600 m up, projected along the light. */
+float cloudShadow(vec3 P){
+  if (uCloudCover < 0.01) return 1.0;
+  vec2 q = (P.xz + uKeyDir.xz / max(uKeyDir.y, 0.2) * (600.0 - P.y)) * 0.0014 + uTime * vec2(0.0035, 0.0012);
+  float c = fbm(q) + 0.25 * vnoise(q * 4.0);
+  return mix(1.0, 0.42, step(0.92 - 0.42 * uCloudCover, c));
+}
 
 /** Soft-edged banded ramp: light falls in painterly steps. */
 float band(float x, float n){
@@ -125,7 +136,7 @@ vec3 pointLights(vec3 P, vec3 N, float wrap){
 vec3 shade(vec3 albedo, vec3 N, vec3 P, float sss, float ao, float wrap){
   vec3 V = normalize(uCamPos - P);
   float ndl = dot(N, uKeyDir) * (1.0 - wrap) + wrap;
-  float sh = shadowAt(P, N);
+  float sh = shadowAt(P, N) * cloudShadow(P);
   float lit = mix(band(ndl, uBands), clamp(ndl, 0.0, 1.0), uSmoothLight) * sh;
   vec3 hemi = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5);
   vec3 amb = (hemi + uShadowTint * (1.0 - lit) * 0.5) * ao;

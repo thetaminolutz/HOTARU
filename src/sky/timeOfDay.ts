@@ -49,7 +49,12 @@ export function createTodState(): TodState {
 const tmpA = new THREE.Color(), tmpB = new THREE.Color();
 function setLin(col: THREE.Color, hex: string) { const [r, g, b] = hexToLinear(hex); return col.setRGB(r, g, b, THREE.LinearSRGBColorSpace); }
 
-export function evaluateTod(hour: number, s: TodState): TodState {
+/** Moon phase 0..1 (0 new, 0.5 full) over an 8-day cycle (SPEC §3.7: 8 phases). */
+export function moonPhase(day: number, hour: number): number {
+  return (((day + hour / 24) / 8) % 1 + 1) % 1;
+}
+
+export function evaluateTod(hour: number, s: TodState, phase = 0.5): TodState {
   const h = wrapHour(hour);
   let i = 0;
   while (i < TOD_KEYS.length - 2 && TOD_KEYS[i + 1]!.hour <= h) i++;
@@ -75,7 +80,9 @@ export function evaluateTod(hour: number, s: TodState): TodState {
     s.keyColor.copy(sunCol).multiplyScalar(sunI);
   } else {
     s.keyDir.copy(s.moonDir);
-    s.keyColor.setRGB(0.42, 0.5, 0.85, THREE.LinearSRGBColorSpace).multiplyScalar(moonI);
+    // the full moon lights the scene noticeably more than a crescent
+    const full = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2);
+    s.keyColor.setRGB(0.42, 0.5, 0.85, THREE.LinearSRGBColorSpace).multiplyScalar(moonI * (0.35 + 0.65 * full));
   }
   const ambI = num('ambI');
   s.ambSky.multiplyScalar(ambI); s.ambGround.multiplyScalar(ambI);

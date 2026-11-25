@@ -29,7 +29,7 @@ export type RegionDef = {
 export const REGIONS: RegionDef[] = [
   { id: 'lake', name: 'Tomoshibi-ko', sub: 'Lantern Lake', x: 0, z: 0, r: 900, base: 4, hill: 18, ridge: 0, forest: 0.45, moisture: 0.6, autumn: 0.75, special: 0, grass: '#7a8a3e' },
   { id: 'castle', name: 'Kagejō', sub: 'The Old Castle', x: -150, z: -1250, r: 650, base: 160, hill: 60, ridge: 420, forest: 0.6, moisture: 0.55, autumn: 0.7, special: 0, grass: '#6e7c3c' },
-  { id: 'maple', name: 'Momijiyama', sub: 'Autumn Maple Mountains', x: -2600, z: -2300, r: 1400, base: 220, hill: 120, ridge: 650, forest: 0.85, moisture: 0.6, autumn: 1, special: 0, grass: '#7a7a36' },
+  { id: 'maple', name: 'Momijiyama', sub: 'Autumn Maple Mountains', x: -2600, z: -2300, r: 1400, base: 140, hill: 120, ridge: 420, forest: 0.85, moisture: 0.6, autumn: 1, special: 0, grass: '#7a7a36' },
   { id: 'snow', name: 'Yukemuri', sub: 'Snowy High Pass', x: -400, z: -4100, r: 1300, base: 520, hill: 140, ridge: 700, forest: 0.45, moisture: 0.5, autumn: 0.2, special: 3, grass: '#5e6e4a' },
   { id: 'volcano', name: 'Hinoyama', sub: 'The Quiet Volcano', x: 1900, z: -4200, r: 1200, base: 120, hill: 40, ridge: 80, forest: 0.15, moisture: 0.2, autumn: 0.1, special: 4, grass: '#5a5a3a' },
   { id: 'cedar', name: 'Kirisugi', sub: 'Misty Cedar Forest', x: -3500, z: -200, r: 1300, base: 90, hill: 90, ridge: 160, forest: 1, moisture: 0.95, autumn: 0.05, special: 0, grass: '#3e6a3a' },
@@ -42,7 +42,7 @@ export const REGIONS: RegionDef[] = [
   { id: 'marsh', name: 'Ashihara', sub: 'Reed Marsh', x: 3700, z: 1700, r: 900, base: 1.5, hill: 2, ridge: 0, forest: 0.05, moisture: 1, autumn: 0.3, special: 7, grass: '#7a8a3a' },
   { id: 'temple', name: 'Kumoji', sub: 'Mountain Temple', x: 2800, z: -2700, r: 900, base: 260, hill: 120, ridge: 380, forest: 0.8, moisture: 0.75, autumn: 0.55, special: 0, grass: '#5e7a3e' },
   { id: 'ginkgo', name: 'Ichōdai', sub: 'Ginkgo Plateau', x: -1500, z: -3000, r: 900, base: 300, hill: 30, ridge: 40, forest: 0.35, moisture: 0.45, autumn: 0.9, special: 0, grass: '#8a8a40' },
-  { id: 'mirror', name: 'Kagami-ike', sub: 'Mirror Lakes', x: -3800, z: -3700, r: 900, base: 380, hill: 90, ridge: 260, forest: 0.6, moisture: 0.8, autumn: 0.7, special: 0, grass: '#5e7e44' },
+  { id: 'mirror', name: 'Kagami-ike', sub: 'Mirror Lakes', x: -3800, z: -3700, r: 900, base: 300, hill: 90, ridge: 200, forest: 0.6, moisture: 0.8, autumn: 0.7, special: 0, grass: '#5e7e44' },
   { id: 'hydrangea', name: 'Ajisaiyama', sub: 'Hydrangea Hills', x: -1300, z: 2300, r: 800, base: 50, hill: 80, ridge: 50, forest: 0.45, moisture: 0.95, autumn: 0.2, special: 0, grass: '#4e8a46' },
   { id: 'sunflower', name: 'Hanano', sub: 'Sunflower & Cosmos Fields', x: 2900, z: 3000, r: 800, base: 15, hill: 18, ridge: 0, forest: 0.08, moisture: 0.55, autumn: 0.3, special: 0, grass: '#8a9a3e' },
   { id: 'pampas', name: 'Susukihara', sub: 'The Pampas Moor', x: 600, z: -2600, r: 900, base: 140, hill: 40, ridge: 30, forest: 0.08, moisture: 0.3, autumn: 0.8, special: 0, grass: '#a09a5a' },

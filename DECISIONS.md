@@ -78,3 +78,43 @@ Non-obvious decisions and why. Newest at the bottom.
   double-tap/squeeze, and the iPad Air M1 has no hover. So: M3 makes the Pencil a precise
   pointer with its own pixel brush cursor; M11 adds pressure/tilt drawing (sketchbook,
   journal, map).
+
+## M2
+
+- **World = authored region map + noise:** 20 regions from SPEC §6/§6.15 (`src/world/data/regions.ts`)
+  blend by domain-warped Gaussian weights. Mountains are broad squared-fbm massifs with soft
+  ridges (pure ridged noise gave spires). Landmarks are sculpted on top: Lantern Lake (the M1
+  shoreline, dock and islands kept exactly), the volcano cone and crater, the eastern sea with
+  cliffs, the gull island, and border ranges outside the 10 km playable square (generated out
+  to ±8 km so they're always on the horizon). Land outside the lake/sea is clamped above the
+  water line so no accidental floods appear before hydrology (M4).
+- **Quadtree terrain, 64×64 nodes:** four 8 km roots, nodes split by distance (split factor
+  0.8 / 1.0 / 1.3 per preset), min node 128 m → 2 m cells at the player. A node is drawn only
+  when all four children are ready (no holes, no overlaps). Skirts hide LOD cracks and face
+  outwards (terrain is front-side only: from below, in the mirror, it must not be seen).
+  64-cell nodes instead of 32 cut draw calls ~4× at equal detail.
+- **Workers:** 1–3 terrain workers (hardware concurrency − 1) build nodes and tree tiles from
+  the same pure height/biome functions as the main thread; jobs are prioritised nearest first.
+- **Biome attributes per vertex** (forest, moisture, autumn, baked AO, grass tint, special
+  feature) drive the terrain shader: meadow tint per region, forest floor near the camera vs.
+  painted canopy beyond tree range, rice terraces with bunds, tea rows, volcanic sand,
+  marsh, cliffs (tri-planar rock), snow line per region, beaches. Detail comes from a
+  greyscale pixel texture array (8 × 32², 16 texels/m) tinted per material.
+- **Trees stream in 256 m tiles** within 450 / 700 / 1000 m; tiles nearer than 220 m use the
+  full cluster layout with trunks and shadows, farther tiles a third of the clusters (bigger)
+  and no shadows. Beyond tree range, forests are painted on the terrain. Species mix per
+  region (cedar, bamboo, cherry, ginkgo, birch added).
+- **Reflections only near water:** the planar reflection re-renders the scene, so it runs only
+  near Lantern Lake or the sea; elsewhere water shows the reflected sky (SPEC §3.8 fallback).
+  Grass, trunks and far tree LODs are skipped in the mirror. The reflection camera has a 35 %
+  wider frustum so rippled lookups never clamp at the edge (that produced vertical bars), and
+  its rotation snaps to whole reflection texels.
+- **Fog thins with altitude** (exponential height profile along the ray): valleys hazy,
+  fly-overs clear, distant ranges as pastel layers.
+- **Lighting:** baked per-vertex terrain AO, darker forest floors, moving cloud shadows on
+  everything lit, 8 moon phases with moonlight scaled by fullness.
+- **Debug:** world map with click-teleport, region list, POI-density heatmap (POI registry in
+  `src/secrets/poi.ts`), per-pass draw counts, terrain/forest streaming stats.
+- **Stability test runs with bloom off:** bloom re-samples on its own half-res grid, so a
+  one-pixel turn changes bloom pixels; the core guarantee (sub-pixel turns change nothing) is
+  unchanged and tested with everything on.

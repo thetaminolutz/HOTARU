@@ -13,8 +13,8 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | # | Milestone | Status | Screenshots | iPad benchmark (Medium) |
 |---|---|---|---|---|
 | M1 | Foundations & THE LOOK prototype | ✅ Done | [M1](docs/screenshots/M1/) | pending (run on iPad) |
-| M2 | Terrain & world streaming | 🔨 In progress | — | — |
-| M3 | Player controller & controls | ⬜ Not started | — | — |
+| M2 | Terrain & world streaming | ✅ Done | [M2](docs/screenshots/M2/) | pending (run on iPad) |
+| M3 | Player controller & controls | 🔨 In progress | — | — |
 | M4 | Water | ⬜ Not started | — | — |
 | M5 | Vegetation, wind & particles | ⬜ Not started | — | — |
 | M6 | Regions, weather & seasons | ⬜ Not started | — | — |
@@ -30,6 +30,28 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M2 at a glance
+
+A 10 km world (16 km with the border ranges) streamed around the player: 20 regions from
+the spec, a quadtree terrain built in Web Workers, forests streamed in tiles, and only what
+is visible gets drawn.
+
+| Lantern Lake from the castle mountain | Mirror lake at dusk |
+|---|---|
+| ![](docs/screenshots/M2/castle-view.png) | ![](docs/screenshots/M2/lake-dusk.png) |
+| **Maple mountains, golden hour** | **High over the world** |
+| ![](docs/screenshots/M2/maple-golden.png) | ![](docs/screenshots/M2/flyover.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 33 passed (incl. chunk-hash determinism, tree placement) |
+| Offline boot + save load | ✅ |
+| Pixel stability | ✅ |
+| Draw calls (headless benchmark path, all passes) | Low 232 · Medium 278 · High 352 (budget < 400) |
+| Triangles (all passes: shadow + reflection + main) | Low 1.22 M · Medium 1.54 M · High 1.91 M |
+| Download size | 853 KB |
+| iPad benchmark | ⏳ needs a run on the iPad |
 
 ### M1 at a glance
 

@@ -25,11 +25,11 @@ export const TREE_SPECIES: TreeSpecies[] = [
   },
   {
     id: 'larch', name: 'Golden larch', shape: 'cone', height: 12, radius: 2.4, trunkHeight: 1.6, trunkRadius: 0.2,
-    clusters: 16, clusterSize: [1.5, 2.4], colors: ['#e8b84a', '#d9a03a', '#f0c860', '#d08a32'], trunkColor: '#3a2c24', sway: 0.08,
+    clusters: 22, clusterSize: [1.8, 2.8], colors: ['#e8b84a', '#d9a03a', '#f0c860', '#d08a32'], trunkColor: '#3a2c24', sway: 0.08,
   },
   {
     id: 'fir', name: 'Fir', shape: 'cone', height: 13, radius: 2.6, trunkHeight: 1.4, trunkRadius: 0.24,
-    clusters: 16, clusterSize: [1.6, 2.6], colors: ['#2f5a4a', '#2a4e40', '#355e48', '#264638'], trunkColor: '#2a2024', sway: 0.06,
+    clusters: 24, clusterSize: [2.0, 3.0], colors: ['#2f5a4a', '#2a4e40', '#355e48', '#264638'], trunkColor: '#2a2024', sway: 0.06,
   },
   {
     id: 'pine', name: 'Black pine (kuromatsu)', shape: 'pads', height: 9, radius: 3.4, trunkHeight: 4.5, trunkRadius: 0.26,
@@ -41,7 +41,7 @@ export const TREE_SPECIES: TreeSpecies[] = [
   },
   {
     id: 'cedar', name: 'Japanese cedar (sugi)', shape: 'cone', height: 26, radius: 3.4, trunkHeight: 5, trunkRadius: 0.55,
-    clusters: 20, clusterSize: [2.2, 3.4], colors: ['#2a4a3c', '#24423a', '#2e5040', '#203a32'], trunkColor: '#4a2e26', sway: 0.03,
+    clusters: 36, clusterSize: [3.0, 4.4], colors: ['#34584a', '#2e5244', '#3a6050', '#2a4a3e'], trunkColor: '#5a3a2e', sway: 0.03,
   },
   {
     id: 'cherry', name: 'Cherry (sakura), autumn leaves', shape: 'dome', height: 7.5, radius: 4.2, trunkHeight: 2.6, trunkRadius: 0.24,
