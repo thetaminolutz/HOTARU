@@ -20,6 +20,7 @@
     "e2e:water": "node scripts/water-test.mjs",
     "e2e:people": "node scripts/people-test.mjs",
     "e2e:secrets": "node scripts/secrets-test.mjs",
+    "e2e:items": "node scripts/items-test.mjs",
     "audio:samples": "node scripts/audio-samples.mjs"
   },
   "dependencies": {
