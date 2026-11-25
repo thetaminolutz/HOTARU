@@ -54,6 +54,7 @@ export class Adventure {
   /** the garden: planted day per plot (−1 empty) */
   garden: number[] = [-1, -1, -1, -1];
   private gardenMesh: THREE.Mesh | null = null;
+  private gardenTop = 0;
   private gardenDay = -1;
   private gardenMat = litMaterial({ outline: true });
   private revealT = 0;
@@ -182,7 +183,21 @@ export class Adventure {
 
   private buildGarden(): void {
     if (this.gardenMesh) { this.g.world.scene.remove(this.gardenMesh); this.gardenMesh.geometry.dispose(); }
-    const P = this.gardenPos, parts: THREE.BufferGeometry[] = [boxUV(3.2, 0.12, 1.4, 1, [0.36, 0.26, 0.18]).translate(P.x, P.y + 0.04, P.z)];
+    // a raised bed: a plank frame that reaches down to the lowest corner of the slope, soil on top
+    const G = this.g.world, P0 = this.gardenPos;
+    const hs = [[-1.7, -0.8], [1.7, -0.8], [-1.7, 0.8], [1.7, 0.8], [0, 0]].map(([dx, dz]) => G.world.height(P0.x + dx!, P0.z + dz!));
+    const top = Math.max(...hs) + 0.22, bottom = Math.min(...hs) - 0.15, hgt = top - bottom, mid = (top + bottom) / 2;
+    const P = new THREE.Vector3(P0.x, top - 0.1, P0.z);
+    const wood: [number, number, number] = [0.42, 0.3, 0.2];
+    const parts: THREE.BufferGeometry[] = [
+      boxUV(3.4, hgt, 0.1, 1, wood).translate(P.x, mid, P.z - 0.75), boxUV(3.4, hgt, 0.1, 1, wood).translate(P.x, mid, P.z + 0.75),
+      boxUV(0.1, hgt, 1.6, 1, wood).translate(P.x - 1.65, mid, P.z), boxUV(0.1, hgt, 1.6, 1, wood).translate(P.x + 1.65, mid, P.z),
+      boxUV(3.2, 0.06, 1.4, 1, [0.3, 0.21, 0.15]).translate(P.x, top - 0.07, P.z),
+    ];
+    this.gardenTop = top;
+    // you step around the bed (it's knee-high on the downhill side)
+    this.g.collision.remove('garden');
+    this.g.collision.addBox({ x0: P.x - 1.7, z0: P.z - 0.8, x1: P.x + 1.7, z1: P.z + 0.8, top: this.gardenTop + 0.3 }, 'garden');
     const cols: [number, number, number][] = [[0.9, 0.3, 0.35], [0.95, 0.8, 0.3], [0.6, 0.45, 0.85], [0.95, 0.95, 0.9]];
     this.garden.forEach((d, i) => {
       if (d < 0) return;

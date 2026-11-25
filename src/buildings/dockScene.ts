@@ -314,6 +314,8 @@ export class DockScene {
     });
     const line = new THREE.Line(lg, lmat);
     line.frustumCulled = false;
+    // a 1-px wire in the half-res, rippled reflection breaks into stray streaks on the water
+    line.userData.noReflect = true;
     this.group.add(line);
     const s: LanternString = { a: a.clone(), b: b.clone(), sag, line, lanterns: [] };
     for (let i = 0; i < count; i++) {

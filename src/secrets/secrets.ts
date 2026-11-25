@@ -145,7 +145,7 @@ export class Secrets {
       const { x, y, z } = s.pos, rot = s.yaw;
       if (s.kind === 'shrine') {
         // hokora: stone base, a small wooden house with a roof, an offering box
-        add('stone', boxUV(0.9, 0.5, 0.7, 1).translate(x, y + 0.25, z));
+        add('stone', boxUV(0.9, 0.9, 0.7, 1).translate(x, y + 0.05, z));
         add('wood', boxUV(0.6, 0.55, 0.5, 1).translate(x, y + 0.78, z));
         const roof = boxUV(0.95, 0.08, 0.8, 1); roof.rotateZ(0.3); add('wood', roof.translate(x - 0.2, y + 1.12, z));
         const roof2 = boxUV(0.95, 0.08, 0.8, 1); roof2.rotateZ(-0.3); add('wood', roof2.translate(x + 0.2, y + 1.12, z));
@@ -155,13 +155,21 @@ export class Secrets {
         this.ropes.set(s.id, mk(boxUV(0.7, 0.06, 0.06, 1).translate(x, y + 1.02, z + 0.27), this.M.rope));
         this.candles.set(s.id, mk(boxUV(0.06, 0.16, 0.06, 1).translate(x + 0.32, y + 0.58, z + 0.3), this.M.candle));
         this.flowers.set(s.id, mk(new THREE.SphereGeometry(0.1, 5, 4).toNonIndexed().translate(x - 0.3, y + 0.6, z + 0.3), this.M.flower));
+      } else if (s.kind === 'view' && (s.id === 'view-pier' || s.id === 'view-keep')) {
+        // the pier end and the keep balcony are their own seats: no stone bench on the boards
       } else if (s.kind === 'view') {
         // a flat stone bench to sit on
-        const g = boxUV(1.6, 0.42, 0.55, 1); g.rotateY(rot);
-        add('stone', g.translate(x, y + 0.21, z));
+        const g = boxUV(1.6, 0.82, 0.55, 1); g.rotateY(rot); // reaches into the ground on a slope
+        add('stone', g.translate(x, y + 0.01, z));
       } else if (s.kind === 'tablet') {
-        const g = boxUV(0.7, 1.1, 0.18, 1); g.rotateY(rot);
-        add('stone', g.translate(x, y + 0.5, z));
+        // a stele: a low base sunk into the ground, a slab with a rounded top, carved lines
+        const parts = [
+          boxUV(0.95, 0.55, 0.5, 1).translate(0, -0.05, 0),
+          boxUV(0.62, 0.82, 0.15, 1).translate(0, 0.62, 0),
+          new THREE.CylinderGeometry(0.31, 0.31, 0.15, 10, 1, false, 0, Math.PI).toNonIndexed().rotateX(Math.PI / 2).rotateZ(Math.PI / 2).rotateY(Math.PI / 2).translate(0, 1.03, 0),
+        ];
+        for (const p of parts) { p.rotateY(rot); add('stone', p.translate(x, y, z)); }
+        for (let k = 0; k < 4; k++) { const c = boxUV(0.035, 0.6 - (k % 2) * 0.15, 0.02, 1); c.translate(-0.18 + k * 0.12, 0.62, 0.08); c.rotateY(rot); add('wood', c.translate(x, y, z)); }
       }
     }
     for (const [k, list] of parts) {
