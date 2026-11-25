@@ -63,6 +63,8 @@ The villages are inhabited: **117 villagers** and **16 wanderers**. Among the wa
 |---|---|
 | Unit tests | ✅ 61 passed (518 distinct lines, schedules, first meeting vs. nickname, weather-aware talk) |
 | People e2e (`npm run e2e:people`) | ✅ 133 people; they move through the day, the lantern maker lights lanterns, umbrellas in rain, talking works and is remembered |
+| All e2e | ✅ offline, stability, controls, audio, houses, fauna, water, people |
+| Draw calls · triangles (Medium) | 334 · 1.65 M (everyone is one draw) |
 
 ### M6 at a glance (weather & seasons)
 
