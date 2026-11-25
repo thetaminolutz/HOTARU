@@ -173,7 +173,7 @@ Castle ruin (climbable keep), temple stairway & pagoda, caves, 50+ secrets, offe
 restoration, viewpoints with pan + haiku.
 ✅ A 1-hour session constantly finds new things.
 
-### M11 — Items, journal, map, photo, boats, fishing
+### M11 — Items, journal, map, photo, boats, fishing ✅
 Inventory (12 + tools), keepsakes/gifts, journal tabs, painted map reveal, photo mode,
 sketchbook, fishing, ferry, your house with garden & storage.
 

@@ -22,7 +22,7 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M8 | Fauna | ✅ Done | [M8](docs/screenshots/M8/) | pending (run on iPad) |
 | M9 | Villagers & wanderers | ✅ Done | [M9](docs/screenshots/M9/) | pending (run on iPad) |
 | M10 | Castle, shrines, caves & secrets | ✅ Done | [M10](docs/screenshots/M10/) | pending (run on iPad) |
-| M11 | Items, journal, map, photo, boats, fishing | 🔨 In progress | — | — |
+| M11 | Items, journal, map, photo, boats, fishing | ✅ Done | [M11](docs/screenshots/M11/) | pending (run on iPad) |
 | M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
 | M13 | Audio | ✅ Done | [M13](docs/screenshots/M13/) · [listen](docs/audio/) | pending (run on iPad) |
 | M14 | Polish, performance & release | ⬜ Not started | — | — |
@@ -30,6 +30,47 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M11 at a glance (items, journal, map, photos, boats, fishing)
+
+- **Pockets:** 12 keepsake slots plus tools that never take a slot.
+  - About 200 keepsakes lie around the world, 21 kinds in all: shells on the sand, smooth
+    stones on river banks, feathers in forests, flowers in meadows, and village finds.
+  - A few are hand-placed: the fox mask, the storehouse key, the star chart, the lost doll.
+  - Common finds grow back after a few days.
+- **Gifts:** every keepsake is liked by some kinds of people. A liked gift deepens the
+  friendship and sometimes earns a keepsake in return. Offering-type keepsakes count double
+  at shrines.
+- **Tools from people:** Akari gives you the lantern, Old Genzō the rod and then the boat,
+  the hermit the flute, the peddler the umbrella. The map, camera and sketchbook are yours
+  from the start.
+- **Lantern:** lights your way at night as a real light.
+- **The journal (J):** a washi notebook with tabs for Items (and your home chest), Places,
+  People (portraits and likes), Creatures (animals seen, fish with their best sizes),
+  Secrets (counts only), Haiku, Lore and the Album.
+- **The map (M):** painted in ink and watercolour from the real terrain.
+  - It reveals only where you've been, with soft dithered edges.
+  - Place names appear as you discover them.
+  - 8 stamps, zoom and pan.
+  - Draw on it with Apple Pencil; the line width follows pressure.
+- **Photo mode (P):**
+  - A free camera within 15 m, with FOV and roll.
+  - Palette filters (sepia, ukiyo-e print, ink, night blue) and frames (washi, polaroid,
+    scroll).
+  - Stop time, or take a self-portrait of the traveller in a straw hat.
+  - Photos go into the album. Save them to the iPad, or draw on them with the Pencil.
+- **Sketchbook:** the view turned into an ink-wash drawing on paper, with a red seal.
+- **Fishing:** cast at open water (F with the rod), watch the float, press on the bite and
+  hold to reel in.
+  - A missed bite comes back. There is no fail state.
+  - 30 species, by water, hour, season and rain; each catch is noted with its size and
+    then released.
+- **Boats:**
+  - Row the boat from the Tomoshibi pier: forward/back to row, left/right to steer.
+  - Step ashore at any pier or gentle bank.
+  - A ferry runs between Shiomachi and the lake every two hours.
+- **Your house:** the boathouse, with a storage chest on its engawa and a small garden
+  where seeds grow over days.
 
 ### M10 at a glance (castle, temple, caves & secrets)
 
@@ -376,10 +417,13 @@ triangles); frame times need the iPad run.
 | Jump | Space | jump token | — | A |
 | Interact · sit · lie · stand | E | interact token | tap the thing (also turns your view) | X / B |
 | Time-lapse (while sitting) | hold T | hold the hourglass token | — | hold Y |
+| Journal · map · photo | J · M · P | book · map · camera tokens, top right | write on the map / album | Back · d-pad ↑ · d-pad ↓ |
+| Use tool (lantern, rod, flute, umbrella) | F | tool token | — | RB |
+| Row a boat | WASD (forward/back rows, left/right steers) | koi stick | — | left stick |
 | Menu | Esc | lacquer token, top right | — | Start |
 | Debug panel | `` ` `` | three-finger tap | — | — |
 
-All keys can be rebound in Settings → Keys. Rowing arrives with boats in M11.
+All keys can be rebound in Settings → Keys. In photo mode Q / E roll the camera.
 
 ## Benchmark on the iPad
 

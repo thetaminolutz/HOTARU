@@ -392,3 +392,23 @@ Non-obvious decisions and why. Newest at the bottom.
   line in brush lettering. Discoveries play a short sting and show "Hidden shrines 3 of 23";
   found secrets, shrine restoration and the opened gate are saved.
 - Melody secrets and collections need the flute and journal (M11).
+
+## M11 (items, journal, map, photo, boats, fishing)
+
+- **M11 lives in `src/app/adventure.ts`, `photoMode.ts` and `screens.ts`,** not in game.ts,
+  which stays under the 600-line limit. The game calls `adv.update()` before the interact
+  handling, and that update can claim the interact press (fishing, leaving the boat).
+- **The rowboat is the dock's moored boat** (`dock.ride`). That way the water shader's boat
+  wakes and the bobbing come for free, and there is no second boat mesh.
+- **Fishing has no failure path at all:** a missed bite goes back to waiting, letting go of
+  the reel only slows progress, and there is no line to break. Every catch is released and
+  logged with its best size.
+- **Photo filters are applied after palette quantisation, in the pixel pass,** so photos stay
+  true pixel art. Album images are shrunk by a whole factor to at most 300 px (crisp pixels)
+  and stored as PNG data URLs in the save, capped at 60 pictures, so the save stays small.
+- **The map is painted once** (256² from the heightfield, about 0.2 s) when it is first
+  opened. The fog of war is a 160² grid saved as base64. Strokes and stamps are stored in
+  world coordinates.
+- **The tiny font gained a full set of capitals** for the journal tabs and map labels.
+- **Hands are shown as the held tool's pixel icon** in the lower right (lantern glow at
+  night), not as a 3D arm, for now.
