@@ -55,7 +55,12 @@ export class UIManager {
       const [x, y] = this.ui.toUI(e.clientX, e.clientY);
       const kind = e.pointerType === 'pen' ? 'pen' : e.pointerType === 'touch' ? 'touch' : 'mouse';
       if (kind === 'pen' || (kind === 'mouse' && !document.pointerLockElement)) this.cursor = { x, y, until: this.t + (kind === 'pen' ? 1.5 : 1e9) };
-      if (kind === 'pen' && this.screen === 'play') { this.penPointer(type, x, y, e.pointerId); return; }
+      if (kind === 'pen' && this.screen === 'play') {
+        // a Pencil tap on a token works like a finger; anywhere else the Pencil walks
+        if (type === 'down' && this.hud.touchMode && this.hud.hitsToken(x, y)) this.penOnHud = e.pointerId;
+        if (this.penOnHud === e.pointerId) { this.hud.pointer({ type, x, y, id: e.pointerId, kind: 'touch' }, this.ui, this.t); if (type === 'up') this.penOnHud = -1; return; }
+        this.penPointer(type, x, y, e.pointerId, e.pressure); return;
+      }
       this.pointer({ type, x, y, id: e.pointerId, kind, pressure: e.pressure });
     };
     canvas.addEventListener('pointerleave', () => { this.cursor = null; });
@@ -73,18 +78,43 @@ export class UIManager {
 
   show(s: ScreenName): void { this.screen = s; }
 
-  /** Apple Pencil while playing: tap = look there & interact, drag = precise look. */
-  private penPointer(type: Pointer['type'], x: number, y: number, id: number): void {
-    const p = this.pen;
-    if (type === 'down') { Object.assign(p, { id, x0: x, y0: y, x, y, dragged: false }); return; }
+  /**
+   * Apple Pencil while playing. Default ("move"): the Pencil is a floating walking stick —
+   * touch down anywhere and drag the way you want to go (press harder to jog), while your
+   * fingers look around; a quick tap still turns toward the thing and uses it. In "look" mode a
+   * Pencil drag looks around precisely instead.
+   */
+  penMode: 'move' | 'look' = 'move';
+  private penOnHud = -1;
+  /** the Pencil stick: −1..1 (x right, z forward), and whether it's held */
+  readonly penStick = { x: 0, z: 0, active: false, pressure: 0.5, x0: 0, y0: 0, px: 0, py: 0 };
+  private penT0 = 0;
+  private penPointer(type: Pointer['type'], x: number, y: number, id: number, pressure = 0.5): void {
+    const p = this.pen, S = this.penStick;
+    if (type === 'down') {
+      Object.assign(p, { id, x0: x, y0: y, x, y, dragged: false });
+      this.penT0 = this.t;
+      this.hud.penActive = true;
+      return;
+    }
     if (id !== p.id) return;
     if (type === 'move') {
       if (Math.hypot(x - p.x0, y - p.y0) > 3) p.dragged = true;
-      if (p.dragged) this.actions.penLook(x - p.x, y - p.y);
+      if (p.dragged) {
+        if (this.penMode === 'look') this.actions.penLook(x - p.x, y - p.y);
+        else {
+          // a stick of 20 UI pixels around where the Pencil came down; it follows if you go further
+          const R = 20; let dx = x - p.x0, dy = y - p.y0; const d = Math.hypot(dx, dy);
+          if (d > R) { p.x0 = x - (dx / d) * R; p.y0 = y - (dy / d) * R; dx = x - p.x0; dy = y - p.y0; }
+          Object.assign(S, { x: dx / R, z: -dy / R, active: true, pressure, x0: p.x0, y0: p.y0, px: x, py: y });
+        }
+      }
       p.x = x; p.y = y;
     } else {
-      if (!p.dragged) this.actions.penTap(x, y);
+      if (!p.dragged && this.t - this.penT0 < 0.6) this.actions.penTap(x, y);
       p.id = -1;
+      Object.assign(S, { x: 0, z: 0, active: false });
+      this.hud.penActive = false;
     }
   }
 

@@ -232,9 +232,15 @@ function loop(now: number): void {
   const frameMs = now - last;
   last = now;
   fps += (1000 / Math.max(1, frameMs) - fps) * 0.05;
-  if (state.mode === 'play' && ui.hud.touchMode) {
-    const v = ui.hud.stickVector();
-    game.input.touchMove.x = v.x; game.input.touchMove.z = v.z; game.input.touchMove.active = v.active;
+  ui.penMode = settings.penMode;
+  ui.hud.penStick = ui.penStick;
+  if (state.mode === 'play' && (ui.hud.touchMode || ui.penStick.active)) {
+    // the koi stick, or the Apple Pencil stick (press harder to jog)
+    const P = ui.penStick, v = P.active ? { x: P.x, z: P.z, active: true } : ui.hud.stickVector();
+    const k = P.active ? Math.min(1, Math.hypot(v.x, v.z)) * (P.pressure > 0.75 ? 1 : 0.9) : 1;
+    const len = Math.hypot(v.x, v.z) || 1;
+    game.input.touchMove.x = P.active ? (v.x / len) * k : v.x; game.input.touchMove.z = P.active ? (v.z / len) * k : v.z; game.input.touchMove.active = v.active;
+    if (P.active) game.input.lastDevice = 'pen';
     game.input.addLook(ui.hud.look.dx, ui.hud.look.dy, 0.012);
     ui.hud.look.dx = 0; ui.hud.look.dy = 0;
   }
