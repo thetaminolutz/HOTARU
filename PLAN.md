@@ -186,7 +186,7 @@ Mixer, HRTF spatial audio, reverb zones, generative music (all instruments, main
 ambience layering, all SFX.
 ✅ Eyes closed, you can tell region, time, season and weather.
 
-### M14 — Polish, performance & release
+### M14 — Polish, performance & release ✅
 Presets + auto quality, full settings & accessibility, save robustness/export, title
 and loading screens final, diegetic tutorial hints, iPad perf passes, README final.
 
