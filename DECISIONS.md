@@ -362,3 +362,33 @@ Non-obvious decisions and why. Newest at the bottom.
   different stop each day); per-character stories, gifts, festivals and named-character quests
   come with M11/M12. Headless tests step the village simulation directly, since software GL runs
   at ~1 fps there.
+
+## M10
+
+- **Landmarks are sculpted first, then built** (§5 step 3): `sites.ts` grades a plateau on the
+  castle mountain's shoulder above the lake (a tenth of the relief kept) and carves three
+  grottos into the heightfield — a pit for the chamber and a cut down to its mouth at a fixed,
+  walkable 1:2.4 grade. A rock dome mesh with its mouth cut out closes each grotto (the
+  heightfield can't overhang; a pit under a dome can). Ramps get as long as the land needs.
+- **Kagejō castle:** battered three-course stone walls with gaps where they've fallen, a
+  gatehouse facing the lake, an overgrown courtyard, the inner garden with a stone-edged pond and
+  a stone lantern, and a five-storey keep on a stone base: real floors with stairs inside to a
+  balcony over the lake. A hidden gate in the north wall (an ivy-covered panel) opens into the
+  secret garden.
+- **Storeys:** floors are decks; the walkable height now depends on where your feet are (the
+  highest deck within a step), so a ground floor isn't lifted to the top floor above it. Houses,
+  the keep and stairs all use the same rule.
+- **Kumoji:** a 70-step stone stairway with stone lanterns rises from the torii to a terrace with
+  the main hall, a five-storey vermilion pagoda and a bell tower whose bell you can ring.
+- **85 secrets, data-driven:** 23 hidden shrines in odd places (behind the waterfall, in the ice
+  and sea caves, the secret garden, the keep's roof, two lake islands, beside a well, the highest
+  peak, the bamboo circle, a giant cedar, a crater rim, gull island…), 24 viewpoints (a bench at
+  the best spot of every region, the pier, the keep balcony, river bends), 30 stone tablets telling
+  the castle story (§19) in fragments, 5 hidden places, 3 rare moments (a fox wedding in a
+  sunshower, the temple bell ringing itself in snowfall, writing on the castle wall that only
+  shows by moonlight).
+- **Shrines restore over days:** one offering a day (a rope, then a candle, then flowers), each
+  with its haiku. **Viewpoints:** sitting starts a 16 s slow pan while the haiku appears line by
+  line in brush lettering. Discoveries play a short sting and show "Hidden shrines 3 of 23";
+  found secrets, shrine restoration and the opened gate are saved.
+- Melody secrets and collections need the flute and journal (M11).

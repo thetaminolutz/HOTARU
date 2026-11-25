@@ -3,7 +3,7 @@
  * and on touch devices a koi stick (left) + look drag (right) + a menu token.
  */
 import type { UICanvas } from '../uiCanvas';
-import { bodyFont, tinyFont } from '../font';
+import { bodyFont, tinyFont, headingFont } from '../font';
 import { C, koiStick, token, icon } from '../art';
 import { panel, type Pointer } from '../widgets';
 import type { Pixmap } from '../../render/pixmap';
@@ -29,6 +29,8 @@ export class Hud {
   lastUse = 0;
   /** What the interact button / bubble shows: an icon name and a label (or null). */
   prompt: { icon: string; label: string } | null = null;
+  /** A viewpoint's haiku, faded in and out over `t` seconds of 16. */
+  haiku: { text: string; t: number } | null = null;
   /** A conversation in progress: who, their portrait, the lines, the current line and how much is shown. */
   dialogue: { name: string; title: string; portrait: Pixmap; lines: string[]; index: number; shown: number } | null = null;
   /** Sitting: show the time-lapse token. */
@@ -63,7 +65,23 @@ export class Hud {
     if (d.shown >= line.length && Math.sin(t * 5) > 0) ui.text(tinyFont, d.index < d.lines.length - 1 ? '>' : 'x', x + w - 12, y + h - 12, C.vermilion);
   }
 
+  /** Haiku in brush lettering across the top of the view. */
+  private drawHaiku(ui: UICanvas): void {
+    const h = this.haiku;
+    if (!h) return;
+    const a = Math.min(1, Math.min(h.t - 1.5, 15 - h.t) / 1.5);
+    if (a <= 0) return;
+    const lines = cleanText(h.text).split(' / ');
+    const y0 = ui.safe.top + 18;
+    lines.forEach((l, i) => {
+      // reveal line by line, like brush strokes
+      if (h.t < 1.5 + i * 1.2) return;
+      ui.text(headingFont, l, Math.round(ui.w / 2), y0 + i * (headingFont.lineHeight + 2), a > 0.5 ? C.paperLight : C.paperDark, { align: 'center', shadow: C.ink });
+    });
+  }
+
   draw(ui: UICanvas, t: number, controls = true): void {
+    this.drawHaiku(ui);
     this.drawDialogue(ui, t);
     const s = ui.safe;
     if (this.showFps) {

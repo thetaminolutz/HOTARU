@@ -13,6 +13,9 @@ import { QUALITY, type Quality, type QualityName } from '../config';
 import { SHOTS, shotByName, type Shot } from './shots';
 import { srgbToLinear } from '../render/color';
 import { Weather, type WeatherId } from '../sky/weather';
+import { deckAt } from '../buildings/villages';
+import type { Secret } from '../secrets/secrets';
+import { KIND_NAMES } from '../secrets/secrets';
 import { lookAt as seasonLook, type SeasonName } from '../flora/data/seasons';
 import { REGIONS } from '../world/data/regions';
 import { talk } from '../people/dialogue';
@@ -21,7 +24,20 @@ import { portrait } from '../people/portrait';
 import type { Person } from '../people/people';
 import { createRng, hashString } from '../core/rng';
 import { SEASONS } from '../flora/data/seasons';
-import type { Pixmap } from '../render/pixmap';
+import { Pixmap } from '../render/pixmap';
+
+let stoneImg: Pixmap | null = null;
+/** A little grey stone for the dialogue box when a tablet or shrine 'speaks'. */
+function stoneIcon(): Pixmap {
+  if (stoneImg) return stoneImg;
+  const m = new Pixmap(28, 28);
+  m.fill(0xe8d8b4);
+  for (let y = 4; y < 25; y++) for (let x = 7; x < 21; x++) if (!((y === 4 || y === 24) && (x === 7 || x === 20))) m.set(x, y, (x + y) % 5 === 0 ? 0x6a6a64 : 0x8a8a80);
+  for (let y = 8; y < 21; y += 3) for (let x = 10; x < 18; x++) if ((x * 3 + y) % 4) m.set(x, y, 0x4a4a46);
+  for (let i = 0; i < 28; i++) { m.set(i, 0, 0x4e2e22); m.set(i, 27, 0x4e2e22); m.set(0, i, 0x4e2e22); m.set(27, i, 0x4e2e22); }
+  stoneImg = m;
+  return m;
+}
 
 export class Game {
   readonly renderer: THREE.WebGLRenderer;
@@ -54,9 +70,9 @@ export class Game {
     const w = this.world;
     const colliders: Collider[] = [];
     this.controller = new Controller({
-      ground: (x, z) => w.groundHeight(x, z),
+      ground: (x, z, feet) => w.groundHeight(x, z, feet),
       terrain: (x, z) => w.height(x, z),
-      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity,
+      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity || deckAt(w.landmarks.decks, x, z) > -Infinity,
       snowy: (x, z, h) => h > 980 || (h > 620 && w.world.biome(x, z).special === 3),
       colliders,
       water: (x, z) => w.world.hydro.waterAt(x, z),
@@ -79,6 +95,14 @@ export class Game {
   /** a few letters were spoken: the audio system babbles in their voice */
   onBabble: ((pitch: number) => void) | null = null;
   private talkSeed = 1;
+  /** messages for the HUD (discoveries, offerings) */
+  onToast: ((text: string) => void) | null = null;
+  /** a discovery, an offering, the bell: the audio system plays a sound */
+  onEvent: ((kind: 'found' | 'offer' | 'bell' | 'gate', pos: THREE.Vector3) => void) | null = null;
+  /** viewpoint: a slow pan with a haiku while you sit */
+  viewPan: { t: number; haiku: string } | null = null;
+  private foxDay = -1;
+  private snowBellT = 30;
   /** wind fixed by a screenshot (else the weather decides) */
   private shotWind: number | null = null;
   private lastSeason = -1;
@@ -98,7 +122,7 @@ export class Game {
         use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
       });
     }
-    this.colliders.push(...w.villages.colliders);
+    this.colliders.push(...w.villages.colliders, ...w.landmarks.colliders);
     for (const sp of w.villages.sits) {
       this.interactions.add({
         id: 'sit-' + sp.x.toFixed(1) + ',' + sp.z.toFixed(1), kind: 'sit', label: sp.label, pos: new THREE.Vector3(sp.x, sp.y + 0.4, sp.z), reach: 2.2, yaw: sp.yaw,
@@ -115,6 +139,18 @@ export class Game {
         use: () => { if (bow) { this.bowT = 1.6; w.fauna.bow(a); } else w.fauna.pet(a); },
       });
     };
+    for (const sc of w.secrets.list) this.registerSecret(sc);
+    for (const sp of w.landmarks.spots) {
+      this.interactions.add({
+        id: sp.id, kind: sp.id === 'temple-bell' ? 'ring' : 'open', label: sp.label, pos: sp.pos, reach: 3.2,
+        use: () => {
+          if (sp.id === 'temple-bell') this.onEvent?.('bell', sp.pos);
+          else if (sp.id === 'hidden-gate' && !w.landmarks.gateOpen) { w.landmarks.openGate(); this.onEvent?.('gate', sp.pos); this.onToast?.('The ivy parts. There is a garden behind the wall.'); }
+        },
+      });
+    }
+    w.secrets.onFound = (sc, n, of) => { this.onEvent?.('found', sc.pos); this.onToast?.(sc.label + '  -  ' + KIND_NAMES[sc.kind] + ' ' + n + ' of ' + of); };
+    w.secrets.refresh();
     w.people.onNear = (p, near) => {
       const id = 'person-' + p.id;
       if (!near) { this.interactions.remove(id); return; }
@@ -237,11 +273,13 @@ export class Game {
     this.world.fauna.update(dt, cp, Math.hypot(pv.x, pv.z), clock.hour);
     this.world.people.update(dt, cp, clock.hour, clock.day, this.weather.out);
     this.updateDialogue(dt);
+    this.updateSecrets(dt);
     this.updateRipples(dt);
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt, this.world.people.openers());
     this.world.rivers.update(this.camera, this.tod.sunDir, 1 - this.tod.stars);
-    const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights);
+    const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights, this.world.landmarks.lights as typeof this.world.dock.lights);
+    this.world.landmarks.update(dt);
     this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
 
@@ -250,7 +288,8 @@ export class Game {
     const q = (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)) / this.pipeline.height;
     this.bowT = Math.max(0, this.bowT - dt);
     const bowDip = this.bowT > 0 ? Math.sin((1 - this.bowT / 1.6) * Math.PI) * 0.55 : 0;
-    let yaw = c.yaw, pitch = c.pitch + c.breath - bowDip;
+    const pan = this.viewPan ? Math.sin((this.viewPan.t / 16) * Math.PI * 2) * 0.42 * Math.min(1, this.viewPan.t / 2) : 0;
+    let yaw = c.yaw + pan, pitch = c.pitch + c.breath - bowDip;
     if (this.snapRotation) {
       const yi = Math.round(yaw / q), pi = Math.round(pitch / q);
       const ry = yaw, rp = pitch;
@@ -275,6 +314,66 @@ export class Game {
     this.stats.drawCalls = this.renderer.info.render.calls;
     this.stats.triangles = this.renderer.info.render.triangles;
     this.stats.frameMs = performance.now() - t0;
+  }
+
+  /** Shrines take offerings, viewpoints are for sitting, tablets for reading. */
+  private registerSecret(sc: Secret): void {
+    const w = this.world;
+    if (sc.kind === 'shrine') this.interactions.add({
+      id: sc.id, kind: 'pray', label: 'Make an offering', pos: sc.pos.clone().setY(sc.pos.y + 0.8), reach: 2.6,
+      use: () => {
+        const fresh = w.secrets.offer(sc, clock.day);
+        this.onEvent?.('offer', sc.pos);
+        this.showText('Hidden shrine', fresh ? [sc.text] : [sc.text, 'The shrine is content for today.']);
+      },
+    });
+    else if (sc.kind === 'view') this.interactions.add({
+      id: sc.id, kind: 'sit', label: 'Sit and take in the view', pos: sc.pos.clone().setY(sc.pos.y + 0.6), reach: 2.6, yaw: sc.yaw,
+      use: () => {
+        this.controller.sitAt(sc.pos.x, sc.pos.z, sc.pos.y + (sc.id === 'view-keep' || sc.id === 'view-pier' ? 0 : 0.42), sc.yaw);
+        this.viewPan = { t: 0, haiku: sc.text };
+        w.secrets.discover(sc);
+      },
+    });
+    else if (sc.kind === 'tablet') this.interactions.add({
+      id: sc.id, kind: 'read', label: 'Read the stone', pos: sc.pos.clone().setY(sc.pos.y + 0.8), reach: 2.6,
+      use: () => {
+        // the last fragment can only be read by moonlight
+        const moonlit = (clock.hour > 20 || clock.hour < 4) && this.weather.out.cloud < 0.6;
+        if (sc.id === 'tablet-29' && !moonlit) { this.showText(sc.label, ['Moss covers the stone. Something is carved here, too faint to read by day.']); return; }
+        this.showText(sc.label, [sc.text]);
+        w.secrets.discover(sc);
+      },
+    });
+  }
+
+  /** Show text in the dialogue box (stones, shrines). */
+  private showText(title: string, lines: string[]): void {
+    const p = { pos: this.controller.position.clone(), pitch: 0.6 } as unknown as Person;
+    this.dialogue = { who: p, name: title, title: '', portrait: stoneIcon(), lines, index: 0, shown: 0 };
+  }
+
+  /** Rare moments and places found by being there. */
+  private updateSecrets(dt: number): void {
+    const w = this.world, p = this.controller.position, W = this.weather.out;
+    const sunshower = this.weather.current === 'sunshower';
+    for (const sc of w.secrets.update(p, clock.hour, W, sunshower)) void sc;
+    // a fox wedding: white foxes walk in a line past the shrine during a sunshower
+    const torii = w.villages.villages.find((v) => v.layout.def.id === 'kumoji')?.layout.torii;
+    if (sunshower && torii && this.foxDay !== clock.day && Math.hypot(p.x - torii.x, p.z - torii.z) < 160) {
+      this.foxDay = clock.day;
+      for (const a of w.fauna.spawnAt('whiteFox', torii.x + 6, torii.z + 6, 7, clock.hour, 1.5)) { a.state = 'wander'; a.sleep = 0; a.target.set(torii.x - 40, a.pos.y, torii.z - 30); a.timer = 30; }
+    }
+    // the temple bell rings by itself in snowfall
+    const bell = w.landmarks.bellPos;
+    if (W.snow > 0.3 && bell.distanceTo(p) < 400) {
+      this.snowBellT -= dt;
+      if (this.snowBellT < 0) { this.snowBellT = 80 + Math.random() * 60; this.onEvent?.('bell', bell); }
+    }
+    if (this.viewPan) {
+      this.viewPan.t += dt;
+      if (this.viewPan.t > 16 || !this.controller.sitting) this.viewPan = null;
+    }
   }
 
   /** Start a conversation with someone (greeting + topical lines from the dialogue bank). */

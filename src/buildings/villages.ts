@@ -20,6 +20,13 @@ import type { World } from '../world/heightfield';
 
 const NEAR = 480;
 
+/** The highest deck at (x, z) that someone with feet at `feet` can stand on (≤ a step up). */
+export function deckAt(decks: [number, number, number, number, number][], x: number, z: number, feet = Infinity): number {
+  let h = -Infinity;
+  for (const [x0, z0, x1, z1, y] of decks) if (x >= x0 && x <= x1 && z >= z0 && z <= z1 && y > h && y <= feet + 0.65) h = y;
+  return h;
+}
+
 export type Lantern = { village: string; pos: THREE.Vector3; lit: boolean; light: Light; start: number; count: number; mesh: THREE.Mesh | null };
 const AMBER = new THREE.Color(1.0, 0.6, 0.24);
 
@@ -243,10 +250,8 @@ export class Villages {
   }
 
   /** Walkable floor height at (x, z) (house floors, steps, bridges), or -Infinity. */
-  floorHeight(x: number, z: number): number {
-    let h = -Infinity;
-    for (const [x0, z0, x1, z1, y] of this.decks) if (x >= x0 && x <= x1 && z >= z0 && z <= z1 && y > h) h = y;
-    return h;
+  floorHeight(x: number, z: number, feet = Infinity): number {
+    return deckAt(this.decks, x, z, feet);
   }
 
   indoors(p: THREE.Vector3): boolean {

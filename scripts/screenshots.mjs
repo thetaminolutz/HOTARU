@@ -78,11 +78,28 @@ const M9_SHOTS = [
   }) },
 ];
 
+const M10_SHOTS = [
+  ...['castle-approach', 'castle-courtyard', 'keep-balcony', 'temple-stair', 'waterfall-cave', 'ice-cave', 'sea-cave'].map((n) => ({ name: n, q: 'shot=' + n })),
+  { name: 'shrine-island', q: 'shot=shrine-island', action: setup(() => { const s = window.__hotaru.game.world.secrets; s.shrineState['shrine-island'] = { level: 3, lastDay: 0 }; s.refresh(); }) },
+  { name: 'viewpoint-haiku', q: 'play=1', wait: 9000, action: setup(() => {
+    const h = window.__hotaru, g = h.game;
+    h.clock.setHour(17.4); h.clock.paused = true; g.pipeline.buildLutNow(17.4);
+    const it = g.interactions.items.find((i) => i.id === 'view-pier');
+    g.controller.placeAt(it.pos.x, it.pos.z); it.use();
+  }) },
+  { name: 'tablet', q: 'play=1', wait: 3500, action: setup(() => {
+    const h = window.__hotaru, g = h.game;
+    h.clock.setHour(15); h.clock.paused = true; g.pipeline.buildLutNow(15);
+    const it = g.interactions.items.find((i) => i.id === 'tablet-4');
+    g.controller.placeAt(it.pos.x + 1.5, it.pos.z + 1.5); g.controller.lookAt(it.pos); it.use(); g.dialogue.shown = 999;
+  }) },
+];
+
 const M13_SHOTS = [
   { name: 'settings-sound', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'sound'; }) },
 ];
 
-const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M10: M10_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();

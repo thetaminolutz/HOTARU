@@ -21,8 +21,8 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M7 | Buildings, villages & interiors | ✅ Done | [M7](docs/screenshots/M7/) | pending (run on iPad) |
 | M8 | Fauna | ✅ Done | [M8](docs/screenshots/M8/) | pending (run on iPad) |
 | M9 | Villagers & wanderers | ✅ Done | [M9](docs/screenshots/M9/) | pending (run on iPad) |
-| M10 | Castle, shrines, caves & secrets | 🔨 In progress | — | — |
-| M11 | Items, journal, map, photo, boats, fishing | ⬜ Not started | — | — |
+| M10 | Castle, shrines, caves & secrets | ✅ Done | [M10](docs/screenshots/M10/) | pending (run on iPad) |
+| M11 | Items, journal, map, photo, boats, fishing | 🔨 In progress | — | — |
 | M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
 | M13 | Audio | ✅ Done | [M13](docs/screenshots/M13/) · [listen](docs/audio/) | pending (run on iPad) |
 | M14 | Polish, performance & release | ⬜ Not started | — | — |
@@ -30,6 +30,38 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M10 at a glance (castle, temple, caves & secrets)
+
+**Kagejō**, the ruined castle above the lake:
+- crumbling stone walls, a gatehouse and an overgrown courtyard
+- an inner garden with a pond
+- a **five-storey keep you can climb** to a balcony over the lake
+- a **secret garden** behind a hidden gate
+
+**Kumoji** has a stone stairway lined with lanterns, up to a temple hall, a five-storey pagoda and a bell you can ring.
+
+**Three caves:** behind the Great Waterfall, in the ice of the high pass, and under the sea cliffs.
+
+**85 secrets to find:**
+- **23 hidden shrines.** Make an offering once a day and the shrine slowly restores (a rope, then a candle, then flowers), each with its own haiku.
+- **24 viewpoints.** Sit down and the view pans slowly while a haiku appears in brush lettering.
+- **30 stone tablets** that piece together the castle's story.
+- **5 hidden places.**
+- **3 rare moments:** a fox wedding in a sunshower, a bell that rings itself in the snow, and writing that only shows by moonlight.
+
+| Kagejō's keep | The lake from the keep's balcony |
+|---|---|
+| ![](docs/screenshots/M10/castle-courtyard.png) | ![](docs/screenshots/M10/keep-balcony.png) |
+| **The cave behind the waterfall** | **A viewpoint haiku at the pier** |
+| ![](docs/screenshots/M10/waterfall-cave.png) | ![](docs/screenshots/M10/viewpoint-haiku.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 63 passed (lore and haiku, castle plateau, walkable grotto ramps) |
+| All e2e | ✅ offline, stability, controls, audio, houses, fauna, water, people, secrets |
+| Draw calls · triangles | Low 307 · 1.30 M — Medium 356 · 1.66 M — High 404 · 1.97 M (High just over the 400 budget; M14 trims) |
+| Secrets e2e (`npm run e2e:secrets`) | ✅ 85 secrets; shrine restores 1→3 over days (once per day); viewpoint pan with haiku; tablet; cave found on entering; hidden gate; 5 keep storeys (standing on the ground floor stays there) |
 
 ### M9 at a glance (villagers)
 
@@ -370,6 +402,7 @@ npm run e2e:houses     # walk into a house
 npm run e2e:fauna      # animals: presence, fleeing, petting, bowing
 npm run e2e:water      # swim in a river, ripples
 npm run e2e:people     # villagers through a day, lantern round, talking
+npm run e2e:secrets    # shrines, viewpoints, tablets, caves, the keep
 npm run audio:samples  # render music samples → docs/audio/
 npm run icons          # regenerate app icons & launch images
 ```

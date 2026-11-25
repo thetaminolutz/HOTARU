@@ -18,7 +18,9 @@ import { TREE_SPECIES } from '../flora/data/trees';
 import { DockScene } from '../buildings/dockScene';
 import { createLeaves } from '../particles/particles';
 import { AmbientFx } from '../particles/ambient';
-import { Villages } from '../buildings/villages';
+import { Villages, deckAt } from '../buildings/villages';
+import { Landmarks } from '../buildings/landmarks';
+import { Secrets } from '../secrets/secrets';
 import { Fauna } from '../fauna/fauna';
 import { People } from '../people/people';
 import { Rivers } from '../water/rivers';
@@ -43,6 +45,8 @@ export class GameWorld {
   villages!: Villages;
   fauna!: Fauna;
   people!: People;
+  landmarks!: Landmarks;
+  secrets!: Secrets;
   rivers!: Rivers;
   kits = new Map<string, TreeKit>();
   readonly rainbow = new SkyRainbow();
@@ -102,11 +106,23 @@ export class GameWorld {
       // villages and the roads between them (before the forest, which keeps their ground clear)
       this.villages = new Villages(this.world, seed, this.dock.anchors.shore!);
       this.scene.add(this.villages.group);
+      const kumoji = this.villages.villages.find((v) => v.layout.def.id === 'kumoji')?.layout.torii;
+      this.landmarks = new Landmarks(this.world, kumoji ? { x: kumoji.x, z: kumoji.z, rot: kumoji.rot } : null);
+      this.scene.add(this.landmarks.group);
+      this.villages.clearings.rects.push(...this.landmarks.clear.rects);
+      this.villages.clearings.segs.push(...this.landmarks.clear.segs);
+      const C = this.world.sites.castle;
+      this.villages.clearings.rects.push([C.x - 40, C.z - 55, C.x + 40, C.z + 40]);
+      registerPoi({ x: C.x, z: C.z, kind: 'landmark', name: 'Kagejō castle' });
+      for (const g of this.world.sites.grottos) { this.villages.clearings.rects.push([g.x - g.r - 3, g.z - g.r - 3, g.x + g.r + 3, g.z + g.r + 3]); registerPoi({ x: g.x, z: g.z, kind: 'cave', name: g.id + ' cave' }); }
       for (const v of this.villages.villages) registerPoi({ x: v.layout.def.x, z: v.layout.def.z, kind: 'village', name: v.layout.def.name });
       this.fauna = new Fauna(this, seed);
       this.scene.add(this.fauna.group);
       this.people = new People(this, seed);
       this.scene.add(this.people.mesh);
+      this.secrets = new Secrets(this);
+      this.scene.add(this.secrets.group);
+      for (const sc of this.secrets.list) registerPoi({ x: sc.pos.x, z: sc.pos.z, kind: 'secret-' + sc.kind, name: sc.label });
     });
     this.steps.push(() => {
       const kits = new Map(TREE_SPECIES.map((sp, i) => [sp.id, new TreeKit(sp, atlas, seed + i * 101)]));
@@ -182,8 +198,9 @@ export class GameWorld {
 
   height(x: number, z: number): number { return this.world.height(x, z); }
 
-  groundHeight(x: number, z: number): number {
-    return Math.max(this.world.height(x, z), this.dock.deckHeight(x, z), this.villages.floorHeight(x, z));
+  /** Walkable height at (x, z); with `feet`, upper storeys out of reach are ignored. */
+  groundHeight(x: number, z: number, feet?: number): number {
+    return Math.max(this.world.height(x, z), this.dock.deckHeight(x, z), this.villages.floorHeight(x, z, feet), this.landmarks ? deckAt(this.landmarks.decks, x, z, feet) : -Infinity);
   }
 
   normal(x: number, z: number, out = new THREE.Vector3()): THREE.Vector3 {

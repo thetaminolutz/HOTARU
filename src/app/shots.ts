@@ -143,4 +143,23 @@ SHOTS.push(
   { name: 'shrine-monk', label: 'Morning prayers at Kumoji', hour: 5.4, elapsed: 1200, pos: (w) => street(w, 'kumoji', 0.88, 1.7), look: (w) => street(w, 'kumoji', 1, 1.2), fov: 70 },
 );
 
+/** M10: castle, temple, caves and secrets. */
+const castleAt = (w: GameWorld, dx: number, dz: number, dy: number) => { const C = w.world.sites.castle; return new THREE.Vector3(C.x + dx, w.groundHeight(C.x + dx, C.z + dz) + dy, C.z + dz); };
+const grottoAt = (w: GameWorld, id: string, along: number, dy: number, side = 0) => {
+  const g = w.world.sites.grottos.find((g) => g.id === id)!, ax = Math.sin(g.dir), az = Math.cos(g.dir);
+  const x = g.x + ax * along - az * side, z = g.z + az * along + ax * side;
+  return new THREE.Vector3(x, w.groundHeight(x, z) + dy, z);
+};
+const templeStep = (w: GameWorld, f: number, dy: number) => { const t = vil(w, 'kumoji').torii!; const d = f * 60; return new THREE.Vector3(t.x + Math.sin(t.rot) * d, 0, t.z + Math.cos(t.rot) * d).setY(w.groundHeight(t.x + Math.sin(t.rot) * d, t.z + Math.cos(t.rot) * d) + dy); };
+SHOTS.push(
+  { name: 'castle-approach', label: 'Kagejō from the gate road', hour: 16.2, elapsed: 1200, pos: (w) => castleAt(w, 30, 150, 26), look: (w) => castleAt(w, 4, -8, 10), fov: 60 },
+  { name: 'castle-courtyard', label: 'The overgrown courtyard and the keep', hour: 10, elapsed: 1200, pos: (w) => castleAt(w, -20, 26, 1.7), look: (w) => castleAt(w, 4, -8, 9), fov: 72 },
+  { name: 'keep-balcony', label: 'The lake from the keep\u2019s balcony', hour: 17.6, elapsed: 1200, pos: (w) => w.landmarks.keepTop.clone().add(new THREE.Vector3(0, 1.6, 0.6)), look: () => new THREE.Vector3(0, 0, 300), fov: 70 },
+  { name: 'temple-stair', label: 'The stairway to Kumoji\u2019s pagoda', hour: 7.2, elapsed: 1200, pos: (w) => templeStep(w, 0.1, 1.7), look: (w) => templeStep(w, 1.2, 6), fov: 70 },
+  { name: 'waterfall-cave', label: 'The cave behind the waterfall', hour: 14, elapsed: 1200, pos: (w) => grottoAt(w, 'waterfall', 5, 1.6), look: (w) => grottoAt(w, 'waterfall', -6, 0.6), fov: 78 },
+  { name: 'ice-cave', label: 'The ice cave', hour: 13, elapsed: 1200, season: 'winter', pos: (w) => grottoAt(w, 'ice', 6, 1.6), look: (w) => grottoAt(w, 'ice', -6, 0.8), fov: 78 },
+  { name: 'sea-cave', label: 'The sea cave', hour: 11, elapsed: 1200, pos: (w) => grottoAt(w, 'sea', 18, 1.7), look: (w) => grottoAt(w, 'sea', -2, 1.4), fov: 70 },
+  { name: 'shrine-island', label: 'A hidden shrine on the wooded island', hour: 18.6, elapsed: 1200, pos: (w) => { const s = w.secrets.list.find((s) => s.id === 'shrine-island')!; return s.pos.clone().add(new THREE.Vector3(2.2, 1.2, 2.6)); }, look: (w) => w.secrets.list.find((s) => s.id === 'shrine-island')!.pos.clone().add(new THREE.Vector3(0, 0.7, 0)), fov: 65 },
+);
+
 export const shotByName = (n: string | undefined) => SHOTS.find((s) => s.name === n);

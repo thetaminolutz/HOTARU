@@ -15,7 +15,7 @@ export type Collider = { x0: number; z0: number; x1: number; z1: number; top: nu
 
 export type WorldQuery = {
   /** Walkable surface height (terrain or deck). */
-  ground(x: number, z: number): number;
+  ground(x: number, z: number, feet?: number): number;
   /** Raw terrain height (lake/sea bed below water). */
   terrain(x: number, z: number): number;
   /** true if a deck (pier, engawa) is under (x, z). */
@@ -139,7 +139,7 @@ export class Controller {
       const f3 = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(this.pitch, this.yaw, 0, 'YXZ'));
       this.position.addScaledVector(f3, input.moveZ * sp * dt).addScaledVector(right, input.moveX * sp * dt);
       this.position.y += input.up * sp * dt;
-      this.position.y = Math.max(this.position.y, this.q.ground(this.position.x, this.position.z) + 0.5);
+      this.position.y = Math.max(this.position.y, this.q.ground(this.position.x, this.position.z, this.feet) + 0.5);
       this.feet = this.position.y - this.eye;
       return;
     }
@@ -152,7 +152,7 @@ export class Controller {
       else { this.applyEye(dt, 0, yawRate); return; }
     }
 
-    const ground = this.q.ground(this.position.x, this.position.z);
+    const ground = this.q.ground(this.position.x, this.position.z, this.feet);
     const deck = this.q.onDeck(this.position.x, this.position.z);
     const W = this.waterLevel();
     const depth = deck ? 0 : W - this.q.terrain(this.position.x, this.position.z);
@@ -189,7 +189,7 @@ export class Controller {
     // move with step-up, slope limit and colliders, axis by axis
     const tryMove = (nx: number, nz: number): boolean => {
       if (this.blocked(nx, nz)) return false;
-      const g2 = this.q.ground(nx, nz);
+      const g2 = this.q.ground(nx, nz, this.feet);
       const rise = g2 - this.feet;
       if (this.pose === 'air' || this.pose === 'swim') return rise < STEP_UP || this.feet > g2;
       const dist = Math.hypot(nx - this.position.x, nz - this.position.z);
@@ -204,7 +204,7 @@ export class Controller {
     else { this.vel.x *= 0.2; this.vel.z *= 0.2; }
 
     // vertical
-    const g = this.q.ground(this.position.x, this.position.z);
+    const g = this.q.ground(this.position.x, this.position.z, this.feet);
     if (this.pose === 'swim') {
       const target = this.waterLevel() - 1.25 + Math.sin(this.t * 1.6) * 0.04;
       this.feet = lerp(this.feet, target, 1 - Math.exp(-dt * 3));
@@ -254,7 +254,7 @@ export class Controller {
     // footfalls at the bottom of each bob (one per step), swim strokes every ~1.4 s
     const grounded = this.pose === 'stand' || this.pose === 'wade' || this.pose === 'slide';
     const ph = Math.floor(this.bob / Math.PI + 0.25);
-    if (grounded && speed > 0.4 && this.feet <= this.q.ground(this.position.x, this.position.z) + 0.05 && ph !== this.stepPhase) this.onStep?.(speed);
+    if (grounded && speed > 0.4 && this.feet <= this.q.ground(this.position.x, this.position.z, this.feet) + 0.05 && ph !== this.stepPhase) this.onStep?.(speed);
     this.stepPhase = ph;
     if (this.pose === 'swim' && speed > 0.3 && Math.floor(this.t / 1.4) !== Math.floor((this.t - dt) / 1.4)) this.onStroke?.();
     const bobAmt = this.headBob && (this.pose === 'stand' || this.pose === 'wade') ? Math.min(1, speed / 2) : 0;

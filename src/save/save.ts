@@ -19,6 +19,10 @@ export type SaveV1 = {
   memory?: { met: Record<string, number>; nick: Record<string, string> };
   /** trust per animal species (M8) */
   trust?: Record<string, number>;
+  /** secrets found, shrine restoration, the castle's hidden gate (M10) */
+  found?: string[];
+  shrines?: Record<string, { level: number; lastDay: number }>;
+  gate?: boolean;
 };
 
 export type SaveData = SaveV1;

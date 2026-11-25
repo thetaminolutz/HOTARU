@@ -9,6 +9,7 @@ import { smoothstep, lerp, clamp } from '../core/math';
 import { REGIONS, HALF } from './data/regions';
 import { VILLAGES } from '../buildings/data/villages';
 import { computeHydrology, type Hydro } from './hydrology';
+import { computeSites, type Sites } from './sites';
 
 export type Biome = {
   forest: number;
@@ -28,6 +29,8 @@ export type World = {
   regionAt(x: number, z: number): number;
   /** rivers, ponds and waterfalls */
   readonly hydro: Hydro;
+  /** castle plateau and grottos */
+  readonly sites: Sites;
 };
 
 const hexLin = (h: string): [number, number, number] => {
@@ -151,14 +154,19 @@ export function createWorld(seed: number): World {
     const inLake = Math.hypot(x / 440, (z + 10) / 300) < 1.25;
     if (!inLake && x < coastX - 120 && gd > 1.2) h = Math.max(h, 0.6);
     // rivers, ponds and waterfalls carved last (see hydrology.ts)
-    if (carving) h = hydro().carve(x, z, h);
+    if (carving) { h = hydro().carve(x, z, h); h = sites().carve(x, z, h); }
     return h;
   }
 
   let carving = true;
   let hyd: Hydro | null = null;
+  let sit: Sites | null = null;
+  function sites(): Sites {
+    if (!sit) { const was = carving; carving = false; const hy = hydro(); sit = computeSites((x, z) => hy.carve(x, z, height(x, z)), hy); carving = was; }
+    return sit;
+  }
   function hydro(): Hydro {
-    if (!hyd) { carving = false; hyd = computeHydrology(height); carving = true; }
+    if (!hyd) { const was = carving; carving = false; hyd = computeHydrology(height); carving = was; }
     return hyd;
   }
 
@@ -223,5 +231,5 @@ export function createWorld(seed: number): World {
     return best > 0.25 ? bi : -1;
   }
 
-  return { seed, height, biome, regionAt, get hydro() { return hydro(); } };
+  return { seed, height, biome, regionAt, get hydro() { return hydro(); }, get sites() { return sites(); } };
 }
