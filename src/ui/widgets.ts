@@ -4,7 +4,7 @@ import { bodyFont } from './font';
 import { C, plaque, lanternIcon, bead, washi, lacquer, indigoCloth } from './art';
 import type { Pixmap } from '../render/pixmap';
 
-export type Pointer = { type: 'down' | 'move' | 'up'; x: number; y: number; id: number };
+export type Pointer = { type: 'down' | 'move' | 'up'; x: number; y: number; id: number; kind?: 'mouse' | 'touch' | 'pen' };
 
 export abstract class Widget {
   x = 0; y = 0; w = 0; h = 0;
@@ -74,6 +74,8 @@ export class Toggle extends Widget {
 /** Slider as beads on a string; the big gold bead is the handle. */
 export class Slider extends Widget {
   private dragging = -1;
+  /** How the value is shown (default: percent). */
+  format: (v: number) => string = (v) => Math.round(v * 100) + '%';
   constructor(public label: string, public value: number, public onChange: (v: number) => void, w = 90) {
     super();
     this.w = w;
@@ -89,7 +91,7 @@ export class Slider extends Widget {
       ui.disc(bx, y, 1, i / 8 <= this.value ? C.vermilion : C.woodDark);
     }
     ui.sprite(a.beadG, Math.round(x0 + (x1 - x0) * this.value) - 3, y - 3);
-    ui.text(bodyFont, Math.round(this.value * 100) + '%', this.x + this.w, this.y, C.paperDark, { align: 'right', shadow: C.indigoDark });
+    ui.text(bodyFont, this.format(this.value), this.x + this.w, this.y, C.paperDark, { align: 'right', shadow: C.indigoDark });
   }
   override pointer(p: Pointer): boolean {
     const set = () => {

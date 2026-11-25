@@ -6,6 +6,7 @@ import { TitleScreen } from './screens/title';
 import { SettingsScreen } from './screens/settings';
 import { Hud } from './screens/hud';
 import { GalleryScreen } from './screens/gallery';
+import { brushCursor } from './art';
 
 export type ScreenName = 'loading' | 'title' | 'settings' | 'play' | 'gallery';
 
@@ -16,6 +17,10 @@ export type UIActions = {
   hasSave: () => boolean;
   /** Non-UI pointer input on desktop (click to capture the mouse). */
   gameClick: () => void;
+  /** Apple Pencil in play: a tap turns the view there and uses what's there. */
+  penTap: (x: number, y: number) => void;
+  /** Apple Pencil drag: precise look (UI pixels). */
+  penLook: (dx: number, dy: number) => void;
 };
 
 export class UIManager {
@@ -28,6 +33,10 @@ export class UIManager {
   readonly gallery = new GalleryScreen();
   hidden = false;
   private t = 0;
+  /** Brush cursor position (mouse in menus, Apple Pencil anywhere); null = hidden. */
+  private cursor: { x: number; y: number; until: number } | null = null;
+  private cursorArt = brushCursor();
+  private pen = { id: -1, x0: 0, y0: 0, x: 0, y: 0, dragged: false };
 
   constructor(canvas: HTMLCanvasElement, private actions: UIActions) {
     this.ui = new UICanvas(canvas);
@@ -37,15 +46,39 @@ export class UIManager {
     this.hud.touchMode = matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
     const send = (type: Pointer['type'], e: PointerEvent) => {
       const [x, y] = this.ui.toUI(e.clientX, e.clientY);
-      this.pointer({ type, x, y, id: e.pointerId });
+      const kind = e.pointerType === 'pen' ? 'pen' : e.pointerType === 'touch' ? 'touch' : 'mouse';
+      if (kind === 'pen' || (kind === 'mouse' && !document.pointerLockElement)) this.cursor = { x, y, until: this.t + (kind === 'pen' ? 1.5 : 1e9) };
+      if (kind === 'pen' && this.screen === 'play') { this.penPointer(type, x, y, e.pointerId); return; }
+      this.pointer({ type, x, y, id: e.pointerId, kind });
     };
-    canvas.addEventListener('pointerdown', (e) => { e.preventDefault(); canvas.setPointerCapture?.(e.pointerId); send('down', e); });
+    canvas.addEventListener('pointerleave', () => { this.cursor = null; });
+    canvas.style.cursor = 'none';
+    canvas.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      try { canvas.setPointerCapture?.(e.pointerId); } catch { /* pointer already gone: fine */ }
+      send('down', e);
+    });
     canvas.addEventListener('pointermove', (e) => send('move', e));
     canvas.addEventListener('pointerup', (e) => send('up', e));
     canvas.addEventListener('pointercancel', (e) => send('up', e));
   }
 
   show(s: ScreenName): void { this.screen = s; }
+
+  /** Apple Pencil while playing: tap = look there & interact, drag = precise look. */
+  private penPointer(type: Pointer['type'], x: number, y: number, id: number): void {
+    const p = this.pen;
+    if (type === 'down') { Object.assign(p, { id, x0: x, y0: y, x, y, dragged: false }); return; }
+    if (id !== p.id) return;
+    if (type === 'move') {
+      if (Math.hypot(x - p.x0, y - p.y0) > 3) p.dragged = true;
+      if (p.dragged) this.actions.penLook(x - p.x, y - p.y);
+      p.x = x; p.y = y;
+    } else {
+      if (!p.dragged) this.actions.penTap(x, y);
+      p.id = -1;
+    }
+  }
 
   private pointer(p: Pointer): void {
     switch (this.screen) {
@@ -75,6 +108,8 @@ export class UIManager {
         case 'gallery': this.gallery.draw(ui, t, dt); break;
         case 'play': this.hud.draw(ui, t); break;
       }
+      this.hud.drawFade(ui);
+      if (this.cursor && t < this.cursor.until && (this.screen !== 'play' || !document.pointerLockElement)) ui.sprite(this.cursorArt, this.cursor.x, this.cursor.y);
     }
     ui.present();
   }

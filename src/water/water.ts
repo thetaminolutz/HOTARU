@@ -180,8 +180,27 @@ export class Water {
       vertexShader: VERT,
       fragmentShader: FRAG,
     });
-    const g = new THREE.PlaneGeometry(40000, 40000, 1, 1);
-    g.rotateX(-Math.PI / 2);
+    // Camera-centred radial grid: tiny triangles near the player, growing geometrically to
+    // the horizon. (A single huge quad loses varying precision when the eye is close to it.)
+    const SEG = 64, RINGS = 34;
+    const pos: number[] = [0, 0, 0];
+    const idx: number[] = [];
+    for (let r = 1; r <= RINGS; r++) {
+      const rad = 0.6 * Math.pow(1.38, r - 1) * (r === RINGS ? 4 : 1);
+      for (let sgm = 0; sgm < SEG; sgm++) {
+        const a = (sgm / SEG) * Math.PI * 2;
+        pos.push(Math.cos(a) * rad, 0, Math.sin(a) * rad);
+      }
+    }
+    for (let sgm = 0; sgm < SEG; sgm++) idx.push(0, 1 + ((sgm + 1) % SEG), 1 + sgm);
+    for (let r = 1; r < RINGS; r++) for (let sgm = 0; sgm < SEG; sgm++) {
+      const a = 1 + (r - 1) * SEG + sgm, b = 1 + (r - 1) * SEG + ((sgm + 1) % SEG);
+      const c = a + SEG, d = b + SEG;
+      idx.push(a, b, c, b, d, c);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
     this.mesh = new THREE.Mesh(g, this.material);
     this.mesh.position.set(0, level, 0);
     this.mesh.frustumCulled = false;
@@ -257,6 +276,10 @@ export class Water {
   }
 
   update(cam: THREE.Camera): void {
+    // follow the camera (snapped to 1 m so the grid never swims)
+    const cp = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
+    this.mesh.position.set(Math.round(cp.x), this.level, Math.round(cp.z));
+    this.mesh.updateMatrixWorld();
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     this.material.uniforms.uCamFwd!.value.set(fwd.x, fwd.z);
     const ub = this.material.uniforms.uBoats!.value as THREE.Vector4[];

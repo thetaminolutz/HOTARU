@@ -1,6 +1,7 @@
 /** Player settings (SPEC §26), persisted in localStorage (settings only — saves live in IndexedDB). */
 import type { QualityName } from '../config';
 import { bus } from '../core/events';
+import { DEFAULT_BINDINGS, type Action } from '../player/bindings';
 
 export type Settings = {
   quality: QualityName;
@@ -8,17 +9,31 @@ export type Settings = {
   outlines: boolean;
   showFps: boolean;
   headBob: boolean;
+  /** Field of view in degrees (60–100). */
+  fov: number;
+  /** Look sensitivity multiplier (0.25–2). */
+  sensitivity: number;
+  invertY: boolean;
+  /** Hold Shift to jog (false) or toggle jog with a tap (true). */
+  toggleJog: boolean;
+  bindings: Record<Action, string[]>;
 };
 
 const KEY = 'hotaru.settings.v1';
-const DEFAULTS: Settings = { quality: 'medium', dither: 0.85, outlines: true, showFps: false, headBob: true };
+const DEFAULTS: Settings = {
+  quality: 'medium', dither: 0.85, outlines: true, showFps: false, headBob: true,
+  fov: 75, sensitivity: 1, invertY: false, toggleJog: false,
+  bindings: structuredClone(DEFAULT_BINDINGS),
+};
 
 function load(): Settings {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...DEFAULTS, ...(JSON.parse(raw) as Partial<Settings>) } : { ...DEFAULTS };
+    if (!raw) return structuredClone(DEFAULTS);
+    const s = JSON.parse(raw) as Partial<Settings>;
+    return { ...structuredClone(DEFAULTS), ...s, bindings: { ...structuredClone(DEFAULT_BINDINGS), ...(s.bindings ?? {}) } };
   } catch {
-    return { ...DEFAULTS };
+    return structuredClone(DEFAULTS);
   }
 }
 

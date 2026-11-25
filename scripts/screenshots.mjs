@@ -34,7 +34,24 @@ const M2_SHOTS = [
   { name: 'dock-day', q: 'shot=dock-day' },
 ];
 
-const SHOTS = milestone === 'M1' ? M1_SHOTS : M2_SHOTS;
+// M3: the player. Each shot starts a game (?play=1) and poses the player.
+const setup = (fn, arg) => async (page) => page.evaluate(fn, arg);
+const pose = (hour, body) => setup(new Function('hour', `
+  const h = window.__hotaru, g = h.game, c = g.controller, d = g.world.dock;
+  h.clock.setHour(hour); h.clock.paused = true; g.pipeline.buildLutNow(hour);
+  ${body}
+`), hour);
+const M3_SHOTS = [
+  { name: 'pier-prompt', q: 'play=1', wait: 2500, action: pose(18.3, `const e = d.anchors.pierEnd; c.placeAt(e.x + 0.4, e.z + 1.4); c.yaw = 0; c.pitch = -0.32;`) },
+  { name: 'sitting-dusk', q: 'play=1', wait: 2500, action: pose(17.7, `g.interactions.nearest('sit', d.anchors.pierEnd).use();`) },
+  { name: 'lying-night', q: 'play=1', wait: 2500, action: pose(22.2, `const s = d.anchors.shore; c.placeAt(s.x + 14, s.z + 30); c.cyclePose(); c.cyclePose(); c.yaw = 0.6;`) },
+  { name: 'swimming', q: 'play=1', wait: 3000, action: pose(16.2, `c.placeAt(-40, 150); c.yaw = 0.3; c.pitch = 0.05;`) },
+  { name: 'touch-hud', q: 'play=1', touch: true, wait: 2500, action: pose(18.3, `const e = d.anchors.pierEnd; c.placeAt(e.x + 0.4, e.z + 1.4); c.yaw = 0; c.pitch = -0.32;`) },
+  { name: 'settings-camera', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'camera'; }) },
+  { name: 'settings-keys', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'keys'; }) },
+];
+
+const SHOTS = milestone === 'M1' ? M1_SHOTS : milestone === 'M2' ? M2_SHOTS : M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();

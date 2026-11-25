@@ -14,9 +14,9 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 |---|---|---|---|---|
 | M1 | Foundations & THE LOOK prototype | ✅ Done | [M1](docs/screenshots/M1/) | pending (run on iPad) |
 | M2 | Terrain & world streaming | ✅ Done | [M2](docs/screenshots/M2/) | pending (run on iPad) |
-| M3 | Player controller & controls | 🔨 In progress | — | — |
+| M3 | Player controller & controls | ✅ Done | [M3](docs/screenshots/M3/) | pending (run on iPad) |
 | M4 | Water | ⬜ Not started | — | — |
-| M5 | Vegetation, wind & particles | ⬜ Not started | — | — |
+| M5 | Vegetation, wind & particles | 🔨 In progress | — | — |
 | M6 | Regions, weather & seasons | ⬜ Not started | — | — |
 | M7 | Buildings, villages & interiors | ⬜ Not started | — | — |
 | M8 | Fauna | ⬜ Not started | — | — |
@@ -30,6 +30,26 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M3 at a glance
+
+Walk, jog, slow walk, jump, step up onto ledges, wade, swim (calm, no drowning), slide on snow,
+sit and lie down anywhere, time-lapse while sitting, soft landings. Desktop, touch, gamepad and
+**Apple Pencil** (tap = look there & interact, drag = precise look, pixel brush cursor);
+every key rebindable; FOV, sensitivity, invert Y, head bob, tap-to-jog.
+
+| On the pier (interact prompt) | Sitting at dusk |
+|---|---|
+| ![](docs/screenshots/M3/pier-prompt.png) | ![](docs/screenshots/M3/sitting-dusk.png) |
+| **Swimming** | **Touch controls** |
+| ![](docs/screenshots/M3/swimming.png) | ![](docs/screenshots/M3/touch-hud.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 33 passed |
+| Controls e2e (`npm run e2e:controls`) | ✅ walk, jump & land, swim, sit, time-lapse, stand up, colliders, Apple Pencil tap |
+| Offline / pixel stability | ✅ / ✅ (one-pixel turn match 0.98 after the water-mesh fix) |
+| Draw calls · triangles (Medium, all passes) | 278 · 1.54 M |
 
 ### M2 at a glance
 
@@ -94,16 +114,21 @@ triangles); frame times need the iPad run.
 4. Start Hotaru from the home screen. Everything is cached; airplane mode works.
    When a new version has been downloaded, a small paper toast offers a restart.
 
-## Controls (M1)
+## Controls
 
 | | Desktop | iPad |
 |---|---|---|
-| Look | click, then mouse | drag on the right side |
-| Walk | WASD (Shift jogs) | left thumb (koi stick; push far to jog) |
-| Menu | Esc | lacquer token, top right |
-| Debug panel | `` ` `` | three-finger tap |
+| | Desktop | iPad (touch) | Apple Pencil | Gamepad |
+|---|---|---|---|---|
+| Look | click, then mouse | drag on the right side | drag (fine) | right stick |
+| Walk / jog / slow | WASD · Shift · Ctrl/C | koi stick (rim = jog, gentle = slow) | — | left stick · L3/RT · LB/LT |
+| Jump | Space | jump token | — | A |
+| Interact · sit · lie · stand | E | interact token | tap the thing (also turns your view) | X / B |
+| Time-lapse (while sitting) | hold T | hold the hourglass token | — | hold Y |
+| Menu | Esc | lacquer token, top right | — | Start |
+| Debug panel | `` ` `` | three-finger tap | — | — |
 
-The full movement set (jump, wade, swim, sit, lie, rowing) arrives in M3.
+All keys can be rebound in Settings → Keys. Rowing arrives with boats in M11.
 
 ## Benchmark on the iPad
 

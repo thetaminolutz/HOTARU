@@ -12,7 +12,8 @@
     "shots": "node scripts/screenshots.mjs",
     "e2e:offline": "node scripts/offline-test.mjs",
     "e2e:stability": "node scripts/stability-test.mjs",
-    "perf": "node scripts/perf.mjs"
+    "perf": "node scripts/perf.mjs",
+    "e2e:controls": "node scripts/controls-test.mjs"
   },
   "dependencies": {
     "three": "0.187.0"

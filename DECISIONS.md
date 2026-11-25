@@ -118,3 +118,35 @@ Non-obvious decisions and why. Newest at the bottom.
 - **Stability test runs with bloom off:** bloom re-samples on its own half-res grid, so a
   one-pixel turn changes bloom pixels; the core guarantee (sub-pixel turns change nothing) is
   unchanged and tested with everything on.
+
+## M3
+
+- **Controller as a small pose machine** (stand / air / wade / swim / slide / sit / lie) over
+  the analytic heightfield and deck rectangles: walk 2.2 m/s, jog 4.8 (no stamina), slow 1.1;
+  jump 4.4 m/s (≈0.75 m); step-up ≤ 0.6 m; slopes steeper than ~43° can't be walked up;
+  wading below 0.3 m depth, swimming below 1.35 m (eye 0.35 m above the water, gentle bob,
+  no diving, no drowning). Snow slopes > 0.35 slide gently. Falls never hurt: landing dips
+  the camera, falls > 9 m end in a soft dithered fade.
+- **Colliders are AABBs** for now (the boathouse); interiors open up in M7.
+- **Interact = context first, then pose:** E / the interact token uses what you look at
+  (sit spots on the pier and engawa so far); with nothing targeted it cycles sit → lie → stand
+  ("sit anywhere", SPEC §8). Holding T / the hourglass token while sitting runs time ×20.
+- **Camera feel:** head bob (toggle), idle breathing sway (also toggled by head bob, for
+  comfort), a very slight lean into turns, landing dip. The breathing sway goes through the
+  pixel-snapped rotation like any other look input, so it never shimmers.
+- **Apple Pencil:** Safari reports the Pencil as `pointerType: "pen"` with pressure/tilt but
+  not its double-tap/squeeze, and the iPad Air M1 has no hover. In play a Pencil *tap* turns
+  the view smoothly toward that point and uses whatever is there; a *drag* looks with 2× the
+  precision of a finger. A pixel brush cursor follows the Pencil (and the mouse in menus).
+  Pressure drawing arrives with the sketchbook/journal/map in M11.
+- **Gamepad (standard mapping):** left stick move, right stick look, A jump, X/B interact,
+  Y hold time-lapse, LB/LT slow, L3/RT jog, Start menu. Touch: koi stick (gentle push = slow,
+  rim = jog), drag right side to look, jump / interact / time-lapse tokens.
+- **Rebinding:** every keyboard action is rebindable in Settings → Keys (stored with the
+  settings in localStorage). Camera tab: FOV 60–100°, sensitivity ×0.25–2, invert Y, head bob,
+  tap-to-jog.
+- **Water mesh is now a camera-centred radial grid** (bug found in M3): the single 40 km quad
+  from M2 lost varying precision when the eye was ~1.7 m above it, so close-up water rendered
+  flat. Rings grow ×1.38 from 0.6 m to the horizon; the mesh follows the camera in 1 m steps.
+- **Palette LUT race fixed:** a synchronous LUT rebuild invalidates any worker result still in
+  flight, so an old hour's LUT can't overwrite the new one.

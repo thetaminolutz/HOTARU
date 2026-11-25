@@ -2,7 +2,9 @@
 import * as THREE from 'three';
 import { PixelPipeline } from '../render/pipeline';
 import { GameWorld } from '../scene/gameWorld';
-import { Controller } from '../player/controller';
+import { Controller, type Collider } from '../player/controller';
+import { Interactions } from '../interact/interactions';
+import { settings } from './settings';
 import { InputState } from '../player/input';
 import { createTodState, evaluateTod, moonPhase, type TodState } from '../sky/timeOfDay';
 import { U } from '../render/uniforms';
@@ -40,17 +42,37 @@ export class Game {
     this.world = new GameWorld(seed, this.quality);
     this.input = new InputState(canvas);
     const w = this.world;
-    this.controller = new Controller(
-      (x, z) => w.groundHeight(x, z),
-      (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.height(x, z) > -0.3,
-    );
+    const colliders: Collider[] = [];
+    this.controller = new Controller({
+      ground: (x, z) => w.groundHeight(x, z),
+      terrain: (x, z) => w.height(x, z),
+      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity,
+      snowy: (x, z, h) => h > 980 || (h > 620 && w.world.biome(x, z).special === 3),
+      colliders,
+    });
+    this.colliders = colliders;
+    this.controller.onSoftLanding = () => { this.fade = 1; };
   }
+
+  private colliders: Collider[];
+  readonly interactions = new Interactions();
+  /** 0..1 screen fade (soft landings); the UI draws it. */
+  fade = 0;
+  /** Time-lapse is active (sitting + holding the button/key). */
+  timelapse = false;
 
   /** Finish building after all world steps ran. */
   finishInit(hour: number): void {
     const w = this.world;
     const S = w.dock.anchors.shore!;
-    this.controller.position.set(S.x + 1, w.groundHeight(S.x + 1, S.z + 3) + 1.6, S.z + 3);
+    this.colliders.push(...w.dock.colliders);
+    for (const sp of w.dock.sitSpots) {
+      this.interactions.add({
+        id: 'sit-' + sp.x.toFixed(1), kind: 'sit', label: sp.label, pos: new THREE.Vector3(sp.x, sp.y + 0.6, sp.z), reach: 2.6, yaw: sp.yaw,
+        use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
+      });
+    }
+    this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
     clock.setHour(hour);
     this.pipeline.buildLutNow(hour);
@@ -110,8 +132,26 @@ export class Game {
     const elapsed = this.frozenElapsed ?? clock.elapsed;
     U.uTime.value = elapsed;
     this.input.poll();
-    if (this.controller.mode === 'drift') this.updateDrift(dt);
-    else this.controller.update(dt, this.input);
+    const c0 = this.controller;
+    if (c0.mode === 'walk' || c0.mode === 'fly') {
+      if (this.camera.fov !== settings.fov) { this.camera.fov = settings.fov; this.camera.updateProjectionMatrix(); }
+      c0.headBob = settings.headBob;
+      // interact: a targeted thing, else sit / lie / stand where you are
+      const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(c0.pitch, c0.yaw, 0, 'YXZ'));
+      this.interactions.update(c0.position, dir);
+      if (this.input.interactPressed && c0.mode === 'walk') {
+        const t = this.interactions.target;
+        if (t && !c0.sitting) t.use();
+        else c0.cyclePose();
+      }
+      // time-lapse while sitting (SPEC §21): ×20 to watch a sunset, a storm, the stars wheel
+      this.timelapse = c0.sitting && this.input.timelapse;
+      clock.timeScale = this.timelapse ? 20 : 1;
+    }
+    this.fade = Math.max(0, this.fade - dt * 0.8);
+    if (c0.mode === 'drift') this.updateDrift(dt);
+    else c0.update(dt, this.input);
+    this.input.endFrame();
 
     // M1 look shots use a full moon; the running game follows the 8-day cycle
     const phase = this.frozenElapsed !== null ? 0.5 : moonPhase(clock.day + 4, clock.hour);
@@ -134,11 +174,12 @@ export class Game {
     // smooth pixel camera: snap rotation to whole pixel angles, shift the image by the remainder
     const c = this.controller;
     const q = (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)) / this.pipeline.height;
-    let yaw = c.yaw, pitch = c.pitch;
+    let yaw = c.yaw, pitch = c.pitch + c.breath;
     if (this.snapRotation) {
-      const yi = Math.round(c.yaw / q), pi = Math.round(c.pitch / q);
+      const yi = Math.round(yaw / q), pi = Math.round(pitch / q);
+      const ry = yaw, rp = pitch;
       yaw = yi * q; pitch = pi * q;
-      this.pipeline.shift.set(((c.yaw - yaw) / q), -((c.pitch - pitch) / q));
+      this.pipeline.shift.set(((ry - yaw) / q), -((rp - pitch) / q));
       this.pipeline.ditherOffset.set(-yi, pi);
       // reflections render at a lower resolution: snap them to whole reflection texels
       const H = this.pipeline.height, M = 2;
@@ -150,7 +191,7 @@ export class Game {
       this.pipeline.reflectAngles.use = false;
     }
     this.camera.position.copy(c.position);
-    this.camera.rotation.set(pitch, yaw, 0, 'YXZ');
+    this.camera.rotation.set(pitch, yaw, c.roll, 'YXZ');
     this.camera.updateMatrixWorld();
 
     this.renderer.info.reset();
