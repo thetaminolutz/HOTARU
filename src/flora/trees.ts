@@ -47,6 +47,7 @@ varying vec3 vNormal;
 varying vec2 vUv;
 varying vec3 vColor;
 varying float vAo;
+varying float vKey;
 void main(){
   float s = iPos.w;
   float ph = iColor.w;
@@ -79,6 +80,7 @@ void main(){
   vec2 cell = vec2(mod(aAtlas, 2.0), floor(aAtlas / 2.0)) * 0.5;
   vUv = cell + vec2(aCorner.x * 0.5 + 0.5, 0.5 - aCorner.y * 0.5) * 0.5;
   vColor = iColor.rgb;
+  vKey = fract(sin(dot(aCenter.xz * 7.13 + aCenter.y, vec2(12.9898, 78.233)) + ph * 43.7) * 43758.5453);
   gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);
 }
 `;
@@ -90,16 +92,26 @@ ${SKY_FN}
 ${FOG_FN}
 ${LIGHTING}
 uniform sampler2D uAtlas;
+uniform vec3 uSeasonCol;
+uniform float uSeasonMix;
+uniform float uBare;
 varying vec3 vWorldPos;
 varying vec3 vNormal;
 varying vec2 vUv;
 varying vec3 vColor;
 varying float vAo;
+varying float vKey;
 void main(){
   clipCheck(vWorldPos);
+  if (vKey < uBare) discard; // leaves fallen (winter)
   vec4 t = texture2D(uAtlas, vUv);
   if (t.a < 0.5) discard;
-  vec3 albedo = vColor * (0.55 + 0.75 * t.r) * 1.6;
+  // the season's colour replaces the tree's own (autumn) palette; keep a little per-tree variety
+  vec3 base = mix(vColor, uSeasonCol * (0.85 + 0.3 * fract(vKey * 7.0)), uSeasonMix);
+  vec3 albedo = base * (0.55 + 0.75 * t.r) * 1.6;
+  // snow on the upper side of the crown
+  vec3 Nn = normalize(vNormal);
+  albedo = mix(albedo, vec3(1.05, 1.07, 1.12), smoothstep(0.15, 0.7, Nn.y) * uSnowCover * 0.85 * step(0.35, t.r));
   vec3 col = shade(albedo, normalize(vNormal), vWorldPos, 0.4, vAo, 0.3);
   col = min(col, vec3(1.15)); // leaves never bloom like lamps
   col = applyFog(col, vWorldPos);
@@ -109,8 +121,10 @@ void main(){
 
 const DEPTH_FRAG = /* glsl */ `
 uniform sampler2D uAtlas;
+uniform float uBare;
 varying vec2 vUv;
-void main(){ if (texture2D(uAtlas, vUv).a < 0.5) discard; gl_FragColor = vec4(1.0); }
+varying float vKey;
+void main(){ if (vKey < uBare || texture2D(uAtlas, vUv).a < 0.5) discard; gl_FragColor = vec4(1.0); }
 `;
 
 /** Cluster layout for a species, in metres, in tree-local space. */
@@ -254,6 +268,14 @@ export class TreeKit {
   private trunkMat: THREE.ShaderMaterial;
   private colors: [number, number, number][];
 
+  /** Apply a season look (see data/seasons.ts). */
+  setSeason(col: [number, number, number] | null, mix: number, bare: number): void {
+    const u = this.mat.uniforms;
+    if (col) (u.uSeasonCol!.value as THREE.Vector3).set(col[0], col[1], col[2]);
+    u.uSeasonMix!.value = mix;
+    u.uBare!.value = bare;
+  }
+
   constructor(readonly sp: TreeSpecies, atlas: THREE.Texture, seed: number) {
     const layout = clusterLayout(sp, seed);
     this.near = clusterGeometryAttributes(layout, seed);
@@ -266,6 +288,9 @@ export class TreeKit {
       uCrownY: { value: sp.trunkHeight + (sp.height - sp.trunkHeight) * 0.5 },
       uHeight: { value: sp.height },
       uSwayAmt: { value: sp.sway },
+      uSeasonCol: { value: new THREE.Vector3(1, 1, 1) },
+      uSeasonMix: { value: 0 },
+      uBare: { value: 0 },
     };
     this.mat = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide });
     this.mat.userData.depth = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: DEPTH_FRAG, side: THREE.DoubleSide });

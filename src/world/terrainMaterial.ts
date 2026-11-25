@@ -56,6 +56,7 @@ void main(){
   vec3 dry = lin(vec3(0.6, 0.52, 0.27));
   vec3 grass = mix(vGrass * 1.15, dry, clamp((0.55 - moist) * 1.4 + (patchN - 0.5) * 0.6, 0.0, 0.8) * step(0.5 + 0.2 * (td - 0.5), patchN + autumn * 0.25));
   grass = mix(grass, grass * vec3(0.82, 0.95, 0.8), step(0.62, fbm(P.xz * 0.004 + 3.0) + 0.1 * (td - 0.5)));
+  grass *= uSeasonTint;
   vec3 col = grass * detail(0.0, uv);
   float mat = 0.0;
 
@@ -77,7 +78,7 @@ void main(){
   if (sp == 5.0) crown = mix(crown, lin(vec3(0.42, 0.56, 0.26)), spW);       // bamboo: light green
   vec2 inCell = fract(P.xz / cellSize) - 0.5;
   crown *= 0.9 + 0.25 * dot(inCell, normalize(uKeyDir.xz + 1e-4)) * (1.0 - smoothstep(150.0, 400.0, dist));
-  col = mix(col, mix(floorC, crown, canopyT), fMask);
+  col = mix(col, mix(floorC, crown * mix(vec3(1.0), uSeasonTint, 0.6), canopyT), fMask);
   ao *= mix(1.0, 0.7, fMask * (1.0 - canopyT)); // darker under the trees
 
   // --- specials
@@ -86,7 +87,10 @@ void main(){
     float stepF = fract(P.y / 2.4);
     float bund = step(0.88, stepF) + step(0.4, slope);
     vec3 bundC = lin(vec3(0.3, 0.42, 0.2)) * detail(0.0, uv);
-    vec3 terr = mix(rice * detail(0.0, uv * 2.0), bundC, clamp(bund, 0.0, 1.0));
+    // rice through the year: flooded mirrors in spring, green in summer, gold in autumn, stubble in winter
+    vec3 riceS = mix(lin(vec3(0.34, 0.44, 0.46)), lin(vec3(0.42, 0.62, 0.3)), step(0.55, vnoise(P.xz * 0.6)));
+    vec3 riceSeason = riceS * uSeasonW.x + lin(vec3(0.36, 0.6, 0.24)) * uSeasonW.y + rice * uSeasonW.z + lin(vec3(0.48, 0.4, 0.3)) * uSeasonW.w;
+    vec3 terr = mix(riceSeason * detail(0.0, uv * 2.0), bundC, clamp(bund, 0.0, 1.0));
     col = mix(col, terr, step(0.5 + 0.2 * (td - 0.5), spW) * (1.0 - fMask));
   }
   if (sp == 6.0 && spW > 0.25) { // tea rows: round dark-green bushes in contour lines
@@ -113,6 +117,9 @@ void main(){
   // --- snow high up (and in the snowy pass lower down)
   float snowLine = sp == 3.0 ? 700.0 - 200.0 * spW : 1000.0;
   float snow = step(0.5 + 0.2 * (td - 0.5), smoothstep(snowLine, snowLine + 140.0, P.y + 70.0 * (patchN - 0.5)) * (1.0 - smoothstep(0.72, 0.9, slope)));
+  // seasonal / fallen snow lies on everything flat enough, in dithered drifts at its edge
+  float drift = uSnowCover * smoothstep(0.55, 0.85, an.y) * step(0.3, P.y);
+  snow = max(snow, step(0.5 + 0.25 * (td - 0.5) + 0.3 * (patchN - 0.5), drift * 1.15));
   col = mix(col, lin(vec3(0.74, 0.76, 0.84)) * detail(3.0, uv), snow);
 
   // --- shores: sand and pebbles, wet darkening just above the water; sea beaches wider
@@ -127,7 +134,12 @@ void main(){
   float macro = fbm(P.xz * 0.03 + 7.0);
   col *= 0.86 + 0.28 * step(0.5 + 0.1 * (td - 0.5), macro) + 0.08 * (vnoise(P.xz * 0.15) - 0.5);
 
+  // rain: everything darkens; puddles gather in flat hollows and mirror the sky
+  col *= 1.0 - uWet * 0.32 * (1.0 - snow);
+  float puddle = uWet * step(0.72, fbm(P.xz * 0.12 + 11.0)) * smoothstep(0.93, 0.985, an.y) * step(0.8, P.y) * (1.0 - snow);
   vec3 c = shade(col, N, P, 0.0, ao, 0.0);
+  vec3 Vp = normalize(uCamPos - P);
+  c = mix(c, skyColor(reflect(-Vp, vec3(0.0, 1.0, 0.0))) * 0.75, step(0.5, puddle) * 0.85);
   c = applyFog(c, P);
   gl_FragColor = vec4(c, 0.5);
 }

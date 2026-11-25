@@ -76,7 +76,7 @@ ${COMMON_PARS}
 ${NOISE}
 ${SKY_FN}
 ${FOG_FN}
-uniform float uEmissive, uOpacity;
+uniform float uEmissive, uOpacity, uMotion;
 varying vec3 vCol;
 varying vec3 vWorldPos;
 varying float vA;
@@ -97,6 +97,8 @@ void main(){
   }
   // solid points: hard cut (glowing ones fade by brightness); soft ones: ordered dither
   if (uOpacity < 1.0 ? cover < bayer4(gl_FragCoord.xy) : cover < 0.15) discard;
+  // rain falls as short vertical streaks
+  if (uMotion == 1.0 && abs(gl_PointCoord.x - 0.5) > 0.2) discard;
   vec3 lit = vCol * (uKeyColor * 0.55 + uAmbSky * 1.3 + uAmbGround * 0.3);
   vec3 col = mix(lit, vCol * (1.4 + 1.2 * uLamps) * (uOpacity < 1.0 ? 1.0 : 0.4 + 0.8 * vA), uEmissive);
   gl_FragColor = vec4(applyFog(col, vWorldPos), 0.5);
@@ -151,6 +153,8 @@ export class AmbientFx {
   /** Set by the weather system (M6): 0..1 rain / snow. */
   rain = 0;
   snow = 0;
+  /** season weights: spring, summer, autumn, winter */
+  season: [number, number, number, number] = [0, 0, 1, 0];
   scale = 1;
   /** current ground-mist amount (eased) */
   mist = 0;
@@ -184,11 +188,13 @@ export class AmbientFx {
     const morning = Math.max(0, 1 - Math.abs(hour - 6.5) / 2.2);
     const nearWater = Math.max(0, 1 - Math.abs(w.height(cam.x, cam.z)) / 14);
     const s = this.scale;
+    const [spring, summer, autumn, winter] = this.season;
+    const dryAir = 1 - Math.min(1, this.rain * 1.5);
     const A = (id: string, amount: number, c = cam, gy = groundY) => this.effects.get(id)?.set(Math.min(1, Math.max(0, amount)) * s, c, gy);
-    A('fireflies', Math.max(night, dusk * 0.6) * (0.25 + 0.75 * Math.max(nearWater, b.moisture * (1 - b.forest * 0.5))) * (cam.y - groundY < 30 ? 1 : 0));
-    A('leaves', (b.autumn * (0.3 + 0.7 * b.forest) + (rid === 'maple' || rid === 'ginkgo' ? 0.4 : 0)) * (0.4 + wind) * 0.9);
-    A('petals', (rid === 'cherry' ? 0.9 : rid === 'wisteria' ? 0.35 : 0) * (0.5 + wind));
-    A('pollen', day * (1 - b.forest) * (0.2 + 0.6 * Math.max(0, 1 - b.autumn)) * (rid === 'sunflower' || rid === 'tea' ? 1.6 : 0.6));
+    A('fireflies', (0.3 + summer * 1.2 + spring * 0.3 + autumn * 0.4) * (1 - winter) * dryAir * Math.max(night, dusk * 0.6) * (0.25 + 0.75 * Math.max(nearWater, b.moisture * (1 - b.forest * 0.5))) * (cam.y - groundY < 30 ? 1 : 0));
+    A('leaves', (0.15 + autumn * 0.85 + winter * 0.15) * dryAir * (b.autumn * (0.3 + 0.7 * b.forest) + (rid === 'maple' || rid === 'ginkgo' ? 0.4 : 0)) * (0.4 + wind) * 0.9);
+    A('petals', (spring * 1.5 + 0.1) * (rid === 'cherry' ? 0.9 : rid === 'wisteria' ? 0.35 : 0.12) * (0.5 + wind) * dryAir);
+    A('pollen', (spring + summer) * dryAir * day * (1 - b.forest) * (0.2 + 0.6 * Math.max(0, 1 - b.autumn)) * (rid === 'sunflower' || rid === 'tea' ? 1.6 : 0.6));
     A('motes', day * b.forest * (0.3 + 0.7 * tod.keyColor.r) * 0.8);
     A('rain', this.rain);
     A('snow', Math.max(this.snow, rid === 'snow' && cam.y > 650 ? 0.35 : 0));
@@ -199,7 +205,7 @@ export class AmbientFx {
     U.uMist.value = this.mist * 0.75;
     U.uMistY.value = groundY;
     A('spray', rid === 'coast' && w.height(cam.x, cam.z) < 40 ? 0.4 + wind * 0.6 : 0);
-    A('moths', night * (rid === 'market' || rid === 'lake' ? 0.8 : 0.3) * (1 - b.forest * 0.5));
+    A('moths', (1 - winter) * dryAir * night * (rid === 'market' || rid === 'lake' ? 0.8 : 0.3) * (1 - b.forest * 0.5));
     // local emitters within 400 m
     for (const [id, list] of this.local) {
       let k = 0;

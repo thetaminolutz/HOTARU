@@ -24,6 +24,12 @@ export const U = {
   uHeightFog: { value: 0.3 },
   /** local ground mist (deep forests, misty mornings): amount, ground height */
   uMist: { value: 0 },
+  /** seasons & weather: snow lying on up-facing surfaces, rain wetness, grass/terrain tint */
+  uSnowCover: { value: 0 },
+  uWet: { value: 0 },
+  uSeasonTint: { value: new THREE.Vector3(1, 1, 1) },
+  /** season weights: spring, summer, autumn, winter */
+  uSeasonW: { value: new THREE.Vector4(0, 0, 1, 0) },
   uMistY: { value: 0 },
   uShadowMap: { value: null as THREE.Texture | null },
   uShadowMatrix: { value: new THREE.Matrix4() },

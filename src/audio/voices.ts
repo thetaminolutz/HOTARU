@@ -61,7 +61,7 @@ export type VoiceId =
   | 'warbler' | 'tit' | 'sparrow' | 'dove' | 'crow' | 'owl' | 'woodpecker' | 'gull'
   | 'cricket' | 'bellCricket' | 'higurashi' | 'frog' | 'kajika'
   | 'furin' | 'templeBell' | 'bambooKnock' | 'shishiOdoshi' | 'creak' | 'twig' | 'drip' | 'splash'
-  | 'meow' | 'bark' | 'quack' | 'deer' | 'cluck' | 'whinny' | 'moo' | 'monkey' | 'kite' | 'crane';
+  | 'meow' | 'bark' | 'quack' | 'deer' | 'cluck' | 'whinny' | 'moo' | 'monkey' | 'kite' | 'crane' | 'thunder';
 
 export function playVoice(id: VoiceId, ctx: Ctx, out: AudioNode, t: number, r: Rng, noise: AudioBuffer): number {
   switch (id) {
@@ -239,6 +239,20 @@ export function playVoice(id: VoiceId, ctx: Ctx, out: AudioNode, t: number, r: R
       tone(ctx, bp, t, 950, 1100, 0.3, 0.3, 'sawtooth', 0.02);
       tone(ctx, bp, t + 0.35, 1100, 900, 0.4, 0.25, 'sawtooth', 0.02);
       return 0.8;
+    }
+    case 'thunder': { // a long low rumble with a crack at the start when close
+      const s0 = ctx.createBufferSource();
+      s0.buffer = noise; s0.loop = true;
+      const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 160 + r.next() * 120;
+      const g = ctx.createGain();
+      const dur = 3 + r.next() * 3;
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.9, t + 0.15);
+      for (let k = 0; k < 6; k++) g.gain.linearRampToValueAtTime(0.4 + r.next() * 0.6, t + 0.3 + (k / 6) * dur * 0.6);
+      g.gain.linearRampToValueAtTime(0, t + dur);
+      s0.connect(lp); lp.connect(g); g.connect(out);
+      s0.start(t, r.next()); s0.stop(t + dur + 0.1);
+      return dur;
     }
     case 'splash': { // a fish jumping
       noiseBurst(ctx, out, noise, t, 0.25, 0.4, 'bandpass', 1400, 1.2, 0.06);

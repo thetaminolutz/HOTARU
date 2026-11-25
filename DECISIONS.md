@@ -301,3 +301,30 @@ Non-obvious decisions and why. Newest at the bottom.
 - **Player:** wading and swimming work at any water level (rivers and ponds too). Roads bridge
   rivers at the river's own height; trees and plants stay out of riverbeds.
 - Not yet: lake ice (winter, M6) and puddles (rain, M6).
+
+## M6
+
+- **Seasons follow the day counter:** a new journey starts in autumn (the reference look); each
+  season lasts 3 / 7 / 14 in-game days (Settings → World) or can be locked ("eternal autumn").
+  Seasons hold for most of their span and blend into the next over the last fifth.
+- **Trees through the year without new meshes:** autumn is each species' own per-tree palette;
+  spring/summer replace the crown colour (cherries and plums blossom, azaleas flower), winter
+  drops a share of the leaf clusters (a per-cluster hash) and leaves evergreens alone; camellias
+  bloom red in winter. One uniform set per species material, updated only when the season moves.
+- **Grass and terrain** take a season tint (fresh spring, deep summer, the regions' own autumn,
+  dull winter); rice terraces go flooded → green → gold → stubble.
+- **Weather is a state machine** (clear, partly cloudy, overcast, drizzle, rain, heavy rain,
+  thunderstorm, fog, sunshower, snow, heavy snow). The next state is drawn from the season's
+  climate with regional tweaks (fog in the cedar woods and mirror lakes, snow on the high pass);
+  changes blend over ~20 in-game minutes. Cold (winter, altitude) turns rain into snow.
+- **What weather drives:** cloud cover; light (sun dimmed, sky, clouds and ambient greyed — a
+  rainy sunset goes grey); fog density and ground mist; wind (grass, trees, water, particles,
+  wind audio); rain streaks and snowflakes; rain rings on water; wetness (everything darkens) and
+  puddles in flat hollows that mirror the sky; snow settling on flat ground, roofs, decks, tree
+  crowns, and hiding the grass; lightning flashes with thunder arriving at the speed of sound; a
+  rainbow across the sky (42° around the antisolar point) after rain and during sunshowers.
+- **Seasonal life:** fireflies peak in summer and vanish in winter, falling leaves belong to
+  autumn, petals to spring, pollen to spring and summer; rain grounds fireflies and moths.
+- Screenshots force their weather and season (default clear autumn) so the reference shots stay
+  stable; the running game uses Settings → World.
+- Not yet: ice on winter lakes, footprints in snow, drip lines from eaves (M14 polish).

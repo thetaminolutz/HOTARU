@@ -21,6 +21,7 @@ import { AmbientFx } from '../particles/ambient';
 import { Villages } from '../buildings/villages';
 import { Fauna } from '../fauna/fauna';
 import { Rivers } from '../water/rivers';
+import { SkyRainbow } from '../sky/rainbow';
 import { toTexture, leafAtlas, glowSprite } from '../render/textures';
 import type { Quality } from '../config';
 import { registerPoi } from '../secrets/poi';
@@ -41,6 +42,8 @@ export class GameWorld {
   villages!: Villages;
   fauna!: Fauna;
   rivers!: Rivers;
+  kits = new Map<string, TreeKit>();
+  readonly rainbow = new SkyRainbow();
   private steps: (() => void | Promise<void>)[] = [];
 
   constructor(readonly seed: number, private quality: Quality) {
@@ -60,6 +63,7 @@ export class GameWorld {
     this.steps.push(() => {
       this.sky = createSky();
       this.scene.add(this.sky.mesh);
+      this.scene.add(this.rainbow.mesh);
       this.scene.add(createBackdrop(seed));
       // water depth texture around Lantern Lake (the sea outside it counts as deep)
       const HS = 256, hx0 = -640, hz0 = -480, hsize = 1280;
@@ -102,6 +106,7 @@ export class GameWorld {
     });
     this.steps.push(() => {
       const kits = new Map(TREE_SPECIES.map((sp, i) => [sp.id, new TreeKit(sp, atlas, seed + i * 101)]));
+      this.kits = kits;
       this.forest = new ForestStreamer(this.pool, seed, kits);
       this.forest.clearings = this.villages.clearings;
       this.forest.radius = quality.name === 'low' ? 450 : quality.name === 'high' ? 1000 : 700;
