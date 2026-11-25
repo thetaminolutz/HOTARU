@@ -139,18 +139,36 @@ vec3 pointLights(vec3 P, vec3 N, float wrap){
  * Stylised surface shading. sss: how much light shines through when backlit (leaves, paper).
  * ao: baked occlusion. wrap: light wrap for soft volumes like foliage.
  */
+uniform vec4 uRooms[8];
+uniform vec2 uRoomY[8];
+uniform int uRoomCount;
+/** 0 outdoors … 1 inside a room (interiors: dim daylight, lamps and hearths always glow) */
+float indoorAt(vec3 P){
+  float k = 0.0;
+  for (int i = 0; i < 8; i++) {
+    if (i >= uRoomCount) break;
+    vec4 r = uRooms[i];
+    vec2 y = uRoomY[i];
+    vec3 lo = vec3(r.x, y.x, r.y), hi = vec3(r.z, y.y, r.w);
+    vec3 e = min(P - lo, hi - P);
+    k = max(k, smoothstep(-0.02, 0.06, min(e.x, min(e.y, e.z))));
+  }
+  return k;
+}
 vec3 shade(vec3 albedo, vec3 N, vec3 P, float sss, float ao, float wrap){
   vec3 V = normalize(uCamPos - P);
   float ndl = dot(N, uKeyDir) * (1.0 - wrap) + wrap;
   float sh = shadowAt(P, N) * cloudShadow(P);
   float lit = mix(band(ndl, uBands), clamp(ndl, 0.0, 1.0), uSmoothLight) * sh;
   vec3 hemi = mix(uAmbGround, uAmbSky, N.y * 0.5 + 0.5);
-  vec3 amb = (hemi + uShadowTint * (1.0 - lit) * 0.5) * ao;
+  float indoor = indoorAt(P);
+  vec3 amb = (hemi + uShadowTint * (1.0 - lit) * 0.5) * ao * (1.0 - 0.68 * indoor);
   vec3 direct = uKeyColor * lit;
   float back = pow(max(dot(-V, uKeyDir), 0.0), 3.0) * sss * sh;
   direct += uKeyColor * albedo * back * 1.5;
   float rimF = pow(1.0 - max(dot(N, V), 0.0), 3.0) * smoothstep(-0.3, 0.7, dot(-V, uKeyDir)) * sh;
-  vec3 pl = pointLights(P, N, wrap) * uLamps;
+  vec3 pl = pointLights(P, N, wrap) * max(uLamps, indoor * 0.85);
+  rimF *= 1.0 - indoor;
   return albedo * (amb + direct + pl) + uRim * rimF * (albedo + 0.15);
 }
 

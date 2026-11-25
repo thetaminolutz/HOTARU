@@ -7,6 +7,7 @@ import type { World } from '../world/heightfield';
 import { createRng, hash3 } from '../core/rng';
 import { createNoise } from '../core/noise';
 import { REGIONS } from '../world/data/regions';
+import { inClearing, type Clear } from '../world/clearings';
 
 type Mix = [string, number][];
 const MIX: Record<string, Mix> = {
@@ -51,7 +52,7 @@ function keepOpen(x: number, z: number): boolean {
   return false;
 }
 
-export function placeTrees(w: World, x0: number, z0: number, size: number): Record<string, Float32Array> {
+export function placeTrees(w: World, x0: number, z0: number, size: number, clear?: Clear): Record<string, Float32Array> {
   const lists: Record<string, number[]> = {};
   const r = createRng(hash3(Math.round(x0), Math.round(z0), 0, w.seed ^ 0x7733));
   const n = createNoise(w.seed ^ 0x7ee5);
@@ -66,6 +67,7 @@ export function placeTrees(w: World, x0: number, z0: number, size: number): Reco
     const slope = Math.hypot(w.height(px + e, pz) - w.height(px - e, pz), w.height(px, pz + e) - w.height(px, pz - e)) / (2 * e);
     if (slope > 1.2) continue;
     if (keepOpen(px, pz)) continue;
+    if (inClearing(clear, px, pz, 2.5)) continue;
     w.biome(px, pz, b);
     // treeline: fewer trees high up, none on snowy peaks
     const alt = h > 1050 ? 0 : h > 750 ? 1 - (h - 750) / 300 : 1;

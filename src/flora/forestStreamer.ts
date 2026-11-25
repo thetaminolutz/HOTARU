@@ -7,6 +7,7 @@
 import * as THREE from 'three';
 import type { WorkerPool } from '../world/workerPool';
 import type { TreeKit } from './trees';
+import type { Clearings } from '../world/clearings';
 import { hash3 } from '../core/rng';
 
 type Tile = { key: string; x0: number; z0: number; group: THREE.Group | null; loading: boolean; parts: { near: THREE.Mesh; far: THREE.Mesh; trunks: THREE.InstancedMesh }[] };
@@ -19,6 +20,8 @@ export class ForestStreamer {
   private tiles = new Map<string, Tile>();
   /** Trees are loaded within this radius (m); set from the quality preset. */
   radius = 700;
+  /** Villages and roads keep their ground clear (set by the world). */
+  clearings: Clearings | null = null;
   /** Full-detail crowns (and trunks, shadows) within this distance. */
   nearDist = 220;
   stats = { tiles: 0, trees: 0 };
@@ -44,7 +47,7 @@ export class ForestStreamer {
         t = { key, x0, z0, group: null, loading: true, parts: [] };
         this.tiles.set(key, t);
         const tile = t;
-        void this.pool.request<{ trees: Record<string, Float32Array> }>({ kind: 'trees', seed: this.seed, x0, z0, size: TILE }, 1 + d / 100).then((res) => {
+        void this.pool.request<{ trees: Record<string, Float32Array> }>({ kind: 'trees', seed: this.seed, x0, z0, size: TILE, clear: this.clearings?.forTile(x0, z0, TILE, 4) }, 1 + d / 100).then((res) => {
           tile.loading = false;
           if (this.tiles.get(key) !== tile) return;
           this.build(tile, res.trees);

@@ -7,6 +7,7 @@
 import { createNoise } from '../core/noise';
 import { smoothstep, lerp, clamp } from '../core/math';
 import { REGIONS, HALF } from './data/regions';
+import { VILLAGES } from '../buildings/data/villages';
 
 export type Biome = {
   forest: number;
@@ -134,9 +135,36 @@ export function createWorld(seed: number): World {
     }
 
     // keep land above the water line outside the lake and the sea (no accidental floods)
+    // villages sit on gently graded land (keeps a fifth of the original relief)
+    if (grading) for (const v of VILLAGES) {
+      const dv = Math.hypot(x - v.x, z - v.z);
+      if (dv > v.r * 1.6) continue;
+      const tv = villageLevel(v);
+      if (tv < 2) continue;
+      const k = smoothstep(v.r * 1.6, v.r * 0.8, dv);
+      h = lerp(h, tv + (h - tv) * 0.2, k);
+    }
+
     const inLake = Math.hypot(x / 440, (z + 10) / 300) < 1.25;
     if (!inLake && x < coastX - 120 && gd > 1.2) h = Math.max(h, 0.6);
     return h;
+  }
+
+  /** Mean height around a village before grading (computed once). */
+  let grading = true;
+  const levels = new Map<string, number>();
+  function villageLevel(v: { id: string; x: number; z: number; r: number }): number {
+    let t = levels.get(v.id);
+    if (t === undefined) {
+      grading = false;
+      t = 0;
+      const pts = [[0, 0], [0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]];
+      for (const [a, b] of pts) t += height(v.x + a! * v.r, v.z + b! * v.r);
+      t /= pts.length;
+      grading = true;
+      levels.set(v.id, t);
+    }
+    return t;
   }
 
   function biome(x: number, z: number, out: Biome = { forest: 0, moisture: 0, autumn: 0, special: 0, specialW: 0, grass: [0, 0, 0], region: 0 }): Biome {

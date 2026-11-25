@@ -223,7 +223,8 @@ export class PixelPipeline {
       U.uLightPos.value[i]!.set(l.pos.x, l.pos.y, l.pos.z, l.radius);
       U.uLightCol.value[i]!.set(l.color.r, l.color.g, l.color.b, l.intensity);
     }
-    U.uLightCount.value = lamps > 0.01 ? n : 0;
+    // by day lights only matter inside houses (hearths, lamps): skip them when no room is near
+    U.uLightCount.value = lamps > 0.01 || U.uRoomCount.value > 0 ? n : 0;
   }
 
   private renderShadows(scene: THREE.Scene, cam: THREE.PerspectiveCamera, tod: TodState): void {

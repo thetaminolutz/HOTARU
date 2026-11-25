@@ -15,6 +15,7 @@
     "perf": "node scripts/perf.mjs",
     "e2e:controls": "node scripts/controls-test.mjs",
     "e2e:audio": "node scripts/audio-test.mjs",
+    "e2e:houses": "node scripts/houses-test.mjs",
     "audio:samples": "node scripts/audio-samples.mjs"
   },
   "dependencies": {

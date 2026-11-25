@@ -215,3 +215,36 @@ Non-obvious decisions and why. Newest at the bottom.
 - **iOS:** the AudioContext is created on the first gesture and resumed when the app returns.
 - **Listenable samples** are rendered offline (`npm run audio:samples` → `docs/audio/*.wav`)
   since nobody can hear this container.
+
+## M7
+
+- **Houses are generated, not modelled:** `buildHouse(spec)` builds walls with door and window
+  openings, corner posts, a ceiling, a stone plinth to the ground, stone steps (≤ 0.28 m each)
+  down from the door, and a roof — thatch (steep, thick, ridge battens), kawara tile (a sagging
+  curve that lifts at the eaves), shingle or copper-green. Buildings turn in 90° steps so wall
+  colliders stay axis-aligned boxes (the player's collision model).
+- **Every house is enterable, no loading:** the interior is part of the building's merged mesh.
+  Shōji doors slide open when you come within 2.6 m and close behind you. Interiors are
+  furnished by type and profession (tatami, irori hearth with kettle, cushions you can sit on,
+  chabudai, tansu, shelves, andon lamps, tokonoma with scroll and ikebana; potter's wheel,
+  lantern-maker's lanterns, loom, carpenter's planks, fishing nets, an onsen bath with steam).
+  Futons are laid out at night. Upstairs rooms are left for later (the M7 houses are one storey).
+- **Interior light without new passes:** the shared shader knows the 8 nearest rooms (boxes); a
+  fragment inside one gets 68 % less sky ambient and no rim light, while lamps and hearths glow
+  there by day too. Outside walls aren't affected (their faces lie outside the room box). Point
+  lights are uploaded by day only when a room is near.
+- **Villages:** 7 sites (Ichiba market town, Inaho thatched farms, Chabatake tea hamlet,
+  Shiomachi harbour, Sakuraoka, Yukemuri onsen village, Kumoji shrine). A winding main street
+  follows the contour (plus a cross street in the market town), lots line both sides and face the
+  street; a plaza with a well, lantern posts every ~18 m, a vermilion torii at the street's end.
+  **The land under a village is graded** in the heightfield itself (a fifth of the relief kept),
+  so terrain, workers, roads and placement all agree and houses don't stand on stilts.
+- **Roads:** A* on a 24 m grid with a slope cost (roads wind over passes, avoid water — plank
+  bridges if they must cross), Chaikin-smoothed, draped as dirt strips in 120 m chunks drawn
+  within 650 m. Roads leave a village from the street end facing the next village.
+- **Clearings:** house footprints, plazas and roads are sent with each tree/grass worker request
+  (only the shapes touching that tile), so forests and grass keep clear of them.
+- **Far villages:** beyond 480 m a village switches to one merged block-and-roof mesh plus a
+  window mesh whose windows glow at night: two draw calls per village to 6 km.
+- **Audio:** inside a house the reverb becomes a small room, the wind is sheltered, and
+  footsteps sound like tatami; house floors and steps sound like wood.

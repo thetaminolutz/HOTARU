@@ -20,6 +20,24 @@ const off = (w: GameWorld, x: number, y: number, z: number) => w.dock.anchors.sh
 /** Absolute position `dy` metres above the ground (or water). */
 const at = (w: GameWorld, x: number, z: number, dy: number) => new THREE.Vector3(x, Math.max(w.height(x, z), 0) + dy, z);
 
+const vil = (w: GameWorld, id: string) => w.villages.villages.find((v) => v.layout.def.id === id)!.layout;
+/** A point along a village's main street (fraction 0..1), `dy` above the road. */
+const street = (w: GameWorld, id: string, f: number, dy = 1.7) => {
+  const st = vil(w, id).streets[0]!, [x, z] = st[Math.round(f * (st.length - 1))]!;
+  return new THREE.Vector3(x, w.groundHeight(x, z) + dy, z);
+};
+/** Inside the n-th house of a type: local (u, v) in −1..1 of the floor, `dy` above it. */
+const inside = (w: GameWorld, id: string, type: string, u: number, v: number, dy: number) => {
+  const h = vil(w, id).houses.filter((h) => h.type === type)[0] ?? vil(w, id).houses[0]!;
+  const lx = (u * h.w) / 2, lz = (v * h.d) / 2, a = (h.rot * Math.PI) / 2;
+  const c = Math.round(Math.cos(a)), sn = Math.round(Math.sin(a));
+  return new THREE.Vector3(h.x + lx * c + lz * sn, h.floorY + dy, h.z - lx * sn + lz * c);
+};
+const above = (w: GameWorld, id: string, dist: number, ang: number, dy: number) => {
+  const d = vil(w, id).def, x = d.x + Math.cos(ang) * dist, z = d.z + Math.sin(ang) * dist;
+  return new THREE.Vector3(x, Math.max(w.height(x, z), 0) + dy, z);
+};
+
 export const SHOTS: Shot[] = [
   { name: 'dock-night', label: 'Dock at night', hour: 21.6, elapsed: 4200, pos: (w) => off(w, 8, 3, 3), look: (w) => off(w, -8, 1.8, -18), fov: 70 },
   { name: 'dock-golden', label: 'Dock, golden hour', hour: 17.7, elapsed: 4200, pos: (w) => off(w, 8, 3, 3), look: (w) => off(w, -8, 1.8, -18), fov: 70 },
@@ -35,6 +53,16 @@ export const SHOTS: Shot[] = [
   { name: 'snow-pass', label: 'Snowy high pass', hour: 14, elapsed: 1200, pos: (w) => at(w, -300, -3300, 25), look: (w) => at(w, -400, -4300, 300), fov: 70 },
   { name: 'flyover', label: 'High over the world', hour: 16.5, elapsed: 1200, pos: () => new THREE.Vector3(1200, 1400, 2600), look: () => new THREE.Vector3(-600, 200, -1500), fov: 70 },
   { name: 'rice-valley', label: 'Rice-terrace valley', hour: 10.5, elapsed: 1200, pos: (w) => at(w, -200, 2500, 30), look: (w) => at(w, -200, 3300, 20), fov: 70 },
+  // M7: villages and interiors
+  { name: 'market-street', label: 'Ichiba market street', hour: 10.5, elapsed: 1200, pos: (w) => street(w, 'ichiba', 0.42), look: (w) => street(w, 'ichiba', 0.7, 1.6), fov: 70 },
+  { name: 'market-dusk', label: 'Ichiba at dusk', hour: 19.2, elapsed: 1200, pos: (w) => street(w, 'ichiba', 0.3, 1.7), look: (w) => street(w, 'ichiba', 0.55, 1.5), fov: 70 },
+  { name: 'villages-night', label: 'A village at night from the hills', hour: 21.5, elapsed: 1200, pos: (w) => above(w, 'ichiba', 230, 0.8, 38), look: (w) => above(w, 'ichiba', 0, 0, 4), fov: 55 },
+  { name: 'interior-day', label: 'Inside a farmhouse', hour: 11, elapsed: 1200, pos: (w) => inside(w, 'inaho', 'minka', 0.75, -0.7, 1.5), look: (w) => inside(w, 'inaho', 'minka', -0.4, 0.6, 0.6), fov: 78 },
+  { name: 'interior-night', label: 'Farmhouse at night', hour: 22, elapsed: 1200, pos: (w) => inside(w, 'inaho', 'minka', 0.75, 0.75, 1.5), look: (w) => inside(w, 'inaho', 'minka', -0.5, -0.8, 0.4), fov: 78 },
+  { name: 'thatch-village', label: 'Inaho, thatched farmhouses', hour: 16.8, elapsed: 1200, pos: (w) => street(w, 'inaho', 0.4, 1.7), look: (w) => street(w, 'inaho', 0.65, 2.2), fov: 70 },
+  { name: 'harbour', label: 'Shiomachi fishing village', hour: 8.5, elapsed: 1200, pos: (w) => street(w, 'shiomachi', 0.25, 1.7), look: (w) => street(w, 'shiomachi', 0.6, 2), fov: 70 },
+  { name: 'onsen-village', label: 'Yukemuri hot-spring village', hour: 17.8, elapsed: 1200, pos: (w) => street(w, 'yukemuri', 0.35, 1.7), look: (w) => street(w, 'yukemuri', 0.65, 2), fov: 70 },
+  { name: 'shrine-torii', label: 'Torii at Kumoji', hour: 15, elapsed: 1200, pos: (w) => street(w, 'kumoji', 0.82, 1.7), look: (w) => street(w, 'kumoji', 1, 2.6), fov: 70 },
   // M5: vegetation, wind & particles
   { name: 'meadow-flowers', label: 'Cosmos fields', hour: 15.5, elapsed: 1200, wind: 0.7, pos: (w) => at(w, 2900, 3000, 1.6), look: (w) => at(w, 2960, 2940, 1), fov: 70 },
   { name: 'cherry-hills', label: 'Cherry hills, falling leaves', hour: 16.5, elapsed: 1200, wind: 0.8, pos: (w) => at(w, 2300, -400, 1.7), look: (w) => at(w, 2380, -460, 4), fov: 70 },

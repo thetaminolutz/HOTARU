@@ -31,6 +31,10 @@ export const U = {
   uLightPos: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector4()) },
   uLightCol: { value: Array.from({ length: MAX_LIGHTS }, () => new THREE.Vector4()) },
   uLightCount: { value: 0 },
+  /** nearby interiors (x0, z0, x1, z1) and their floor/ceiling heights */
+  uRooms: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+  uRoomY: { value: Array.from({ length: 8 }, () => new THREE.Vector2()) },
+  uRoomCount: { value: 0 },
   uClipPlane: { value: new THREE.Vector4(0, 0, 0, 1) },
   /** xy: wind direction, z: strength, w: gustiness */
   uWind: { value: new THREE.Vector4(1, 0.3, 0.5, 0.5) },

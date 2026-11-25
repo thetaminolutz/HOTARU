@@ -7,6 +7,7 @@ import type { World, Biome } from '../world/heightfield';
 import { createRng, hash3 } from '../core/rng';
 import { createNoise, type Noise } from '../core/noise';
 import { GV } from './groundAtlas';
+import { inClearing, type Clear } from '../world/clearings';
 import { REGIONS } from '../world/data/regions';
 
 const PAMPAS = REGIONS.findIndex((r) => r.id === 'pampas');
@@ -21,7 +22,7 @@ export type Rect = [number, number, number, number];
 
 const lin = (c: number) => (c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
 
-export function placeGround(w: World, x0: number, z0: number, size: number, density: number, exclude: Rect[]): Float32Array {
+export function placeGround(w: World, x0: number, z0: number, size: number, density: number, exclude: Rect[], clear?: Clear): Float32Array {
   if (!noise || noiseSeed !== w.seed) { noise = createNoise(w.seed ^ 0x9a55); noiseSeed = w.seed; }
   const n = noise;
   const r = createRng(hash3(Math.round(x0), Math.round(z0), 7, w.seed));
@@ -34,6 +35,7 @@ export function placeGround(w: World, x0: number, z0: number, size: number, dens
     const px = x + r.next() * cell, pz = z + r.next() * cell;
     const u = r.next(), u2 = r.next(), u3 = r.next();
     if (px >= x0 + size || pz >= z0 + size) continue; // jitter must not spill into the next tile
+    if (inClearing(clear, px, pz)) continue;
     if (exclude.some(([ax, az, bx, bz]) => px > ax && px < bx && pz > az && pz < bz)) continue;
     const b = bio[Math.min(G - 1, Math.round(((pz - z0) / size) * (G - 1))) * G + Math.min(G - 1, Math.round(((px - x0) / size) * (G - 1)))]!;
     const h = w.height(px, pz);

@@ -8,6 +8,7 @@ import { U } from '../render/uniforms';
 import { COMMON_PARS, FOG_FN, LIGHTING, NOISE, SKY_FN, WIND } from '../render/shaders/common';
 import type { WorkerPool } from '../world/workerPool';
 import { STRIDE, type Rect } from './groundPlacement';
+import type { Clearings } from '../world/clearings';
 
 const VERT = /* glsl */ `
 ${COMMON_PARS}
@@ -94,6 +95,8 @@ export class GrassField {
   density = 0.7;
   /** Areas with no plants (decks, buildings). */
   exclude: Rect[] = [];
+  /** Villages and roads (set by the world). */
+  clearings: Clearings | null = null;
   stats = { tiles: 0, plants: 0 };
   private material: THREE.ShaderMaterial;
 
@@ -137,7 +140,7 @@ export class GrassField {
       if (!this.tiles.has(key)) {
         const t: Tile = { key, data: null, loading: true };
         this.tiles.set(key, t);
-        void this.pool.request<{ data: Float32Array }>({ kind: 'ground', seed: this.seed, x0, z0, size: TILE, density: this.density, exclude: this.exclude }, 0.5 + d / 40).then((res) => {
+        void this.pool.request<{ data: Float32Array }>({ kind: 'ground', seed: this.seed, x0, z0, size: TILE, density: this.density, exclude: this.exclude, clear: this.clearings?.forTile(x0, z0, TILE, 1) }, 0.5 + d / 40).then((res) => {
           t.loading = false;
           if (this.tiles.get(key) !== t) return;
           t.data = res.data;
