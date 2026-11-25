@@ -20,6 +20,8 @@ export type LitOptions = {
   alphaTest?: number;
   outline?: boolean;
   side?: THREE.Side;
+  /** Lamp-driven emissive that still glows this much by day (shōji with daylight behind). */
+  dayGlow?: number;
   /** Gentle sway (lanterns, cloth); amplitude in metres per metre above the object origin. */
   sway?: number;
 };
@@ -70,6 +72,7 @@ uniform vec3 uEmissive;
 uniform float uEmissiveI;
 uniform float uFlicker;
 uniform float uLampDriven;
+uniform float uDayGlow;
 uniform float uSss;
 uniform float uWrap;
 uniform float uAlphaTest;
@@ -87,7 +90,7 @@ void main(){
   if (!gl_FrontFacing) N = -N;
   vec3 col = shade(albedo, N, vWorldPos, uSss, 1.0, uWrap);
   float em = vColor.a * uEmissiveI;
-  if (uLampDriven > 0.5) em *= uLamps;
+  if (uLampDriven > 0.5) em *= max(uLamps, uDayGlow);
   if (uFlicker > 0.5) {
     float ph = dot(floor(vWorldPos * 2.0), vec3(1.7, 3.1, 2.3));
     em *= 0.88 + 0.12 * (sin(uTime * 9.0 + ph) * 0.5 + 0.5) * (sin(uTime * 23.0 + ph * 1.3) * 0.5 + 0.5);
@@ -121,6 +124,7 @@ export function litMaterial(o: LitOptions = {}): THREE.ShaderMaterial {
     uEmissiveI: { value: o.emissiveIntensity ?? 1 },
     uFlicker: { value: o.flicker ? 1 : 0 },
     uLampDriven: { value: o.lampDriven ? 1 : 0 },
+    uDayGlow: { value: o.dayGlow ?? 0 },
     uSss: { value: o.sss ?? 0 },
     uWrap: { value: o.wrap ?? 0 },
     uAlphaTest: { value: o.alphaTest ?? 0 },

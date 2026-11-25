@@ -54,7 +54,8 @@ export class AudioSystem {
   surface(): Surface {
     const g = this.game, w = g.world, p = g.controller.position;
     if (g.controller.pose === 'wade' || g.controller.pose === 'swim') return 'water';
-    if (w.dock.deckHeight(p.x, p.z) > -Infinity) return 'wood';
+    if (w.villages.indoors(p)) return 'tatami';
+    if (w.dock.deckHeight(p.x, p.z) > -Infinity || w.villages.floorHeight(p.x, p.z) > -Infinity) return 'wood';
     const h = w.height(p.x, p.z), b = w.world.biome(p.x, p.z, this.b);
     const rid = REGIONS[b.region]?.id ?? '';
     if (h > 980 || (h > 620 && b.special === 3)) return 'snow';
@@ -87,7 +88,7 @@ export class AudioSystem {
     const ctx: AmbContext = {
       region, forest: b.forest, moisture: b.moisture, autumn: b.autumn, hour: clock.hour,
       wind: g.windStrength * 1.2, water: coast > 0 ? 0 : wet, coast, altitude,
-      rain: w.fx.rain, snow: w.fx.snow, dock, indoors: false,
+      rain: w.fx.rain, snow: w.fx.snow, dock, indoors: w.villages.indoors(p),
     };
     this.context = ctx;
     this.ambience.update(dt, ctx);

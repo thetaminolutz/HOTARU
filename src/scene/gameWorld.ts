@@ -18,6 +18,7 @@ import { TREE_SPECIES } from '../flora/data/trees';
 import { DockScene } from '../buildings/dockScene';
 import { createLeaves } from '../particles/particles';
 import { AmbientFx } from '../particles/ambient';
+import { Villages } from '../buildings/villages';
 import { toTexture, leafAtlas, glowSprite } from '../render/textures';
 import type { Quality } from '../config';
 import { registerPoi } from '../secrets/poi';
@@ -35,6 +36,7 @@ export class GameWorld {
   terrainMaterial!: THREE.ShaderMaterial;
   grass!: GrassField;
   fx!: AmbientFx;
+  villages!: Villages;
   private steps: (() => void | Promise<void>)[] = [];
 
   constructor(readonly seed: number, private quality: Quality) {
@@ -76,8 +78,15 @@ export class GameWorld {
       this.water.boats = this.dock.boats;
     });
     this.steps.push(() => {
+      // villages and the roads between them (before the forest, which keeps their ground clear)
+      this.villages = new Villages(this.world, seed, this.dock.anchors.shore!);
+      this.scene.add(this.villages.group);
+      for (const v of this.villages.villages) registerPoi({ x: v.layout.def.x, z: v.layout.def.z, kind: 'village', name: v.layout.def.name });
+    });
+    this.steps.push(() => {
       const kits = new Map(TREE_SPECIES.map((sp, i) => [sp.id, new TreeKit(sp, atlas, seed + i * 101)]));
       this.forest = new ForestStreamer(this.pool, seed, kits);
+      this.forest.clearings = this.villages.clearings;
       this.forest.radius = quality.name === 'low' ? 450 : quality.name === 'high' ? 1000 : 700;
       this.terrainMaterial.uniforms.uTreeRadius!.value = this.forest.radius;
       this.scene.add(this.forest.group);
@@ -85,6 +94,7 @@ export class GameWorld {
     this.steps.push(() => {
       const H = this.world.height;
       this.grass = new GrassField(this.pool, seed, gAtlas);
+      this.grass.clearings = this.villages.clearings;
       this.grass.exclude = this.dock.decks.map(([x0, z0, x1, z1]) => [x0 - 0.2, z0 - 0.2, x1 + 0.2, z1 + 0.2]);
       this.applyGrassQuality(this.quality);
       this.scene.add(this.grass.mesh);
@@ -94,6 +104,7 @@ export class GameWorld {
       for (const [x, z, a] of [[-380, -4050, 1], [-260, -4180, 0.7], [1900, -4200, 0.8], [2050, -4120, 0.5]] as const) {
         this.fx.addEmitter({ effect: 'steam', pos: new THREE.Vector3(x, H(x, z), z), amount: a });
       }
+      for (const e of this.villages.emitters) this.fx.addEmitter({ effect: 'steam', pos: e, amount: 0.8 });
       this.scene.add(this.fx.group);
       const m = this.dock.anchors.maple!;
       this.scene.add(createLeaves(new THREE.Vector3(m.x + 3, m.y + 9, m.z - 3), new THREE.Vector3(12, 9, 12), Math.round(90 * this.quality.particles), 0.1));
@@ -144,7 +155,7 @@ export class GameWorld {
   height(x: number, z: number): number { return this.world.height(x, z); }
 
   groundHeight(x: number, z: number): number {
-    return Math.max(this.world.height(x, z), this.dock.deckHeight(x, z));
+    return Math.max(this.world.height(x, z), this.dock.deckHeight(x, z), this.villages.floorHeight(x, z));
   }
 
   normal(x: number, z: number, out = new THREE.Vector3()): THREE.Vector3 {

@@ -18,8 +18,8 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M4 | Water | ⬜ Not started | — | — |
 | M5 | Vegetation, wind & particles | ✅ Done | [M5](docs/screenshots/M5/) | pending (run on iPad) |
 | M6 | Regions, weather & seasons | ⬜ Not started | — | — |
-| M7 | Buildings, villages & interiors | 🔨 In progress | — | — |
-| M8 | Fauna | ⬜ Not started | — | — |
+| M7 | Buildings, villages & interiors | ✅ Done | [M7](docs/screenshots/M7/) | pending (run on iPad) |
+| M8 | Fauna | 🔨 In progress | — | — |
 | M9 | Villagers & wanderers | ⬜ Not started | — | — |
 | M10 | Castle, shrines, caves & secrets | ⬜ Not started | — | — |
 | M11 | Items, journal, map, photo, boats, fishing | ⬜ Not started | — | — |
@@ -30,6 +30,42 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M7 at a glance (villages & houses)
+
+**Seven villages**, joined by winding dirt roads:
+
+- **Ichiba:** a market town with tiled machiya, shops and workshops
+- **Inaho:** thatched farmhouses among the rice terraces
+- **Chabatake:** a tea hamlet
+- **Shiomachi:** a fishing harbour
+- **Sakuraoka:** on the cherry hills
+- **Yukemuri:** a hot-spring village with an onsen
+- **Kumoji:** a shrine settlement
+
+**Every house can be entered.** Walk up the stone steps and the shōji door slides open, with no loading screen. Inside are:
+
+- tatami, an irori hearth with a kettle, and cushions you can sit on
+- a tokonoma alcove with a scroll and flowers, and andon lamps
+- tools for the owner's trade: a potter's wheel, a lantern maker's lanterns, a loom, nets
+- futons laid out at night
+
+Interiors are lamp-lit and darker than outside. Windows glow at night, so villages shine from the hills.
+
+| Inside a farmhouse | Farmhouse at night |
+|---|---|
+| ![](docs/screenshots/M7/interior-day.png) | ![](docs/screenshots/M7/interior-night.png) |
+| **Ichiba at dusk** | **A village at night from the hills** |
+| ![](docs/screenshots/M7/market-dusk.png) | ![](docs/screenshots/M7/villages-night.png) |
+| **Inaho, thatched farmhouses** | **Shiomachi harbour** |
+| ![](docs/screenshots/M7/thatch-village.png) | ![](docs/screenshots/M7/harbour.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 45 passed (layout determinism, no overlaps, every house has a door gap, floor and walkable steps, roads connect) |
+| Houses e2e (`npm run e2e:houses`) | ✅ walk up, door opens, step inside (indoors, room reverb, tatami steps), walls hold |
+| Offline · stability · controls · audio e2e | ✅ |
+| Draw calls · triangles (Medium) | benchmark path 311 · 1.57 M; market street at dusk 360 · 1.33 M; inside a house 244 · 0.64 M |
 
 ### M13 at a glance (audio)
 
@@ -208,6 +244,7 @@ npm run e2e:offline    # offline boot test (builds must exist)
 npm run e2e:stability  # pixel stability test
 npm run e2e:controls   # walking, swimming, sitting, Pencil tap
 npm run e2e:audio      # audio unlock, output and per-place mix
+npm run e2e:houses     # walk into a house
 npm run audio:samples  # render music samples → docs/audio/
 npm run icons          # regenerate app icons & launch images
 ```

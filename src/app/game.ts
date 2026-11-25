@@ -46,7 +46,7 @@ export class Game {
     this.controller = new Controller({
       ground: (x, z) => w.groundHeight(x, z),
       terrain: (x, z) => w.height(x, z),
-      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity,
+      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity,
       snowy: (x, z, h) => h > 980 || (h > 620 && w.world.biome(x, z).special === 3),
       colliders,
     });
@@ -69,6 +69,13 @@ export class Game {
     for (const sp of w.dock.sitSpots) {
       this.interactions.add({
         id: 'sit-' + sp.x.toFixed(1), kind: 'sit', label: sp.label, pos: new THREE.Vector3(sp.x, sp.y + 0.6, sp.z), reach: 2.6, yaw: sp.yaw,
+        use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
+      });
+    }
+    this.colliders.push(...w.villages.colliders);
+    for (const sp of w.villages.sits) {
+      this.interactions.add({
+        id: 'sit-' + sp.x.toFixed(1) + ',' + sp.z.toFixed(1), kind: 'sit', label: sp.label, pos: new THREE.Vector3(sp.x, sp.y + 0.4, sp.z), reach: 2.2, yaw: sp.yaw,
         use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
       });
     }
@@ -170,7 +177,9 @@ export class Game {
     this.world.update(this.controller.position);
     const cp = this.controller.position;
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
-    this.pipeline.uploadLights(this.world.dock.lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
+    this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt);
+    const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights);
+    this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
 
     // smooth pixel camera: snap rotation to whole pixel angles, shift the image by the remainder
