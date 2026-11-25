@@ -26,7 +26,12 @@ function pickW<T>(list: [T, number][], u: number): T {
   return list[list.length - 1]![0];
 }
 
-export function layoutVillage(def: VillageDef, height: (x: number, z: number) => number, seed: number): VillageLayout {
+export function layoutVillage(def: VillageDef, height: (x: number, z: number) => number, seed: number, riverDist: (x: number, z: number) => number = () => Infinity): VillageLayout {
+  /** keep houses, lanterns and the well off the stream's banks */
+  const wet = (x0: number, z0: number, x1: number, z1: number, pad: number) => {
+    for (let x = x0 - pad; x <= x1 + pad + 0.01; x += Math.max(1, (x1 - x0 + 2 * pad) / 4)) for (let z = z0 - pad; z <= z1 + pad + 0.01; z += Math.max(1, (z1 - z0 + 2 * pad) / 4)) if (riverDist(x, z) < 0) return true;
+    return false;
+  };
   const r = createRng(hashString(def.id) ^ seed);
   // main road direction: follow the contour (least slope) through the centre
   let best = 0, bestCost = Infinity;
@@ -80,7 +85,7 @@ export function layoutVillage(def: VillageDef, height: (x: number, z: number) =>
         const odd = rot % 2 === 1;
         const hw = (odd ? d : w) / 2 + 0.6, hd = (odd ? w : d) / 2 + 0.6;
         const x0 = cx - hw, x1 = cx + hw, z0 = cz - hd, z1 = cz + hd;
-        if (!free(x0 - 1.2, z0 - 1.2, x1 + 1.2, z1 + 1.2) || onStreet(x0, z0, x1, z1)) continue;
+        if (!free(x0 - 1.2, z0 - 1.2, x1 + 1.2, z1 + 1.2) || onStreet(x0, z0, x1, z1) || wet(x0, z0, x1, z1, 3)) continue;
         let lo = Infinity, hi = -Infinity;
         for (const [px, pz] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1], [cx, cz]]) { const h = height(px!, pz!); lo = Math.min(lo, h); hi = Math.max(hi, h); }
         if (lo < 1.2 || hi - lo > 5) continue;
@@ -100,11 +105,12 @@ export function layoutVillage(def: VillageDef, height: (x: number, z: number) =>
     const [ax, az] = st[i - 1]!, [bx, bz] = st[i + 1]!, tl = Math.hypot(bx - ax, bz - az) || 1;
     const side = i % 2 ? 1 : -1;
     const x = st[i]![0] + (-(bz - az) / tl) * 2.6 * side, z = st[i]![1] + ((bx - ax) / tl) * 2.6 * side;
-    if (!free(x - 0.3, z - 0.3, x + 0.3, z + 0.3)) continue;
+    if (!free(x - 0.3, z - 0.3, x + 0.3, z + 0.3) || riverDist(x, z) < 1.2) continue;
     const y = height(x, z);
     if (y > 0.8) lanterns.push({ x, z, y });
   }
-  const wx = def.x + 4, wz = def.z + 4;
+  let wx = def.x + 4, wz = def.z + 4;
+  for (let k = 0; k < 8 && riverDist(wx, wz) < 3; k++) { wx = def.x + Math.cos(k) * 8; wz = def.z + Math.sin(k) * 8; }
   const well = { x: wx, z: wz, y: height(wx, wz) };
   let torii: VillageLayout['torii'] = null;
   if (def.shrine) {

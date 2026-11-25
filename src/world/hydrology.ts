@@ -11,7 +11,9 @@ export type RiverPoint = { x: number; z: number; level: number; width: number; s
 export type River = { id: string; main: boolean; pts: RiverPoint[] };
 export type Pond = { x: number; z: number; r: number; level: number };
 export type Fall = { x: number; z: number; top: number; bottom: number; dx: number; dz: number; width: number; river: string };
-export type Hydro = { rivers: River[]; ponds: Pond[]; falls: Fall[]; carve: (x: number, z: number, h: number) => number; waterAt: (x: number, z: number) => number };
+export type Hydro = { rivers: River[]; ponds: Pond[]; falls: Fall[]; carve: (x: number, z: number, h: number) => number; waterAt: (x: number, z: number) => number;
+  /** distance (m) from (x, z) to the nearest river bank (negative: in the water), or Infinity */
+  riverDist: (x: number, z: number) => number };
 
 /** The main river, through valleys (x, z), source to sea. */
 const MAIN: [number, number][] = [
@@ -21,6 +23,11 @@ const MAIN: [number, number][] = [
   [380, 60], [700, 300], [1150, 700], [1700, 1050], [2300, 1350], [2900, 1550], [3500, 1700], [4100, 1800], [4700, 1850],
 ];
 const LAKE_IN = 9, LAKE_OUT = 10; // indices around the lake
+
+/** Villages with a stream running through them. */
+const VILLAGE_STREAMS = [
+  { id: 'ichiba', x: 1500, z: 1500 }, { id: 'inaho', x: -200, z: 3050 }, { id: 'yukemuri', x: -380, z: -4050 }, { id: 'sakuraoka', x: 2250, z: -420 },
+];
 
 /** Tributary sources (mountain springs). */
 const SOURCES: [string, number, number][] = [
@@ -134,6 +141,39 @@ export function computeHydrology(H: (x: number, z: number) => number): Hydro {
     }
   }
 
+  // ---- village streams: down from the hills, through the middle of a village, on to the river ----
+  for (const v of VILLAGE_STREAMS) {
+    // the uphill side whose ground rises most steadily from the village
+    let bestA = 0, bestScore = -Infinity;
+    for (let k = 0; k < 24; k++) {
+      const a = (k / 24) * Math.PI * 2;
+      let prev = H(v.x, v.z), dips = 0;
+      for (let s2 = 60; s2 <= 420; s2 += 60) { const h2 = H(v.x + Math.cos(a) * s2, v.z + Math.sin(a) * s2); if (h2 < prev) dips += prev - h2; prev = Math.max(prev, h2); }
+      const score = H(v.x + Math.cos(a) * 420, v.z + Math.sin(a) * 420) - dips * 4;
+      if (score > bestScore) { bestScore = score; bestA = a; }
+    }
+    const path: [number, number][] = [];
+    for (let s2 = 420; s2 >= 0; s2 -= 30) {
+      const wob = Math.sin(s2 * 0.013 + v.x) * 18 * Math.min(1, s2 / 120);
+      path.push([v.x + Math.cos(bestA) * s2 - Math.sin(bestA) * wob, v.z + Math.sin(bestA) * s2 + Math.cos(bestA) * wob]);
+    }
+    // then downhill from the village until it meets water
+    let x = v.x, z = v.z, hdg = bestA + Math.PI, h = H(x, z);
+    for (let k = 0; k < 300; k++) {
+      let bx = 0, bz = 0, bh = Infinity, ba = hdg;
+      for (let d = 0; d < DIRS; d++) {
+        const a = (d / DIRS) * Math.PI * 2, turn = Math.abs(Math.atan2(Math.sin(a - hdg), Math.cos(a - hdg)));
+        if (turn > 1.6) continue;
+        const nx = x + Math.cos(a) * STEP, nz = z + Math.sin(a) * STEP, nh = H(nx, nz) + turn * 0.8;
+        if (nh < bh) { bh = nh; bx = nx; bz = nz; ba = a; }
+      }
+      x = bx; z = bz; hdg = ba; h = Math.min(h, H(x, z));
+      path.push([x, z]);
+      if (h < 0.4 || (k > 3 && nearMain(x, z).d < 4)) break;
+    }
+    rivers.push(profile('stream-' + v.id, false, densify(chaikin(path, 2), 8), H, 2.2, 4.5));
+  }
+
   // ---- waterfalls: steep stretches merged; ≥ 6 m of drop is a waterfall, less is rapids ----
   const falls: Fall[] = [];
   for (const r of rivers) {
@@ -220,5 +260,12 @@ export function computeHydrology(H: (x: number, z: number) => number): Hydro {
     return -Infinity;
   };
 
-  return { rivers, ponds, falls, carve, waterAt };
+  const riverDist = (x: number, z: number): number => {
+    const n = nearest(x, z);
+    let d = n ? n.d - n.w : Infinity;
+    for (const p of ponds) d = Math.min(d, Math.hypot(x - p.x, z - p.z) - p.r);
+    return d;
+  };
+
+  return { rivers, ponds, falls, carve, waterAt, riverDist };
 }

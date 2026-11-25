@@ -83,7 +83,7 @@ export class Villages {
     this.M.road.polygonOffset = true; this.M.road.polygonOffsetFactor = -2; this.M.road.polygonOffsetUnits = -4;
 
     for (const def of VILLAGES) {
-      const layout = layoutVillage(def, world.height, seed);
+      const layout = layoutVillage(def, world.height, seed, world.hydro.riverDist);
       this.villages.push(this.build(layout));
     }
     this.buildRoads(dock);
