@@ -248,3 +248,28 @@ Non-obvious decisions and why. Newest at the bottom.
   window mesh whose windows glow at night: two draw calls per village to 6 km.
 - **Audio:** inside a house the reverb becomes a small room, the wind is sheltered, and
   footsteps sound like tatami; house floors and steps sound like wood.
+
+## M8
+
+- **41 species, one instanced draw each:** bodies are built from boxes in code (quadruped,
+  bird, fish, insect, crab, tortoise, frog plans with per-species proportions, ears, antlers,
+  tails, spots / stripes / masks / calico patches). Every vertex stores its part and pivot; the
+  vertex shader swings legs with the gait (diagonal pairs), lowers the head to graze or bow,
+  wags tails, folds or flaps wings, pitches flying birds and tucks the legs of sleeping
+  animals. Hidden species cost nothing; the shadow pass uses the same animation.
+- **Spawning by habitat:** 40 m cells within 120 m of the player, each deterministic per cell
+  and two-hour window, so the same meadow has the same deer when you come back that morning.
+  Habitats come from the world (forest, meadow, water, shore, marsh, coast, snow, village, farm,
+  temple, onsen, flowers, sky) and each species' active hours; diurnal grazers sleep in place
+  at night (deer lie in the grass), nocturnal ones (tanuki, foxes, owls, frogs) appear.
+- **Behaviour:** idle, wander, graze, sleep, flee, approach, petted, bow; plus movement modes for
+  circling kites and gulls, darting swallows, fluttering butterflies and dragonflies, perched
+  owls, swimming ducks and koi, standing herons, hopping hares and sparrows.
+- **Reactions:** jogging scares most animals (birds take off), walking scares them at half the
+  distance, slow walking or standing still lets curious ones come up to you. Petting raises
+  trust per species (shy animals flee less as trust grows). **Bowing:** temple deer can be bowed
+  to — the camera dips in a bow and the deer bows back.
+- **Calls:** cats, dogs, ducks, deer, chickens, horses, cows, macaques, kites, cranes, crows,
+  gulls, owls, pigeons and frogs call from where they are (spatial audio).
+- Ecosystem touches beyond habitat choice (herons hunting, crows following farmers, cats at
+  the fish market) wait for villagers and water in M9/M4.

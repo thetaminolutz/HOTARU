@@ -60,7 +60,8 @@ function pulsed(ctx: Ctx, out: AudioNode, t: number, f: number, dur: number, rat
 export type VoiceId =
   | 'warbler' | 'tit' | 'sparrow' | 'dove' | 'crow' | 'owl' | 'woodpecker' | 'gull'
   | 'cricket' | 'bellCricket' | 'higurashi' | 'frog' | 'kajika'
-  | 'furin' | 'templeBell' | 'bambooKnock' | 'shishiOdoshi' | 'creak' | 'twig' | 'drip' | 'splash';
+  | 'furin' | 'templeBell' | 'bambooKnock' | 'shishiOdoshi' | 'creak' | 'twig' | 'drip' | 'splash'
+  | 'meow' | 'bark' | 'quack' | 'deer' | 'cluck' | 'whinny' | 'moo' | 'monkey' | 'kite' | 'crane';
 
 export function playVoice(id: VoiceId, ctx: Ctx, out: AudioNode, t: number, r: Rng, noise: AudioBuffer): number {
   switch (id) {
@@ -174,6 +175,70 @@ export function playVoice(id: VoiceId, ctx: Ctx, out: AudioNode, t: number, r: R
     case 'drip': {
       tone(ctx, out, t, 900 + r.next() * 500, 2400 + r.next() * 800, 0.04, 0.12, 'sine', 0.002);
       return 0.1;
+    }
+    case 'meow': { // a vowel-shaped glide through a formant
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.Q.value = 3; bp.connect(out);
+      bp.frequency.setValueAtTime(900, t); bp.frequency.linearRampToValueAtTime(1600, t + 0.25); bp.frequency.linearRampToValueAtTime(800, t + 0.6);
+      const f = 520 + r.next() * 160;
+      tone(ctx, bp, t, f, f * 1.25, 0.25, 0.35, 'sawtooth', 0.04);
+      tone(ctx, bp, t + 0.25, f * 1.25, f * 0.8, 0.35, 0.35, 'sawtooth', 0.01);
+      return 0.7;
+    }
+    case 'bark': {
+      const n = r.int(1, 4);
+      for (let i = 0; i < n; i++) {
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 900; bp.Q.value = 1.5; bp.connect(out);
+        tone(ctx, bp, t + i * 0.35, 420, 300, 0.14, 0.5, 'sawtooth', 0.008);
+        noiseBurst(ctx, bp, noise, t + i * 0.35, 0.12, 0.25, 'bandpass', 1200, 1, 0.04);
+      }
+      return n * 0.35;
+    }
+    case 'quack': {
+      const n = r.int(1, 4);
+      for (let i = 0; i < n; i++) {
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1100; bp.Q.value = 4; bp.connect(out);
+        tone(ctx, bp, t + i * 0.28, 260, 220, 0.18, 0.5, 'square', 0.01);
+      }
+      return n * 0.28;
+    }
+    case 'deer': { // sika: a high, thin whistle-call
+      tone(ctx, out, t, 1800, 2600, 0.25, 0.12, 'sine', 0.03);
+      tone(ctx, out, t + 0.25, 2600, 1500, 0.5, 0.12, 'sine', 0.01);
+      return 0.8;
+    }
+    case 'cluck': {
+      const n = r.int(2, 6);
+      for (let i = 0; i < n; i++) {
+        const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 800; bp.Q.value = 3; bp.connect(out);
+        tone(ctx, bp, t + i * 0.18, 380, 330, 0.08, 0.35, 'square', 0.005);
+      }
+      return n * 0.18;
+    }
+    case 'whinny': {
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1400; bp.Q.value = 2; bp.connect(out);
+      pulsed(ctx, bp, t, 900, 1.1, 14, 0.25, 'sawtooth', 600);
+      return 1.2;
+    }
+    case 'moo': {
+      const bp = ctx.createBiquadFilter(); bp.type = 'lowpass'; bp.frequency.value = 600; bp.connect(out);
+      tone(ctx, bp, t, 140, 120, 1.3, 0.4, 'sawtooth', 0.15);
+      return 1.4;
+    }
+    case 'monkey': {
+      const n = r.int(1, 3);
+      for (let i = 0; i < n; i++) tone(ctx, out, t + i * 0.3, 900, 1500, 0.2, 0.12, 'triangle', 0.02);
+      return n * 0.3;
+    }
+    case 'kite': { // black kite: "piihyorororo"
+      tone(ctx, out, t, 2200, 2600, 0.4, 0.1, 'sine', 0.05);
+      pulsed(ctx, out, t + 0.45, 2400, 0.9, 12, 0.08, 'sine', 1900);
+      return 1.4;
+    }
+    case 'crane': {
+      const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1500; bp.Q.value = 2; bp.connect(out);
+      tone(ctx, bp, t, 950, 1100, 0.3, 0.3, 'sawtooth', 0.02);
+      tone(ctx, bp, t + 0.35, 1100, 900, 0.4, 0.25, 'sawtooth', 0.02);
+      return 0.8;
     }
     case 'splash': { // a fish jumping
       noiseBurst(ctx, out, noise, t, 0.25, 0.4, 'bandpass', 1400, 1.2, 0.06);

@@ -19,6 +19,7 @@ import { DockScene } from '../buildings/dockScene';
 import { createLeaves } from '../particles/particles';
 import { AmbientFx } from '../particles/ambient';
 import { Villages } from '../buildings/villages';
+import { Fauna } from '../fauna/fauna';
 import { toTexture, leafAtlas, glowSprite } from '../render/textures';
 import type { Quality } from '../config';
 import { registerPoi } from '../secrets/poi';
@@ -37,6 +38,7 @@ export class GameWorld {
   grass!: GrassField;
   fx!: AmbientFx;
   villages!: Villages;
+  fauna!: Fauna;
   private steps: (() => void | Promise<void>)[] = [];
 
   constructor(readonly seed: number, private quality: Quality) {
@@ -82,6 +84,8 @@ export class GameWorld {
       this.villages = new Villages(this.world, seed, this.dock.anchors.shore!);
       this.scene.add(this.villages.group);
       for (const v of this.villages.villages) registerPoi({ x: v.layout.def.x, z: v.layout.def.z, kind: 'village', name: v.layout.def.name });
+      this.fauna = new Fauna(this, seed);
+      this.scene.add(this.fauna.group);
     });
     this.steps.push(() => {
       const kits = new Map(TREE_SPECIES.map((sp, i) => [sp.id, new TreeKit(sp, atlas, seed + i * 101)]));

@@ -58,6 +58,8 @@ export class Game {
   readonly interactions = new Interactions();
   /** 0..1 screen fade (soft landings); the UI draws it. */
   fade = 0;
+  /** Bow gesture timer (s); the camera dips and comes back up. */
+  bowT = 0;
   /** Time-lapse is active (sitting + holding the button/key). */
   timelapse = false;
 
@@ -79,6 +81,16 @@ export class Game {
         use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
       });
     }
+    // animals you can pet or bow to appear as interactables while they're close
+    w.fauna.onNear = (a, near) => {
+      const id = 'animal-' + a.id;
+      if (!near) { this.interactions.remove(id); return; }
+      const bow = !!a.sp.bows;
+      this.interactions.add({
+        id, kind: bow ? 'bow' : 'pet', label: (bow ? 'Bow to the ' : 'Pet the ') + a.sp.name.toLowerCase(), pos: a.pos, reach: 3.4,
+        use: () => { if (bow) { this.bowT = 1.6; w.fauna.bow(a); } else w.fauna.pet(a); },
+      });
+    };
     this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
     clock.setHour(hour);
@@ -117,6 +129,13 @@ export class Game {
     const S = this.world.dock.anchors.shore!;
     this.world.dock.rowOverride = s.boat ? { x: S.x + s.boat[0], z: S.z + s.boat[1], heading: s.boat[2] } : null;
     this.pipeline.buildLutNow(s.hour);
+    // animals placed in view for the shot
+    const c = this.controller;
+    for (const [id, ahead, right, n] of s.fauna ?? []) {
+      const fx = Math.sin(c.yaw + Math.PI), fz = Math.cos(c.yaw + Math.PI);
+      const x = c.position.x + fx * ahead - fz * right, z = c.position.z + fz * ahead + fx * right;
+      this.world.fauna.spawnAt(id, x, z, n, s.hour, Math.max(1.2, n * 0.6));
+    }
   }
 
   get shots(): Shot[] { return SHOTS; }
@@ -176,6 +195,8 @@ export class Game {
     this.world.dock.update(elapsed, w);
     this.world.update(this.controller.position);
     const cp = this.controller.position;
+    const pv = this.controller.vel;
+    this.world.fauna.update(dt, cp, Math.hypot(pv.x, pv.z), clock.hour);
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt);
     const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights);
@@ -185,7 +206,9 @@ export class Game {
     // smooth pixel camera: snap rotation to whole pixel angles, shift the image by the remainder
     const c = this.controller;
     const q = (2 * Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2)) / this.pipeline.height;
-    let yaw = c.yaw, pitch = c.pitch + c.breath;
+    this.bowT = Math.max(0, this.bowT - dt);
+    const bowDip = this.bowT > 0 ? Math.sin((1 - this.bowT / 1.6) * Math.PI) * 0.55 : 0;
+    let yaw = c.yaw, pitch = c.pitch + c.breath - bowDip;
     if (this.snapRotation) {
       const yi = Math.round(yaw / q), pi = Math.round(pitch / q);
       const ry = yaw, rp = pitch;
