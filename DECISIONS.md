@@ -470,3 +470,41 @@ Non-obvious decisions and why. Newest at the bottom.
   a heel strike plus a toe roll, with alternating feet and jitter.
   - Surfaces now include dirt roads (mud when wet), gravel, stone (castle and temple), mud
     (paddies and marsh) and snow cover.
+
+## After release: feedback round 3 ("a wanderer in old Japan")
+
+- **Trees:** limbs now grow from the trunk into the 14 outermost leaf clusters (two segments
+  each), so no cluster floats. The leaf atlas has no mipmaps, so neighbouring cells no longer
+  bleed into rectangles at a distance.
+- **Clipping:** the player body is now 0.36 m (was 0.28) and the camera near plane 0.12 m, so
+  walls and posts can't slide inside the view. Doors are still passable (houses e2e).
+- **Village streams:** Ichiba, Inaho, Yukemuri and Sakuraoka each get a stream.
+  - It comes from 420 m upstream (the steadiest uphill direction), runs through the centre,
+    then follows the steepest descent until it meets other water.
+  - It goes through the same profile/carve pipeline as every river.
+  - `hydro.riverDist` keeps houses ≥ 3 m from water. Lanterns and wells move off the banks.
+  - Streets crossing a stream get bridges automatically (existing road code).
+- **Ruins (`src/buildings/ruins.ts`):** seven sites, each settled on the flattest ground near
+  an anchor, ≥ 260 m from villages and clear of water.
+  - Three forts and castles: broken battered walls, a gate, a climbable keep base, a corner
+    turret.
+  - A moor watchtower with a climbable yagura, an empty hamlet, a forgotten shrine, and an
+    old temple gate.
+  - Each site is a hidden place (found within 22 m) and hides 1–2 relics, found with "Look
+    closer". The relics are a new secret kind, "Ruins & relics".
+  - The hamlet's lanterns light themselves at night, which is a new rare moment.
+  - Meshes are merged per site and material and hidden beyond 1.4 km.
+- **Wayside:** along the long roads there are jizo, milestones and wayside shrines (one every
+  ~220–380 m), three teahouses (a bench to rest on, a parasol, a kettle) and one sekisho
+  checkpoint gate, which stands open.
+- **Villagers stay clothed.** The owner asked for nude villagers; that was declined.
+  - More detail instead: faces that blink and smile, four hairstyles (bun, topknot,
+    ponytail, child's bob), and work clothes (jacket, dark trousers, rolled sleeves,
+    headband).
+  - Straw rain capes and hats for farmers and fishers in the rain.
+  - Idle head turns, breathing and a stride sway.
+  - A freer life: children swim in the village stream on fair summer afternoons (in jinbei),
+    adults soak at the Yukemuri onsen in the evening (bath wrap and towel), and elders and
+    farmers nap in the grass after lunch.
+- **Fish:** the lake surface is opaque, so fish swimming just below it were hidden. They are
+  drawn on the surface instead (polygon offset), tinted as if seen through the water.

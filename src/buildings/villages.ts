@@ -50,7 +50,7 @@ export class Villages {
   readonly lights: Light[] = [];
   readonly sits: Sit[] = [];
   readonly rooms: { r: Rect; y0: number; y1: number }[] = [];
-  readonly roads: { path: Path; chunks: THREE.Mesh[] }[] = [];
+  readonly roads: { path: Path; chunks: THREE.Mesh[]; width: number }[] = [];
   readonly emitters: THREE.Vector3[] = [];
   /** street lanterns, each lit or out */
   readonly lanterns: Lantern[] = [];
@@ -83,7 +83,7 @@ export class Villages {
     this.M.road.polygonOffset = true; this.M.road.polygonOffsetFactor = -2; this.M.road.polygonOffsetUnits = -4;
 
     for (const def of VILLAGES) {
-      const layout = layoutVillage(def, world.height, seed);
+      const layout = layoutVillage(def, world.height, seed, world.hydro.riverDist);
       this.villages.push(this.build(layout));
     }
     this.buildRoads(dock);
@@ -205,7 +205,7 @@ export class Villages {
         this.decks.push(...c.decks);
       }
       for (let i = 0; i < path.length - 1; i++) this.clearings.segs.push([path[i]![0], path[i]![1], path[i + 1]![0], path[i + 1]![1], width / 2 + 0.5]);
-      this.roads.push({ path, chunks: meshes });
+      this.roads.push({ path, chunks: meshes, width });
     };
     for (const v of this.villages) for (const st of v.layout.streets) addPath(st, 3.4);
     for (const [a, b] of ROAD_LINKS) {

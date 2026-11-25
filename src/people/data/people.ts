@@ -8,8 +8,8 @@ export const PERSONALITIES: Personality[] = ['shy', 'cheerful', 'grumpy', 'dream
 export type Age = 'child' | 'adult' | 'elder';
 
 /** Where an activity happens. */
-export type Place = 'home' | 'work' | 'plaza' | 'teahouse' | 'field' | 'dock' | 'lanterns' | 'street' | 'shrine' | 'river';
-export type Activity = 'sleep' | 'eat' | 'work' | 'walk' | 'chat' | 'tea' | 'play' | 'sit' | 'lightLanterns' | 'snuffLanterns' | 'sweep' | 'pray' | 'fish';
+export type Place = 'home' | 'work' | 'plaza' | 'teahouse' | 'field' | 'dock' | 'lanterns' | 'street' | 'shrine' | 'river' | 'swim' | 'onsen';
+export type Activity = 'sleep' | 'eat' | 'work' | 'walk' | 'chat' | 'tea' | 'play' | 'sit' | 'lightLanterns' | 'snuffLanterns' | 'sweep' | 'pray' | 'fish' | 'swim' | 'nap' | 'soak';
 export type Slot = { at: number; act: Activity; place: Place };
 
 export type Job = 'farmer' | 'fisher' | 'lanternMaker' | 'potter' | 'weaver' | 'carpenter' | 'merchant' | 'innkeeper' | 'tea' | 'monk' | 'child' | 'elder';

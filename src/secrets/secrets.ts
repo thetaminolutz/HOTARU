@@ -15,7 +15,7 @@ import { REGIONS } from '../world/data/regions';
 import { SHRINE_HAIKU, VIEW_HAIKU, LORE } from './data/texts';
 import type { GameWorld } from '../scene/gameWorld';
 
-export type SecretKind = 'shrine' | 'view' | 'tablet' | 'place' | 'moment' | 'spirit';
+export type SecretKind = 'shrine' | 'view' | 'tablet' | 'relic' | 'place' | 'moment' | 'spirit';
 export type Secret = {
   id: string; kind: SecretKind; label: string; pos: THREE.Vector3; yaw: number;
   text: string; region: string;
@@ -23,7 +23,7 @@ export type Secret = {
   level: number; lastDay: number;
 };
 
-export const KIND_NAMES: Record<SecretKind, string> = { shrine: 'Hidden shrines', view: 'Viewpoints', tablet: 'Stone tablets', place: 'Hidden places', moment: 'Rare moments', spirit: 'Spirit encounters' };
+export const KIND_NAMES: Record<SecretKind, string> = { shrine: 'Hidden shrines', view: 'Viewpoints', tablet: 'Stone tablets', relic: 'Ruins & relics', place: 'Hidden places', moment: 'Rare moments', spirit: 'Spirit encounters' };
 
 export class Secrets {
   readonly list: Secret[] = [];
@@ -132,6 +132,13 @@ export class Secrets {
     for (const g of S.grottos) this.add('place', 'place-' + g.id, g.id === 'waterfall' ? 'The cave behind the waterfall' : g.id === 'ice' ? 'The ice cave' : 'The sea cave', new THREE.Vector3(g.x, g.floor, g.z), '');
     this.add('place', 'place-garden', 'The secret garden', this.ground(C.x - 18, C.z - 34 - 7), '');
     this.add('place', 'place-keep-top', 'The top of the keep', L.keepTop.clone(), '');
+    // ---- the ruins: each is a hidden place, each hides relics ----
+    for (const site of W.ruins.sites) {
+      this.add('place', 'place-ruin-' + site.id, site.name, new THREE.Vector3(site.x, site.y, site.z), '');
+      for (const rl of site.relics) this.add('relic', rl.id, rl.label, rl.pos.clone(), rl.text);
+    }
+    const hamlet = W.ruins.sites.find((s) => s.id === 'kirinoya');
+    if (hamlet) this.add('moment', 'moment-hamlet-lights', 'Lanterns in the empty hamlet', new THREE.Vector3(hamlet.x, hamlet.y, hamlet.z), '');
     // ---- rare moments ----
     this.add('moment', 'moment-fox-wedding', 'A fox wedding in a sunshower', this.ground(2800, -2700), '');
     this.add('moment', 'moment-snow-bell', 'The bell that rings in the snow', L.bellPos.clone(), '');
@@ -222,9 +229,10 @@ export class Secrets {
     for (const s of this.list) {
       if (this.found.has(s.id)) continue;
       const d = s.pos.distanceTo(player);
-      if (s.kind === 'place' && d < (s.id === 'place-keep-top' ? 4 : 8)) { if (this.discover(s)) out.push(s); }
+      if (s.kind === 'place' && d < (s.id === 'place-keep-top' ? 4 : s.id.startsWith('place-ruin-') ? 22 : 8)) { if (this.discover(s)) out.push(s); }
       if (s.kind === 'moment' && d < 40) {
-        const ok = s.id === 'moment-fox-wedding' ? sunshower
+        const ok = s.id === 'moment-hamlet-lights' ? (hour > 19.5 || hour < 4.5) && d < 30
+          : s.id === 'moment-fox-wedding' ? sunshower
           : s.id === 'moment-snow-bell' ? weather.snow > 0.3
           : (hour > 20 || hour < 4) && weather.cloud < 0.6;
         if (ok && this.discover(s)) out.push(s);

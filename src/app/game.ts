@@ -29,6 +29,7 @@ import { Adventure } from './adventure';
 import { PhotoMode } from './photoMode';
 import { Mystic } from './mystic';
 import { CollisionWorld } from '../player/collision';
+import { FishSchools } from '../fauna/fishSchools';
 
 let stoneImg: Pixmap | null = null;
 /** A little grey stone for the dialogue box when a tablet or shrine 'speaks'. */
@@ -47,7 +48,7 @@ export class Game {
   readonly renderer: THREE.WebGLRenderer;
   readonly pipeline: PixelPipeline;
   readonly world: GameWorld;
-  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.2, 22000);
+  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.12, 22000);
   readonly tod: TodState = createTodState();
   readonly input: InputState;
   readonly controller: Controller;
@@ -76,7 +77,7 @@ export class Game {
     this.controller = new Controller({
       ground: (x, z, feet) => w.groundHeight(x, z, feet),
       terrain: (x, z) => w.height(x, z),
-      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity || deckAt(w.landmarks.decks, x, z) > -Infinity,
+      onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity || deckAt(w.landmarks.decks, x, z) > -Infinity || deckAt(w.ruins.decks, x, z) > -Infinity,
       snowy: (x, z, h) => h > 980 || (h > 620 && w.world.biome(x, z).special === 3),
       colliders,
       water: (x, z) => w.world.hydro.waterAt(x, z),
@@ -90,6 +91,7 @@ export class Game {
   private colliders: Collider[];
   /** everything you can bump into (walls, trunks, posts, people, animals) */
   readonly collision = new CollisionWorld();
+  fish: FishSchools | null = null;
   readonly interactions = new Interactions();
   /** items, journal, map, fishing, boats, your house (M11) */
   readonly adv = new Adventure(this);
@@ -137,8 +139,8 @@ export class Game {
         use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
       });
     }
-    this.colliders.push(...w.villages.colliders, ...w.landmarks.colliders);
-    for (const sp of w.villages.sits) {
+    this.colliders.push(...w.villages.colliders, ...w.landmarks.colliders, ...w.ruins.colliders);
+    for (const sp of [...w.villages.sits, ...w.ruins.sits]) {
       this.interactions.add({
         id: 'sit-' + sp.x.toFixed(1) + ',' + sp.z.toFixed(1), kind: 'sit', label: sp.label, pos: new THREE.Vector3(sp.x, sp.y + 0.4, sp.z), reach: 2.2, yaw: sp.yaw,
         use: () => this.controller.sitAt(sp.x, sp.z, sp.y, sp.yaw),
@@ -174,6 +176,9 @@ export class Game {
     this.adv.init();
     this.mystic.init();
     this.buildCollision();
+    // fish under the water near you
+    this.fish = new FishSchools(w.world, (x, z) => Math.max(0, w.world.hydro.waterAt(x, z)), (x, z) => w.world.hydro.ponds.some((p) => Math.hypot(p.x - x, p.z - z) < p.r));
+    w.scene.add(this.fish.mesh);
     this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
     clock.setHour(hour);
@@ -243,6 +248,7 @@ export class Game {
     const C = this.collision, w = this.world;
     for (const b of this.colliders) C.addBox(b);
     for (const p of w.villages.posts) C.addCircle(p);
+    for (const c of w.ruins.circles) C.addCircle(c);
     for (const s of w.secrets.list) {
       const { x, y, z } = s.pos;
       if (s.kind === 'shrine') C.addCircle({ x, z, r: 0.55, top: y + 1.2 });
@@ -322,19 +328,21 @@ export class Game {
     const cp = this.controller.position;
     const pv = this.controller.vel;
     this.world.fauna.update(dt, cp, Math.hypot(pv.x, pv.z), clock.hour);
-    this.world.people.update(dt, cp, clock.hour, clock.day, this.weather.out);
+    this.world.people.update(dt, cp, clock.hour, clock.day, this.weather.out, SEASONS[this.weather.out.weights.indexOf(Math.max(...this.weather.out.weights))]);
     this.updateDialogue(dt);
     this.updateSecrets(dt);
     this.mystic.update(dt);
+    this.fish?.update(dt, this.controller.position);
     this.updateRipples(dt);
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt, this.world.people.openers());
     this.world.rivers.update(this.camera, this.tod.sunDir, 1 - this.tod.stars);
-    const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights, this.world.landmarks.lights as typeof this.world.dock.lights);
+    const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights, this.world.landmarks.lights as typeof this.world.dock.lights, this.world.ruins.lights.filter((l) => l.pos.distanceToSquared(this.controller.position) < 160 * 160));
     const lamp = this.adv.lanternLight();
     if (lamp) lights.push(lamp);
     lights.push(...this.mystic.festivals.lights);
     this.world.landmarks.update(dt);
+    this.world.ruins.update(this.controller.position);
     this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
 
@@ -389,6 +397,10 @@ export class Game {
         this.viewPan = { t: 0, haiku: sc.text };
         w.secrets.discover(sc);
       },
+    });
+    else if (sc.kind === 'relic') this.interactions.add({
+      id: sc.id, kind: 'read', label: 'Look closer', pos: sc.pos.clone().setY(sc.pos.y + 0.3), reach: 2.6,
+      use: () => { this.showText(sc.label, [sc.text]); w.secrets.discover(sc); },
     });
     else if (sc.kind === 'tablet') this.interactions.add({
       id: sc.id, kind: 'read', label: 'Read the stone', pos: sc.pos.clone().setY(sc.pos.y + 0.8), reach: 2.6,
