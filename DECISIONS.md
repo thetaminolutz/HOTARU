@@ -150,3 +150,33 @@ Non-obvious decisions and why. Newest at the bottom.
   flat. Rings grow ×1.38 from 0.6 m to the horizon; the mesh follows the camera in 1 m steps.
 - **Palette LUT race fixed:** a synchronous LUT rebuild invalidates any worker result still in
   flight, so an old hour's LUT can't overwrite the new one.
+
+## M5
+
+- **Grass everywhere = one instanced draw:** ground plants stream in 16 m tiles around the
+  camera (35 / 55 / 80 m per preset), built in the terrain workers from the same biome
+  functions, and are copied into a single instance buffer (one draw call for every plant on
+  screen). 16 varieties share one 256×128 pixel atlas: greyscale parts take the region's
+  grass tint per plant (greener where moist, golden where dry), coloured parts (cosmos,
+  spider lilies, dandelions, cattail heads…) keep their colour. Plants shrink to nothing at
+  the edge of the field and right in front of the camera (a 1 m card 50 cm away would
+  magnify a texel into a block). They bend with wind gusts and away from the player.
+- **Placement rules per biome:** reeds/cattails/horsetail in clumps at the water's edge, rice on
+  terraces (tufts on the bunds), sasa under bamboo, pampas on the moor, ferns/moss/bellflowers on
+  forest floors, meadows of tufts and clover with flower patches. The grass is skipped in the
+  mirror (cost) and on decks.
+- **Nine new species:** willow (new weeping shape), persimmon, camphor, hinoki, plum, zelkova,
+  azalea, hydrangea, camellia, mixed into the regions where they belong (hydrangeas on Ajisaiyama,
+  willows at the marsh and lake, persimmons in the rice valley…).
+- **Deep forests:** the cedar, bamboo and temple woods get a second tree per placement cell
+  (twice as dense). Draw calls don't grow (one draw per species per tile), triangles do.
+- **Ambient particles:** one generic GPU effect (a single `Points` draw each) whose particles
+  wrap in a box around the camera, so they stay world-anchored as you walk through them.
+  Fireflies, leaves, petals, pollen, sun motes, rain, snow, sea spray, moths, plus local emitters
+  (smoke, steam, sparks) that rise and drift downwind. Each effect's amount is set per frame from
+  the region, the hour, the wind and (from M6) the weather; hidden effects cost nothing.
+  Glowing points fade by brightness, soft ones (smoke, steam) by ordered dither.
+- **Mist is fog, not sprites:** point-sprite mist banks read as dotted balls at this resolution.
+  Ground mist is a second fog term in the shared fog function — dense near the ground, fading in
+  over tens of metres — so trunks step back into layers (deep forests always, valleys and lakes
+  in the morning). It eases in and out as you move between regions.

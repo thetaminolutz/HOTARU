@@ -10,28 +10,30 @@ import { REGIONS } from '../world/data/regions';
 
 type Mix = [string, number][];
 const MIX: Record<string, Mix> = {
-  lake: [['maple', 3], ['larch', 3], ['fir', 2], ['pine', 1], ['shrub', 2]],
-  castle: [['maple', 3], ['fir', 3], ['larch', 2], ['pine', 1]],
+  lake: [['maple', 3], ['larch', 3], ['fir', 2], ['pine', 1], ['shrub', 2], ['willow', 0.6]],
+  castle: [['maple', 3], ['fir', 3], ['larch', 2], ['pine', 1], ['zelkova', 1]],
   maple: [['maple', 8], ['larch', 2], ['shrub', 2], ['fir', 1]],
   snow: [['fir', 6], ['birch', 3], ['pine', 1]],
   volcano: [['pine', 4], ['birch', 1]],
-  cedar: [['cedar', 9], ['fir', 2], ['maple', 0.4]],
+  cedar: [['cedar', 9], ['hinoki', 3], ['maple', 0.4], ['camellia', 1]],
   bamboo: [['bamboo', 9], ['maple', 0.5], ['cedar', 0.5]],
-  rice: [['maple', 2], ['cherry', 1], ['pine', 1], ['shrub', 2]],
-  tea: [['cedar', 2], ['maple', 1], ['shrub', 1]],
-  cherry: [['cherry', 8], ['maple', 1], ['pine', 1]],
-  market: [['cherry', 2], ['pine', 2], ['maple', 1]],
+  rice: [['persimmon', 3], ['maple', 1], ['cherry', 1], ['zelkova', 1], ['azalea', 2]],
+  tea: [['hinoki', 2], ['camphor', 1], ['camellia', 2]],
+  cherry: [['cherry', 8], ['plum', 2], ['pine', 1]],
+  market: [['cherry', 2], ['pine', 2], ['willow', 1], ['persimmon', 1]],
   coast: [['pine', 8], ['shrub', 1]],
-  marsh: [['shrub', 2], ['birch', 1]],
-  temple: [['cedar', 5], ['maple', 3], ['pine', 1]],
+  marsh: [['willow', 3], ['shrub', 2], ['birch', 1]],
+  temple: [['cedar', 5], ['camphor', 2], ['maple', 3], ['azalea', 1]],
   ginkgo: [['ginkgo', 8], ['maple', 1]],
   mirror: [['fir', 3], ['larch', 3], ['maple', 3], ['birch', 1]],
-  hydrangea: [['maple', 2], ['cedar', 2], ['shrub', 3]],
-  sunflower: [['shrub', 1], ['cherry', 1]],
+  hydrangea: [['hydrangea', 6], ['maple', 2], ['cedar', 2], ['camphor', 1]],
+  sunflower: [['persimmon', 1], ['cherry', 1]],
   pampas: [['pine', 2], ['shrub', 1]],
-  wisteria: [['maple', 3], ['cedar', 2], ['fir', 1]],
+  wisteria: [['maple', 3], ['camphor', 2], ['willow', 1]],
   none: [['maple', 2], ['larch', 2], ['fir', 2], ['pine', 1], ['shrub', 1]],
 };
+
+const DEEP = new Set(['cedar', 'bamboo', 'temple']);
 
 function pick(mix: Mix, u: number): string {
   const tot = mix.reduce((a, [, w]) => a + w, 0);
@@ -55,7 +57,7 @@ export function placeTrees(w: World, x0: number, z0: number, size: number): Reco
   const n = createNoise(w.seed ^ 0x7ee5);
   const cell = 7;
   const b = { forest: 0, moisture: 0, autumn: 0, special: 0, specialW: 0, grass: [0, 0, 0] as [number, number, number], region: 0 };
-  for (let z = z0; z < z0 + size; z += cell) for (let x = x0; x < x0 + size; x += cell) {
+  for (let z = z0; z < z0 + size; z += cell) for (let x = x0; x < x0 + size; x += cell) for (let k = 0; k < 2; k++) {
     const px = x + r.next() * cell, pz = z + r.next() * cell;
     const u1 = r.next(), u2 = r.next(), u3 = r.next(), u4 = r.next();
     const h = w.height(px, pz);
@@ -72,9 +74,12 @@ export function placeTrees(w: World, x0: number, z0: number, size: number): Reco
     if (b.special === 6 && b.specialW > 0.4) dens *= 0.1; // tea rows
     if (b.special === 7 && b.specialW > 0.4) dens *= 0.2; // marsh
     dens *= 0.55 + 0.45 * (n.fbm2(px / 90, pz / 90, 2) + 0.5);
-    if (u1 > dens) continue;
     const reg = w.regionAt(px, pz);
-    const mix = MIX[reg >= 0 ? REGIONS[reg]!.id : 'none'] ?? MIX.none!;
+    const rid = reg >= 0 ? REGIONS[reg]!.id : 'none';
+    // deep forests: the cedar and bamboo woods are twice as dense (a second tree per cell)
+    if (k === 1 && !(DEEP.has(rid) && b.forest > 0.6)) continue;
+    if (u1 > dens) continue;
+    const mix = MIX[rid] ?? MIX.none!;
     let id = pick(mix, u2);
     if (h > 800 && id !== 'fir' && id !== 'birch') id = u3 < 0.7 ? 'fir' : 'pine';
     (lists[id] ??= []).push(px, h, pz, 0.72 + u3 * 0.6, u4 * Math.PI * 2);

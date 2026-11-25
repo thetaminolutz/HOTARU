@@ -51,7 +51,10 @@ const M3_SHOTS = [
   { name: 'settings-keys', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'keys'; }) },
 ];
 
-const SHOTS = milestone === 'M1' ? M1_SHOTS : milestone === 'M2' ? M2_SHOTS : M3_SHOTS;
+const M5_SHOTS = ['dock-night', 'dock-day', 'cedar-forest', 'meadow-flowers', 'cherry-hills', 'bamboo-grove', 'pampas-moor', 'reed-marsh', 'hydrangea-hills', 'rice-valley']
+  .map((n) => ({ name: n, q: 'shot=' + n }));
+
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M5: M5_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();

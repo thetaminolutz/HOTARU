@@ -22,6 +22,9 @@ export const U = {
   uMoonDir: { value: v3() },
   uFog: { value: 0.001 },
   uHeightFog: { value: 0.3 },
+  /** local ground mist (deep forests, misty mornings): amount, ground height */
+  uMist: { value: 0 },
+  uMistY: { value: 0 },
   uShadowMap: { value: null as THREE.Texture | null },
   uShadowMatrix: { value: new THREE.Matrix4() },
   uShadowOn: { value: 1 },

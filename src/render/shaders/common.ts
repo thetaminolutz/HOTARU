@@ -18,6 +18,8 @@ uniform vec3 uSunDir;
 uniform vec3 uMoonDir;
 uniform float uFog;
 uniform float uHeightFog;
+uniform float uMist;
+uniform float uMistY;
 uniform vec4 uClipPlane;
 uniform vec4 uWind;
 uniform float uBands;
@@ -74,7 +76,11 @@ vec3 applyFog(vec3 col, vec3 P){
   // aerial perspective tends to the sky colour a little above the horizon: blue-lavender
   // layers instead of the warm horizon glow (reference 2's mountain blue)
   vec3 fc = mix(skyColor(normalize(vec3(dir.x, 0.1 + max(dir.y, 0.0) * 0.3, dir.z))), uZenith, 0.3);
-  return mix(col, fc, f);
+  col = mix(col, fc, f);
+  // ground mist: dense near the ground, fades in over tens of metres (soft layered depth)
+  float m = uMist * (1.0 - exp(-d * 0.035)) * exp(-max(P.y - uMistY, 0.0) * 0.06);
+  vec3 mc = mix(fc, uHorizon, 0.5) * 1.05 + uKeyColor * 0.04;
+  return mix(col, mc, clamp(m, 0.0, 0.85));
 }
 `;
 

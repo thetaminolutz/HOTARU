@@ -16,7 +16,7 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M2 | Terrain & world streaming | ✅ Done | [M2](docs/screenshots/M2/) | pending (run on iPad) |
 | M3 | Player controller & controls | ✅ Done | [M3](docs/screenshots/M3/) | pending (run on iPad) |
 | M4 | Water | ⬜ Not started | — | — |
-| M5 | Vegetation, wind & particles | 🔨 In progress | — | — |
+| M5 | Vegetation, wind & particles | ✅ Done | [M5](docs/screenshots/M5/) | pending (run on iPad) |
 | M6 | Regions, weather & seasons | ⬜ Not started | — | — |
 | M7 | Buildings, villages & interiors | ⬜ Not started | — | — |
 | M8 | Fauna | ⬜ Not started | — | — |
@@ -24,12 +24,39 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M10 | Castle, shrines, caves & secrets | ⬜ Not started | — | — |
 | M11 | Items, journal, map, photo, boats, fishing | ⬜ Not started | — | — |
 | M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
-| M13 | Audio | ⬜ Not started | — | — |
+| M13 | Audio | 🔨 In progress | — | — |
 | M14 | Polish, performance & release | ⬜ Not started | — | — |
 
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M5 at a glance
+
+Grass everywhere: 16 kinds of ground plants (tufts, tall grass, reeds, cattails, ferns, moss,
+sasa, pampas, rice, clover, cosmos, spider lilies, bellflowers, dandelions, daisies, horsetail)
+stream around you in one draw call, bend in the wind and part as you walk through. Nine new
+trees and bushes (willow, persimmon, camphor, hinoki, plum, zelkova, azalea, hydrangea,
+camellia), twice-as-dense cedar and bamboo woods, ground mist, and ambient particles —
+fireflies, falling leaves, petals, pollen, sun motes, sea spray, moths, steam (rain and snow
+are ready for the weather in M6).
+
+| Misty cedar forest | Fireflies at the dock |
+|---|---|
+| ![](docs/screenshots/M5/cedar-forest.png) | ![](docs/screenshots/M5/dock-night.png) |
+| **The pampas moor** | **Bamboo grove** |
+| ![](docs/screenshots/M5/pampas-moor.png) | ![](docs/screenshots/M5/bamboo-grove.png) |
+| **Meadow by the dock** | **Cosmos fields** |
+| ![](docs/screenshots/M5/dock-day.png) | ![](docs/screenshots/M5/meadow-flowers.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 36 passed (incl. ground-plant determinism and tile bounds) |
+| Offline · pixel stability · controls e2e | ✅ · ✅ (one-pixel turn match 0.979) · ✅ |
+| Draw calls · triangles (headless, all passes) | Low 251 · 1.23 M — Medium 303 · 1.59 M — High 360 · 1.93 M |
+
+Medium is slightly over the 1.5 M triangle budget because of the denser forests; the iPad
+benchmark decides whether the far-tree LOD needs trimming.
 
 ### M3 at a glance
 
@@ -142,7 +169,7 @@ npm ci
 npm run dev            # http://localhost:5173  (?debug=1 opens the debug panel)
 npm test               # unit tests (Vitest)
 npm run build          # production build + service worker in dist/
-npm run shots          # milestone screenshots → docs/screenshots/M1/
+npm run shots -- M5    # milestone screenshots → docs/screenshots/M5/
 npm run e2e:offline    # offline boot test (builds must exist)
 npm run e2e:stability  # pixel stability test
 npm run icons          # regenerate app icons & launch images
