@@ -129,4 +129,18 @@ SHOTS.push(
   like('dock-night', { name: 'summer-night', label: 'A summer night at the dock', season: 'summer' }),
 );
 
+/** M9: villagers and wanderers. */
+const plaza = (w: GameWorld, id: string, dist: number, ang: number, dy: number) => {
+  const d = vil(w, id).def, x = d.x + 2 + Math.cos(ang) * dist, z = d.z - 3 + Math.sin(ang) * dist;
+  return new THREE.Vector3(x, w.groundHeight(x, z) + dy, z);
+};
+SHOTS.push(
+  { name: 'plaza-evening', label: 'Evening chat on the Ichiba plaza', hour: 19.9, elapsed: 1200, pos: (w) => plaza(w, 'ichiba', 13, 0.6, 1.7), look: (w) => plaza(w, 'ichiba', 0, 0, 1.2), fov: 70 },
+  { name: 'lantern-round', label: 'The lantern maker\u2019s round at dusk', hour: 17.7, elapsed: 1200, pos: (w) => street(w, 'ichiba', 0.55, 1.7), look: (w) => street(w, 'ichiba', 0.75, 1.4), fov: 70 },
+  { name: 'farm-work', label: 'Farmers in the terraces at Inaho', hour: 9.5, elapsed: 1200, pos: (w) => plaza(w, 'inaho', 150, 0.5, 6), look: (w) => plaza(w, 'inaho', 215, 0.5, 0), fov: 65 },
+  { name: 'rain-umbrellas', label: 'Umbrellas in the rain', hour: 15.3, elapsed: 1200, weather: 'rain', pos: (w) => plaza(w, 'ichiba', 12, 2.2, 1.7), look: (w) => plaza(w, 'ichiba', 0, 0, 1.2), fov: 70 },
+  { name: 'children-play', label: 'Children playing at Inaho', hour: 8.5, elapsed: 1200, pos: (w) => plaza(w, 'inaho', 11, 1.2, 1.5), look: (w) => plaza(w, 'inaho', 0, 0, 0.8), fov: 70 },
+  { name: 'shrine-monk', label: 'Morning prayers at Kumoji', hour: 5.4, elapsed: 1200, pos: (w) => street(w, 'kumoji', 0.88, 1.7), look: (w) => street(w, 'kumoji', 1, 1.2), fov: 70 },
+);
+
 export const shotByName = (n: string | undefined) => SHOTS.find((s) => s.name === n);

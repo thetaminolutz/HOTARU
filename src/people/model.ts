@@ -130,7 +130,7 @@ void main(){
   vWorldPos = wp;
   vNormal = normalize(W * n);
   float s = aSlot;
-  vec3 skin = mix(vec3(0.86, 0.66, 0.52), vec3(0.62, 0.42, 0.3), iColC.w);
+  vec3 skin = mix(vec3(0.6, 0.36, 0.24), vec3(0.42, 0.24, 0.15), iColC.w);
   vColor = s < 0.5 ? iColA.rgb : s < 1.5 ? iColB.rgb : s < 2.5 ? iColC.rgb : s < 3.5 ? skin : s < 4.5 ? vec3(0.7, 0.58, 0.34) : s < 5.5 ? vec3(0.08, 0.07, 0.07) : iColB.rgb * 1.1 + vec3(0.1);
   if (n.y > 0.5) vColor *= 1.08; else if (n.y < -0.5) vColor *= 0.7;
   gl_Position = projectionMatrix * viewMatrix * vec4(wp, 1.0);

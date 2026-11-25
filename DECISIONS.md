@@ -328,3 +328,37 @@ Non-obvious decisions and why. Newest at the bottom.
 - Screenshots force their weather and season (default clear autumn) so the reference shots stay
   stable; the running game uses Settings → World.
 - Not yet: ice on winter lakes, footprints in snow, drip lines from eaves (M14 polish).
+
+## M9
+
+- **Villages populate themselves from their houses:** every house gets a household (the trade
+  of the house decides the adult's job: workshop → potter / weaver / carpenter / lantern maker,
+  shop → merchant, inn → innkeeper, tea house → tea master, fisher's hut → fisher, shrine → monk,
+  farmhouse → farmer), with children and elders in some homes; every village has a lantern
+  maker. 117 villagers today, plus 16 named wanderers (§17). Names, personalities and looks
+  come from the seed.
+- **Schedules per job** (§16 examples): fishers out before dawn, farmers in the terraces with a
+  rest at noon, shopkeepers and tea masters sweep their step then open, monks pray at dawn and
+  dusk at the torii, children play at the plaza and the river, elders sit on the plaza and take
+  tea, people gather on the plaza in the evening. A village comes alive (people placed where
+  their schedule says) when you come within ~420 m; people walk the streets between places,
+  doors slide open for them, they go inside to eat, work and sleep.
+- **The lantern round:** each village's lantern maker walks to every street lantern in turn at
+  dusk, reaches up, and it lights (its glow and its light); near dawn they go round putting them
+  out. Street lanterns therefore have their own mesh with per-lantern emissive.
+- **Weather:** umbrellas (bangasa) in rain and snow; everyone goes home in a storm.
+- **Greetings:** people turn towards you; the first time they bow, afterwards they wave; after a
+  few talks they give you a nickname. Memory (meetings, nicknames) and animal trust are saved.
+- **One instanced draw for everyone:** a single box-built body (kimono, obi, sleeves, sandals,
+  hair with bun, optional straw hat / umbrella / basket) with per-person colours and flags;
+  the vertex shader animates walking, seiza, bowing, waving or reaching up, working, an elder's
+  stoop; children are scaled down.
+- **Dialogue:** 518 distinct short lines, chosen by conditions (first meeting / acquaintance /
+  friend with nickname, job, personality, hour, weather, season, village) plus gossip about a
+  neighbour; wanderers have their own voices. Each talk is a greeting and one or two lines. Pixel
+  portraits are generated from the person's look (the masked stranger wears a fox mask). Soft
+  syllable babble at each person's pitch instead of speech.
+- **Not yet:** wanderers walk their routes between stops only "off screen" (they appear at a
+  different stop each day); per-character stories, gifts, festivals and named-character quests
+  come with M11/M12. Headless tests step the village simulation directly, since software GL runs
+  at ~1 fps there.

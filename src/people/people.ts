@@ -314,8 +314,9 @@ export class People {
       if (!todo.length) continue;
       // walk to the nearest lantern still to do, reach up, light it
       let best = todo[0]!, bd = Infinity;
-      for (const l of todo) { const d = l.pos.distanceTo(lm.pos); if (d < bd) { bd = d; best = l; } }
-      if (!lm.path.length || lm.path[lm.path.length - 1]!.distanceTo(best.pos) > 2) {
+      for (const l of todo) { const d = Math.hypot(l.pos.x - lm.pos.x, l.pos.z - lm.pos.z); if (d < bd) { bd = d; best = l; } }
+      const last = lm.path[lm.path.length - 1];
+      if (!last || Math.hypot(last.x - best.pos.x, last.z - best.pos.z) > 2) {
         const stand = best.pos.clone().add(H2.set(0.7, 0, 0.7));
         stand.y = this.w.groundHeight(stand.x, stand.z);
         lm.path = [stand];

@@ -57,7 +57,7 @@ export class Hud {
     panel(ui, 'washi', x, y, w, h);
     ui.sprite(d.portrait, x + 8, y + 8);
     ui.text(bodyFont, cleanText(d.name), x + 42, y + 7, C.ink);
-    if (d.title) ui.text(tinyFont, cleanText(d.title), x + 42 + bodyFont.measure(cleanText(d.name)) + 5, y + 9, C.inkSoft);
+    if (d.title) ui.text(tinyFont, cleanText(d.title).toUpperCase(), x + 42 + bodyFont.measure(cleanText(d.name)) + 5, y + 9, C.inkSoft);
     const line = cleanText(d.lines[d.index] ?? '');
     ui.textBlock(bodyFont, line.slice(0, Math.floor(d.shown)), x + 42, y + 21, w - 52, C.ink);
     if (d.shown >= line.length && Math.sin(t * 5) > 0) ui.text(tinyFont, d.index < d.lines.length - 1 ? '>' : 'x', x + w - 12, y + h - 12, C.vermilion);
