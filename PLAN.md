@@ -50,6 +50,34 @@ lives in `src/**/data/*.ts`, separate from logic. Files stay under ~600 lines.
 
 ## 3. Milestones
 
+### Revised order (owner, after M1)
+
+The owner asked for animals, enterable houses, better lighting, drawing only what's
+visible, more graphics where it stays smooth, sounds + occasional music (silence between
+pieces), ambient and forest sounds, Apple Pencil support, and much denser, greener
+vegetation with deep forests — and for building to continue autonomously through all
+milestones (each finished milestone is merged by me, no confirmation needed).
+
+Build order from here:
+
+| Order | Milestone | Owner wishes folded in |
+|---|---|---|
+| 1 | **M2** Terrain & world streaming | draw only what's visible (chunk + frustum culling, LOD), improved lighting |
+| 2 | **M3** Player controller & controls | Apple Pencil: precise pointer for menus/look/interaction + brush cursor |
+| 3 | **M5** Vegetation, wind & particles | grass everywhere, many more plants, greener regions, deep forests |
+| 4 | **M13** Audio (pulled forward) | ambience by place/time, forest sounds, occasional generative music |
+| 5 | **M7** Buildings, villages & interiors | every house enterable |
+| 6 | **M8** Fauna | many more animals |
+| 7 | **M4** Water | |
+| 8 | **M6** Regions, weather & seasons | greener/lusher regional palettes |
+| 9 | **M9** Villagers & wanderers | |
+| 10 | **M10** Castle, shrines, caves & secrets | |
+| 11 | **M11** Items, journal, map, photo, boats, fishing | Pencil drawing (pressure/tilt) in sketchbook, journal, map |
+| 12 | **M12** Lore, spirits & festivals | |
+| 13 | **M14** Polish, performance & release | |
+
+Milestone content below is unchanged; only the order moved.
+
 Order and acceptance criteria follow SPEC §30. Every milestone ends with: build ✓,
 tests ✓, Playwright screenshots in `docs/screenshots/Mx/` (day / golden hour / night at
 minimum), offline-boot test ✓, benchmark numbers (headless + yours from iPad), README

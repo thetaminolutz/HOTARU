@@ -66,3 +66,15 @@ Non-obvious decisions and why. Newest at the bottom.
   whatever the repo's capitalisation.
 - **Test scene, not the world:** M1 builds a fixed lake/dock scene (`src/scene/testWorld.ts`,
   `src/world/testTerrain.ts`) whose rules become the first draft of M2's world generator.
+
+## After M1 (owner direction)
+
+- **Autonomous build:** the owner asked me to continue through all milestones overnight
+  without confirmations, merging each milestone PR myself once build, tests, screenshots
+  and README are done. An hourly scheduled task resumes the session after usage limits.
+- **New order:** M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14
+  (see PLAN.md §3). Audio, vegetation, interiors and fauna moved forward on request.
+- **Apple Pencil:** Safari exposes pressure and tilt (pointerType "pen") but not the Pencil's
+  double-tap/squeeze, and the iPad Air M1 has no hover. So: M3 makes the Pencil a precise
+  pointer with its own pixel brush cursor; M11 adds pressure/tilt drawing (sketchbook,
+  journal, map).

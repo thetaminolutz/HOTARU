@@ -12,8 +12,8 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 
 | # | Milestone | Status | Screenshots | iPad benchmark (Medium) |
 |---|---|---|---|---|
-| M1 | Foundations & THE LOOK prototype | 👀 Waiting for review | [M1](docs/screenshots/M1/) | pending (run on iPad) |
-| M2 | Terrain & world streaming | ⬜ Not started | — | — |
+| M1 | Foundations & THE LOOK prototype | ✅ Done | [M1](docs/screenshots/M1/) | pending (run on iPad) |
+| M2 | Terrain & world streaming | 🔨 In progress | — | — |
 | M3 | Player controller & controls | ⬜ Not started | — | — |
 | M4 | Water | ⬜ Not started | — | — |
 | M5 | Vegetation, wind & particles | ⬜ Not started | — | — |
@@ -26,6 +26,8 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
 | M13 | Audio | ⬜ Not started | — | — |
 | M14 | Polish, performance & release | ⬜ Not started | — | — |
+
+Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
 
