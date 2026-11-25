@@ -20,6 +20,7 @@ import { createLeaves } from '../particles/particles';
 import { AmbientFx } from '../particles/ambient';
 import { Villages } from '../buildings/villages';
 import { Fauna } from '../fauna/fauna';
+import { Rivers } from '../water/rivers';
 import { toTexture, leafAtlas, glowSprite } from '../render/textures';
 import type { Quality } from '../config';
 import { registerPoi } from '../secrets/poi';
@@ -39,6 +40,7 @@ export class GameWorld {
   fx!: AmbientFx;
   villages!: Villages;
   fauna!: Fauna;
+  rivers!: Rivers;
   private steps: (() => void | Promise<void>)[] = [];
 
   constructor(readonly seed: number, private quality: Quality) {
@@ -67,7 +69,18 @@ export class GameWorld {
       heightTex.magFilter = heightTex.minFilter = THREE.LinearFilter;
       heightTex.needsUpdate = true;
       this.water = new Water(heightTex, [hx0, hz0, hsize], 0);
+      // the coast's depth (surf breaking as the sea gets shallow)
+      const CW = 96, CH = 512, cx0 = 3600, cz0 = -5200, csx = 1800, csz = 10400;
+      const cd = new Uint16Array(CW * CH);
+      for (let j = 0; j < CH; j++) for (let i = 0; i < CW; i++) cd[j * CW + i] = THREE.DataUtils.toHalfFloat(this.world.height(cx0 + ((i + 0.5) / CW) * csx, cz0 + ((j + 0.5) / CH) * csz));
+      const coastTex = new THREE.DataTexture(cd, CW, CH, THREE.RedFormat, THREE.HalfFloatType);
+      coastTex.magFilter = coastTex.minFilter = THREE.LinearFilter;
+      coastTex.needsUpdate = true;
+      this.water.setCoast(coastTex, [cx0, cz0, csx, csz]);
       this.scene.add(this.water.mesh);
+      // rivers, ponds and waterfalls (hydrology) above lake level
+      this.rivers = new Rivers(this.world.hydro, this.water.material.uniforms);
+      this.scene.add(this.rivers.group);
     });
     this.steps.push(() => {
       this.dock = new DockScene(this.world.height, glow);
@@ -109,6 +122,8 @@ export class GameWorld {
         this.fx.addEmitter({ effect: 'steam', pos: new THREE.Vector3(x, H(x, z), z), amount: a });
       }
       for (const e of this.villages.emitters) this.fx.addEmitter({ effect: 'steam', pos: e, amount: 0.8 });
+      // mist at the foot of the waterfalls
+      for (const f of this.rivers.feet) if (f.height > 5) this.fx.addEmitter({ effect: 'steam', pos: f.pos, amount: Math.min(1, f.height / 20) });
       this.scene.add(this.fx.group);
       const m = this.dock.anchors.maple!;
       this.scene.add(createLeaves(new THREE.Vector3(m.x + 3, m.y + 9, m.z - 3), new THREE.Vector3(12, 9, 12), Math.round(90 * this.quality.particles), 0.1));

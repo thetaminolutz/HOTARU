@@ -162,7 +162,7 @@ export class Villages {
     const H = this.world.height;
     const addPath = (path: Path, width: number) => {
       const meshes: THREE.Mesh[] = [];
-      for (const c of roadMeshes(path, width, H)) {
+      for (const c of roadMeshes(path, width, H, this.world.hydro.waterAt)) {
         const m = new THREE.Mesh(c.geo, this.M.road);
         m.userData.center = c.center; m.userData.radius = c.radius;
         m.userData.noReflect = true;

@@ -40,6 +40,7 @@ export function placeGround(w: World, x0: number, z0: number, size: number, dens
     const b = bio[Math.min(G - 1, Math.round(((pz - z0) / size) * (G - 1))) * G + Math.min(G - 1, Math.round(((px - x0) / size) * (G - 1)))]!;
     const h = w.height(px, pz);
     if (h < -0.75 || h > 1150) continue;
+    if (w.hydro.waterAt(px, pz) > h + 0.05) continue; // under a river or pond
     const patch = n.fbm2(px / 11, pz / 11, 3);
     const big = n.fbm2(px / 60, pz / 60, 2);
     let variant = -1, height = 0.5;

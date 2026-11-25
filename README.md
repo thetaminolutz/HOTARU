@@ -15,9 +15,9 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M1 | Foundations & THE LOOK prototype | ✅ Done | [M1](docs/screenshots/M1/) | pending (run on iPad) |
 | M2 | Terrain & world streaming | ✅ Done | [M2](docs/screenshots/M2/) | pending (run on iPad) |
 | M3 | Player controller & controls | ✅ Done | [M3](docs/screenshots/M3/) | pending (run on iPad) |
-| M4 | Water | 🔨 In progress | — | — |
+| M4 | Water | ✅ Done | [M4](docs/screenshots/M4/) | pending (run on iPad) |
 | M5 | Vegetation, wind & particles | ✅ Done | [M5](docs/screenshots/M5/) | pending (run on iPad) |
-| M6 | Regions, weather & seasons | ⬜ Not started | — | — |
+| M6 | Regions, weather & seasons | 🔨 In progress | — | — |
 | M7 | Buildings, villages & interiors | ✅ Done | [M7](docs/screenshots/M7/) | pending (run on iPad) |
 | M8 | Fauna | ✅ Done | [M8](docs/screenshots/M8/) | pending (run on iPad) |
 | M9 | Villagers & wanderers | ⬜ Not started | — | — |
@@ -30,6 +30,34 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M4 at a glance (water)
+
+**Rivers:**
+- A main river runs from the snowy pass, over the **Great Waterfall**, into Lantern Lake, and out through the marsh to the sea.
+- Tributaries flow down from mountain springs, and some end in quiet ponds.
+- Riverbeds are carved into the land, and water always flows downhill.
+- You can wade and swim in rivers and ponds, and roads cross them on plank bridges.
+
+**The waterfall:** a falling sheet of water with mist at its foot, and a rainbow when the sun is behind you.
+
+**Lake and sea:**
+- Ripples spread when you wade or swim, when ducks paddle, and when fish jump (with a splash, more often at dusk).
+- Sunlight makes a moving net of caustics over sunny shallows.
+- The open sea has swells, and surf breaks white on the coast.
+
+| The Great Waterfall | River at dusk |
+|---|---|
+| ![](docs/screenshots/M4/great-waterfall.png) | ![](docs/screenshots/M4/river-dusk.png) |
+| **Mountain river** | **Surf on the eastern coast** |
+| ![](docs/screenshots/M4/mountain-river.png) | ![](docs/screenshots/M4/coast-surf.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 51 passed (hydrology deterministic, water only flows downhill, beds carved under the surface) |
+| Water e2e (`npm run e2e:water`) | ✅ swim in the upper river at its own level (21.6 m), ripples in the lake |
+| All e2e | ✅ offline, stability, controls, audio, houses, fauna, water |
+| Draw calls · triangles (Medium) | 331 · 1.65 M (rivers, ponds and falls are one draw) |
 
 ### M8 at a glance (animals)
 
@@ -277,6 +305,7 @@ npm run e2e:controls   # walking, swimming, sitting, Pencil tap
 npm run e2e:audio      # audio unlock, output and per-place mix
 npm run e2e:houses     # walk into a house
 npm run e2e:fauna      # animals: presence, fleeing, petting, bowing
+npm run e2e:water      # swim in a river, ripples
 npm run audio:samples  # render music samples → docs/audio/
 npm run icons          # regenerate app icons & launch images
 ```

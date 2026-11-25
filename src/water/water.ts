@@ -25,6 +25,11 @@ uniform sampler2D uReflection;
 uniform mat4 uReflMatrix;
 uniform sampler2D uHeightTex;
 uniform vec3 uHeightRect;
+uniform sampler2D uCoastTex;
+uniform vec4 uCoastRect;   // x0, z0, size x, size z
+uniform vec4 uRipples[8];  // x, z, start time, strength
+uniform float uRain;       // 0..1 rain rings
+uniform float uSeaX;       // where the open sea begins (bigger swells)
 uniform float uWaves;
 uniform float uReflOn;
 uniform vec2 uCamFwd;
@@ -87,12 +92,41 @@ void main(){
   float n1 = vnoise(vec2(across * 0.06 + t * 0.03, along * 0.55 - t * 0.35));
   float n2 = vnoise(vec2(across * 0.22 - t * 0.07, along * 1.9 + t * 0.55));
   float n3 = vnoise(vec2(across * 0.6, along * 4.5 - t * 0.9));
-  float wy = (n1 * 0.55 + n2 * 0.3 + n3 * 0.15 - 0.5) * uWaves;
-  float wx = (vnoise(vec2(across * 0.15 + 5.0, along * 0.4 + t * 0.2)) - 0.5) * uWaves;
+  // the open sea: bigger, longer swells rolling towards the shore (west)
+  float sea = smoothstep(uSeaX - 300.0, uSeaX + 200.0, P.x);
+  float waves = uWaves * (1.0 + sea * 1.8) + sea * 0.6;
+  float swell = sin(P.x * 0.045 + t * 0.9 + vnoise(P.xz * 0.004) * 6.0) * sea;
+  float wy = (n1 * 0.55 + n2 * 0.3 + n3 * 0.15 - 0.5) * waves + swell * 0.6;
+  float wx = (vnoise(vec2(across * 0.15 + 5.0, along * 0.4 + t * 0.2)) - 0.5) * waves;
 
-  // depth below the surface from the baked height texture
+  // ripple rings: wading, swimming, ducks, fish, rain
+  float ring = 0.0;
+  for (int i = 0; i < 8; i++) {
+    vec4 rp = uRipples[i];
+    float age = t - rp.z;
+    if (rp.w <= 0.0 || age < 0.0 || age > 4.0) continue;
+    float rr = age * 1.6 + 0.2;
+    float dd = length(P.xz - rp.xy);
+    float w = 1.0 - smoothstep(rr - 0.18, rr, dd) ;
+    ring += (1.0 - smoothstep(0.0, 0.22, abs(dd - rr))) * (1.0 - age / 4.0) * rp.w;
+    ring += (1.0 - smoothstep(0.0, 0.16, abs(dd - rr * 0.6))) * (1.0 - age / 4.0) * rp.w * 0.5 * w;
+  }
+  if (uRain > 0.01) {
+    vec2 cell = floor(P.xz * 1.5);
+    float ph = hash12(cell);
+    float age = fract(t * 0.7 + ph);
+    vec2 c0 = (cell + 0.25 + 0.5 * vec2(hash12(cell + 3.1), hash12(cell + 7.7))) / 1.5;
+    float dd = length(P.xz - c0);
+    ring += (1.0 - smoothstep(0.0, 0.05, abs(dd - age * 0.32))) * (1.0 - age) * step(ph, uRain) * (1.0 - smoothstep(10.0, 40.0, dist));
+  }
+  wy += ring * 0.35;
+
+  // depth below the surface from the baked height textures (lake, coast)
   vec2 huv = (P.xz - uHeightRect.xy) / uHeightRect.z;
-  float ground = (huv.x < 0.0 || huv.y < 0.0 || huv.x > 1.0 || huv.y > 1.0) ? -30.0 : texture2D(uHeightTex, huv).r;
+  vec2 cuv = (P.xz - uCoastRect.xy) / uCoastRect.zw;
+  float ground = -30.0;
+  if (huv.x >= 0.0 && huv.y >= 0.0 && huv.x <= 1.0 && huv.y <= 1.0) ground = texture2D(uHeightTex, huv).r;
+  else if (cuv.x >= 0.0 && cuv.y >= 0.0 && cuv.x <= 1.0 && cuv.y <= 1.0) ground = texture2D(uCoastTex, cuv).r;
   float depth = max(-ground, 0.0);
 
   // reflection lookup with vertical displacement
@@ -136,6 +170,18 @@ void main(){
   // shore foam and lapping
   float lap = sin(t * 1.3 + across * 0.2) * 0.08;
   float shoreFoam = step(depth, 0.05 + lap * 0.4) * step(0.01, depth) * step(0.6, vnoise(vec2(across * 0.8, along * 6.0) + t * 0.3)) * (1.0 - smoothstep(40.0, 90.0, dist));
+  // surf: swells break white as the sea gets shallow; foam lines run up the beach
+  float surfZone = sea * (1.0 - smoothstep(0.5, 6.0, depth)) * step(0.01, depth);
+  float breaker = step(0.55, sin(P.x * 0.09 + t * 1.4 + vnoise(P.xz * 0.02) * 4.0)) * step(0.45, vnoise(P.xz * vec2(0.4, 0.15) + t * 0.6));
+  shoreFoam = max(shoreFoam, surfZone * breaker * 3.0);
+  col += uHighlight * max(swell, 0.0) * 0.08;
+  col *= 1.0 - max(-swell, 0.0) * 0.18;
+  // caustics: a moving net of light over sunny shallows
+  float cn = 1.0 - abs(vnoise(P.xz * 0.9 + vec2(t * 0.25, -t * 0.18)) * 2.0 - 1.0);
+  float cn2 = 1.0 - abs(vnoise(P.xz * 1.3 - vec2(t * 0.2, t * 0.3) + 4.0) * 2.0 - 1.0);
+  float caustic = step(0.86, min(cn, cn2) + 0.12) * (1.0 - smoothstep(0.2, 2.2, depth)) * step(0.02, depth) * clamp(uKeyDir.y * 3.0, 0.0, 1.0) * (1.0 - uLamps);
+  col += uKeyColor * caustic * 0.22 * (1.0 - smoothstep(25.0, 70.0, dist));
+  col += uHighlight * min(ring, 1.0) * 0.35;
   // wakes
   float wake = foamWake(P.xz, dist);
   vec3 foamCol = (uAmbSky * 1.6 + uKeyColor * 0.5 + uHorizon * 0.5);
@@ -155,6 +201,19 @@ export class Water {
   readonly reflCam = new THREE.PerspectiveCamera();
   private readonly bias = new THREE.Matrix4().set(0.5, 0, 0, 0.5, 0, 0.5, 0, 0.5, 0, 0, 0.5, 0.5, 0, 0, 0, 1);
   boats: Boat[] = [];
+  private ripple = 0;
+
+  /** A ring of ripples at (x, z), e.g. a step while wading, a fish, a duck. */
+  addRipple(x: number, z: number, strength = 1, time = U.uTime.value as number): void {
+    (this.material.uniforms.uRipples!.value as THREE.Vector4[])[this.ripple]!.set(x, z, time, strength);
+    this.ripple = (this.ripple + 1) % 8;
+  }
+
+  /** Depth texture for the coast (surf foam). */
+  setCoast(tex: THREE.Texture, rect: [number, number, number, number]): void {
+    this.material.uniforms.uCoastTex!.value = tex;
+    (this.material.uniforms.uCoastRect!.value as THREE.Vector4).set(...rect);
+  }
 
   constructor(heightTex: THREE.Texture, heightRect: [number, number, number], readonly level = 0) {
     this.target = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: true });
@@ -176,6 +235,11 @@ export class Water {
         uShallow: { value: new THREE.Color() },
         uHighlight: { value: new THREE.Color() },
         uKeyColor2: { value: new THREE.Color() },
+        uCoastTex: { value: heightTex },
+        uCoastRect: { value: new THREE.Vector4(1e6, 1e6, 1, 1) },
+        uRipples: { value: Array.from({ length: 8 }, () => new THREE.Vector4()) },
+        uRain: { value: 0 },
+        uSeaX: { value: 4100 },
       },
       vertexShader: VERT,
       fragmentShader: FRAG,

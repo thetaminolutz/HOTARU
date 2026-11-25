@@ -8,6 +8,7 @@ import { createNoise } from '../core/noise';
 import { smoothstep, lerp, clamp } from '../core/math';
 import { REGIONS, HALF } from './data/regions';
 import { VILLAGES } from '../buildings/data/villages';
+import { computeHydrology, type Hydro } from './hydrology';
 
 export type Biome = {
   forest: number;
@@ -25,6 +26,8 @@ export type World = {
   height(x: number, z: number): number;
   biome(x: number, z: number, out?: Biome): Biome;
   regionAt(x: number, z: number): number;
+  /** rivers, ponds and waterfalls */
+  readonly hydro: Hydro;
 };
 
 const hexLin = (h: string): [number, number, number] => {
@@ -147,7 +150,16 @@ export function createWorld(seed: number): World {
 
     const inLake = Math.hypot(x / 440, (z + 10) / 300) < 1.25;
     if (!inLake && x < coastX - 120 && gd > 1.2) h = Math.max(h, 0.6);
+    // rivers, ponds and waterfalls carved last (see hydrology.ts)
+    if (carving) h = hydro().carve(x, z, h);
     return h;
+  }
+
+  let carving = true;
+  let hyd: Hydro | null = null;
+  function hydro(): Hydro {
+    if (!hyd) { carving = false; hyd = computeHydrology(height); carving = true; }
+    return hyd;
   }
 
   /** Mean height around a village before grading (computed once). */
@@ -156,12 +168,14 @@ export function createWorld(seed: number): World {
   function villageLevel(v: { id: string; x: number; z: number; r: number }): number {
     let t = levels.get(v.id);
     if (t === undefined) {
-      grading = false;
+      // the village levels never depend on rivers (keeps the result independent of call order)
+      const wasCarving = carving;
+      grading = false; carving = false;
       t = 0;
       const pts = [[0, 0], [0.5, 0], [-0.5, 0], [0, 0.5], [0, -0.5]];
       for (const [a, b] of pts) t += height(v.x + a! * v.r, v.z + b! * v.r);
       t /= pts.length;
-      grading = true;
+      grading = true; carving = wasCarving;
       levels.set(v.id, t);
     }
     return t;
@@ -209,5 +223,5 @@ export function createWorld(seed: number): World {
     return best > 0.25 ? bi : -1;
   }
 
-  return { seed, height, biome, regionAt };
+  return { seed, height, biome, regionAt, get hydro() { return hydro(); } };
 }

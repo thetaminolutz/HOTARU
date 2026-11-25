@@ -38,6 +38,11 @@ export class AudioSystem {
     c.onJump = () => this.sfx.jump();
     c.onLand = (impact) => this.sfx.land(this.surface(), impact);
     c.onStroke = () => this.sfx.stroke();
+    game.onSplash = (pos) => {
+      const p = game.controller.position;
+      const out = this.mix.spatial('nature', pos.x - p.x, pos.y - p.y, pos.z - p.z, 2, 0.4);
+      playVoice('splash', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
+    };
     // animals call from where they are
     game.world.fauna.onCall = (voice, pos) => {
       const id: VoiceId = voice === 'coo' ? 'dove' : voice;

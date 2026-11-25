@@ -49,6 +49,7 @@ export class Game {
       onDeck: (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.villages.floorHeight(x, z) > -Infinity,
       snowy: (x, z, h) => h > 980 || (h > 620 && w.world.biome(x, z).special === 3),
       colliders,
+      water: (x, z) => w.world.hydro.waterAt(x, z),
     });
     this.colliders = colliders;
     this.controller.onSoftLanding = () => { this.fade = 1; };
@@ -58,6 +59,10 @@ export class Game {
   readonly interactions = new Interactions();
   /** 0..1 screen fade (soft landings); the UI draws it. */
   fade = 0;
+  /** A fish jumped (or similar): the audio system plays a splash there. */
+  onSplash: ((pos: THREE.Vector3) => void) | null = null;
+  private rippleT = 0;
+  private fishT = 8;
   /** Bow gesture timer (s); the camera dips and comes back up. */
   bowT = 0;
   /** Time-lapse is active (sitting + holding the button/key). */
@@ -197,8 +202,10 @@ export class Game {
     const cp = this.controller.position;
     const pv = this.controller.vel;
     this.world.fauna.update(dt, cp, Math.hypot(pv.x, pv.z), clock.hour);
+    this.updateRipples(dt);
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt);
+    this.world.rivers.update(this.camera, this.tod.sunDir, 1 - this.tod.stars);
     const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights);
     this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
@@ -233,6 +240,33 @@ export class Game {
     this.stats.drawCalls = this.renderer.info.render.calls;
     this.stats.triangles = this.renderer.info.render.triangles;
     this.stats.frameMs = performance.now() - t0;
+  }
+
+  /** Ripples on the lake and sea: the player wading or swimming, ducks, jumping fish. */
+  private updateRipples(dt: number): void {
+    const c = this.controller, p = c.position, wt = this.world.water;
+    this.rippleT -= dt;
+    const moving = Math.hypot(c.vel.x, c.vel.z) > 0.3;
+    if ((c.pose === 'wade' || c.pose === 'swim') && c.waterLevel() < 0.3 && this.rippleT < 0 && (moving || c.pose === 'swim')) {
+      wt.addRipple(p.x, p.z, c.pose === 'swim' ? 1.2 : 0.8);
+      this.rippleT = moving ? 0.55 : 1.6;
+    }
+    for (const a of this.world.fauna.animals) {
+      if (a.sp.move !== 'swim' || a.sp.plan === 'fish') continue;
+      if (Math.abs(a.pos.x - p.x) > 60 || Math.abs(a.pos.z - p.z) > 60) continue;
+      if (a.r.next() < dt * 0.35) wt.addRipple(a.pos.x, a.pos.z, 0.6);
+    }
+    // fish jump now and then (more at dusk) where the water is deep enough
+    this.fishT -= dt * (clock.hour > 17 && clock.hour < 20 ? 2.5 : 1);
+    if (this.fishT < 0) {
+      this.fishT = 6 + Math.random() * 14;
+      const a = Math.random() * Math.PI * 2, d = 12 + Math.random() * 40;
+      const x = p.x + Math.cos(a) * d, z = p.z + Math.sin(a) * d;
+      if (this.world.height(x, z) < -1) {
+        wt.addRipple(x, z, 1.5);
+        this.onSplash?.(new THREE.Vector3(x, 0, z));
+      }
+    }
   }
 
   private applyTod(): void {

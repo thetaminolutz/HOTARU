@@ -115,7 +115,7 @@ export function resample(p: Path, step: number): Path {
 export type RoadChunk = { geo: THREE.BufferGeometry; bridge: THREE.BufferGeometry | null; center: THREE.Vector3; radius: number; decks: [number, number, number, number, number][] };
 
 /** Strip meshes in chunks of ~120 m (culled by distance). UVs run along the road. */
-export function roadMeshes(path: Path, width: number, height: (x: number, z: number) => number): RoadChunk[] {
+export function roadMeshes(path: Path, width: number, height: (x: number, z: number) => number, water?: (x: number, z: number) => number): RoadChunk[] {
   const p = resample(path, 3);
   const chunks: RoadChunk[] = [];
   const per = 40;
@@ -131,9 +131,10 @@ export function roadMeshes(path: Path, width: number, height: (x: number, z: num
       const tx = nx - px, tz = nz - pz, tl = Math.hypot(tx, tz) || 1;
       const ox = (-tz / tl) * (width / 2), oz = (tx / tl) * (width / 2);
       const hl = height(x + ox, z + oz), hr = height(x - ox, z - oz), hm = height(x, z);
-      const water = hm < 0.4;
-      const y = water ? 1.0 : hm;
-      return { a: [x + ox, (water ? 1.0 : hl) + 0.07, z + oz], b: [x - ox, (water ? 1.0 : hr) + 0.07, z - oz], y, water, x, z };
+      const wl = water ? water(x, z) : -Infinity;
+      const isWater = hm < 0.4 || wl > hm - 0.1;
+      const y = isWater ? Math.max(1.0, wl + 1.0) : hm;
+      return { a: [x + ox, (isWater ? y : hl) + 0.07, z + oz], b: [x - ox, (isWater ? y : hr) + 0.07, z - oz], y, water: isWater, x, z };
     };
     let prev = row(c0);
     for (let i = c0 + 1; i <= c1; i++) {
@@ -144,10 +145,11 @@ export function roadMeshes(path: Path, width: number, height: (x: number, z: num
         // a plank bridge segment on posts
         const g = new THREE.BoxGeometry(width, 0.16, 3.1).toNonIndexed();
         g.rotateY(Math.atan2(cur.x - prev.x, cur.z - prev.z));
-        g.translate((cur.x + prev.x) / 2, 1.0, (cur.z + prev.z) / 2);
+        const deckY = Math.max(cur.y, prev.y);
+        g.translate((cur.x + prev.x) / 2, deckY, (cur.z + prev.z) / 2);
         bridge.push(ensureColor(g, [0.55, 0.38, 0.26]));
-        decks.push([Math.min(cur.x, prev.x) - width * 0.4, Math.min(cur.z, prev.z) - width * 0.4, Math.max(cur.x, prev.x) + width * 0.4, Math.max(cur.z, prev.z) + width * 0.4, 1.08]);
-        if (i % 2 === 0) for (const s of [cur.a, cur.b]) bridge.push(ensureColor(new THREE.BoxGeometry(0.18, 2.6, 0.18).toNonIndexed().translate(s[0]!, -0.2, s[2]!), [0.35, 0.24, 0.18]));
+        decks.push([Math.min(cur.x, prev.x) - width * 0.4, Math.min(cur.z, prev.z) - width * 0.4, Math.max(cur.x, prev.x) + width * 0.4, Math.max(cur.z, prev.z) + width * 0.4, deckY + 0.08]);
+        if (i % 2 === 0) for (const s of [cur.a, cur.b]) bridge.push(ensureColor(new THREE.BoxGeometry(0.18, 3.2, 0.18).toNonIndexed().translate(s[0]!, deckY - 1.5, s[2]!), [0.35, 0.24, 0.18]));
       } else {
         const A = prev.a, B = prev.b, C = cur.a, D = cur.b;
         pos.push(...A, ...C, ...B, ...B, ...C, ...D);
