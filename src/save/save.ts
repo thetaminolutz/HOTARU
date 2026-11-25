@@ -23,6 +23,8 @@ export type SaveV1 = {
   found?: string[];
   shrines?: Record<string, { level: number; lastDay: number }>;
   gate?: boolean;
+  /** items, journal, map, album, garden (M11) */
+  adv?: { journey?: Record<string, unknown>; garden?: number[] };
 };
 
 export type SaveData = SaveV1;

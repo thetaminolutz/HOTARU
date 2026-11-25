@@ -22,10 +22,21 @@ export class InputState {
   jumpPressed = false;
   interactPressed = false;
   menuPressed = false;
+  /** edge-triggered: journal, map, photo mode, use the current tool */
+  journalPressed = false;
+  mapPressed = false;
+  photoPressed = false;
+  toolPressed = false;
+  /** interact (or tool) is being held: reeling in a fish */
+  interactHeld = false;
+  /** touch: the interact token is being held */
+  touchInteractHeld = false;
   private keys = new Set<string>();
   private jogToggled = false;
   private padPrev: boolean[] = [];
   enabled = false;
+  /** a journal or the map is open: the world ignores movement and actions */
+  frozen = false;
   /** Radians per mouse pixel at sensitivity 1. */
   mouseSensitivity = 0.0022;
   /** Touch & Pencil writers. */
@@ -55,6 +66,10 @@ export class InputState {
     if (this.is('jump', code)) this.jumpPressed = true;
     if (this.is('interact', code)) this.interactPressed = true;
     if (this.is('menu', code)) this.menuPressed = true;
+    if (this.is('journal', code)) this.journalPressed = true;
+    if (this.is('map', code)) this.mapPressed = true;
+    if (this.is('photo', code)) this.photoPressed = true;
+    if (this.is('tool', code)) this.toolPressed = true;
     if (this.is('jog', code) && settings.toggleJog) this.jogToggled = !this.jogToggled;
   }
 
@@ -91,6 +106,7 @@ export class InputState {
     this.jog = settings.toggleJog ? this.jogToggled : this.held('jog');
     this.slow = this.held('slow');
     this.timelapse = this.held('timelapse') || this.touchTimelapse;
+    this.interactHeld = this.held('interact') || this.held('tool') || this.touchInteractHeld;
 
     // gamepad: standard mapping
     const pads = navigator.getGamepads?.() ?? [];
@@ -109,6 +125,11 @@ export class InputState {
       if (pressed(10) || pressed(7)) this.jog = true; // L3 / RT
       if (pressed(4) || pressed(6)) this.slow = true; // LB / LT
       if (pressed(3)) this.timelapse = true;       // Y (held)
+      if (pressed(2) || pressed(1)) this.interactHeld = true;
+      if (edge(5)) this.toolPressed = true;        // RB
+      if (edge(8)) this.journalPressed = true;     // Back/Select
+      if (edge(12)) this.mapPressed = true;        // d-pad up
+      if (edge(13)) this.photoPressed = true;      // d-pad down
       this.padPrev = p.buttons.map((b) => b.pressed);
     }
 
@@ -124,8 +145,9 @@ export class InputState {
     this.moveX = len > 1 ? x / len : x;
     this.moveZ = len > 1 ? z / len : z;
     this.up = up;
+    if (this.frozen) { this.moveX = this.moveZ = this.up = 0; this.jumpPressed = this.interactPressed = this.toolPressed = this.interactHeld = false; this.lookDX = this.lookDY = 0; }
   }
 
   /** Clear edge-triggered actions after the frame consumed them. */
-  endFrame(): void { this.jumpPressed = false; this.interactPressed = false; }
+  endFrame(): void { this.jumpPressed = false; this.interactPressed = false; this.toolPressed = false; }
 }

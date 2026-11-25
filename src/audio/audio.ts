@@ -12,6 +12,8 @@ import { REGIONS } from '../world/data/regions';
 import { clock } from '../core/clock';
 import { playVoice, type VoiceId } from './voices';
 import { createRng } from '../core/rng';
+import { playNote } from './instruments';
+import { SCALES, degreeToMidi } from './composer';
 
 export type AudioVolumes = { master: number; music: number; ambience: number; sfx: number; musicFrequency: MusicFrequency };
 
@@ -64,6 +66,30 @@ export class AudioSystem {
       else if (kind === 'offer') { playVoice('furin', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white); this.music.sting(); }
       else playVoice('bambooKnock', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
     };
+    // items, fishing, rowing, photos, pages (M11)
+    game.adv.onSound = (kind, pos) => {
+      const p = game.controller.position, ctx = this.mix.ctx, t = this.mix.now + 0.02;
+      const at = (bus: 'sfx' | 'nature', ref = 2) => this.mix.spatial(bus, pos.x - p.x, pos.y - p.y, pos.z - p.z, ref, 0.4);
+      switch (kind) {
+        case 'pick': playVoice('twig', ctx, at('sfx'), t, this.rng, this.mix.noise.white); this.sfx.ui('tick'); break;
+        case 'plop': playVoice('drip', ctx, at('nature', 3), t, this.rng, this.mix.noise.white); break;
+        case 'bite': playVoice('splash', ctx, at('nature', 3), t, this.rng, this.mix.noise.white); break;
+        case 'catch': playVoice('splash', ctx, at('nature', 3), t, this.rng, this.mix.noise.white); this.music.sting(); break;
+        case 'row': this.sfx.stroke(); break;
+        case 'gift': playVoice('furin', ctx, this.mix.direct('sfx', 1, 0.1), t, this.rng, this.mix.noise.white); break;
+        case 'chest': playVoice('creak', ctx, at('sfx'), t, this.rng, this.mix.noise.white); break;
+        case 'shutter': this.sfx.ui('tick'); this.sfx.ui('tick'); break;
+        case 'page': this.sfx.ui('open'); break;
+        case 'flute': {
+          // a short phrase on the shakuhachi, different each time
+          const out = this.mix.direct('sfx', 1, 0.25), sc = SCALES.miyako ?? SCALES.yo;
+          let d = 2 + Math.floor(this.rng.next() * 3);
+          for (let i = 0; i < 5; i++) { playNote(ctx, out, 'shakuhachi', t + i * 0.55, degreeToMidi(sc, 67, d), 0.7, 0.55); d += Math.floor(this.rng.next() * 5) - 2; }
+          break;
+        }
+      }
+    };
+    game.photo.onShutter = () => game.adv.onSound?.('shutter', game.controller.position);
     game.onSplash = (pos) => {
       const p = game.controller.position;
       const out = this.mix.spatial('nature', pos.x - p.x, pos.y - p.y, pos.z - p.z, 2, 0.4);

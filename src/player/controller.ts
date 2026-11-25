@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import type { InputState } from './input';
 import { clamp, lerp } from '../core/math';
 
-export type ControlMode = 'walk' | 'fly' | 'drift' | 'fixed';
+export type ControlMode = 'walk' | 'fly' | 'drift' | 'fixed' | 'boat';
 export type Pose = 'stand' | 'air' | 'wade' | 'swim' | 'slide' | 'sit' | 'lie';
 
 export type Collider = { x0: number; z0: number; x1: number; z1: number; top: number };
@@ -130,6 +130,8 @@ export class Controller {
     const pitchMin = this.pose === 'lie' ? 0.2 : -1.45;
     this.pitch = clamp(this.pitch + input.lookDY, pitchMin, 1.45);
     input.lookDX = 0; input.lookDY = 0;
+    // in a boat the boat moves you; you only look around
+    if (this.mode === 'boat') { this.vel.set(0, 0, 0); return; }
 
     const fwd = new THREE.Vector3(-Math.sin(this.yaw), 0, -Math.cos(this.yaw));
     const right = new THREE.Vector3(-fwd.z, 0, fwd.x);

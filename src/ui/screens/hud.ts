@@ -7,6 +7,7 @@ import { bodyFont, tinyFont, headingFont } from '../font';
 import { C, koiStick, token, icon } from '../art';
 import { panel, type Pointer } from '../widgets';
 import type { Pixmap } from '../../render/pixmap';
+import { itemIcon } from '../../items/items';
 
 export type Toast = { text: string; until: number; onTap?: () => void };
 
@@ -42,6 +43,17 @@ export class Hud {
   /** Touch tokens pressed this frame (read by the game). */
   jumpTap = false;
   actTap = false;
+  /** the interact token is held (reeling in) */
+  actHeld = false;
+  private actId = -1;
+  /** journal / map / photo / tool tokens tapped (touch) */
+  taps = { journal: false, map: false, photo: false, tool: false };
+  private quick: { key: keyof Hud['taps']; x: number; y: number }[] = [];
+  /** the tool in hand (drawn in the lower right), a status line, the reel, a landed fish */
+  held: { id: string; color: number; glow: boolean } | null = null;
+  status = '';
+  reel: number | null = null;
+  landed: { name: string; text: string; size: number; best: boolean; colors: [string, string] } | null = null;
 
   constructor(private onMenu: () => void) {}
 
@@ -80,7 +92,39 @@ export class Hud {
     });
   }
 
+  /** Held item, fishing status, the reel and a landed fish (SPEC §8 hands, §21 fishing). */
+  private drawExtras(ui: UICanvas, t: number): void {
+    const s = ui.safe;
+    if (this.held) {
+      const bob = Math.round(Math.sin(t * 1.8) * 1.5), x = ui.w - s.right - (this.touchMode ? 92 : 40), y = ui.h - s.bottom - 34 + bob;
+      if (this.held.glow) { ui.disc(x + 12, y + 12, 16, C.amber, 40); ui.disc(x + 12, y + 12, 10, C.amberCore, 50); }
+      ui.sprite(itemIcon(this.held.id, this.held.color), x, y, 2);
+    }
+    if (this.status) ui.text(bodyFont, this.status, ui.w / 2, ui.h - s.bottom - (this.dialogue ? 84 : 30), C.paperLight, { align: 'center', shadow: C.indigoDark });
+    if (this.reel !== null) {
+      const w = 90, x = Math.round(ui.w / 2 - w / 2), y = ui.h - s.bottom - 44;
+      ui.rect(x - 1, y - 1, w + 2, 6, C.woodDark);
+      ui.rect(x, y, Math.round(w * this.reel), 4, C.gold);
+      for (let k = 1; k < 6; k++) ui.vline(x + Math.round((w * k) / 6), y, y + 3, C.woodDark);
+    }
+    const L = this.landed;
+    if (L) {
+      const w = 150, h = 58, x = Math.round(ui.w / 2 - w / 2), y = Math.round(ui.h / 2 - h / 2) - 20;
+      panel(ui, 'washi', x, y, w, h);
+      const c0 = parseInt(L.colors[0].slice(1), 16), c1 = parseInt(L.colors[1].slice(1), 16);
+      // a quick fish sketch: body, belly, tail, eye
+      for (let i = 0; i < 26; i++) { const r = Math.round(Math.sin((i / 26) * Math.PI) * 6); ui.vline(x + 10 + i, y + 14 - r, y + 14, c0); ui.vline(x + 10 + i, y + 15, y + 14 + Math.round(r * 0.7), c1); }
+      ui.line(x + 36, y + 14, x + 42, y + 8, c0); ui.line(x + 36, y + 14, x + 42, y + 20, c0); ui.vline(x + 42, y + 8, y + 20, c0);
+      ui.blend(x + 14, y + 12, C.ink);
+      ui.text(bodyFont, cleanText(L.name), x + 50, y + 7, C.ink);
+      ui.text(tinyFont, L.size + ' CM' + (L.best ? '  NEW!' : ''), x + 50, y + 18, L.best ? C.vermilion : C.inkSoft);
+      ui.textBlock(tinyFont, cleanText(L.text).toUpperCase(), x + 8, y + 30, w - 16, C.inkSoft);
+      ui.text(tinyFont, 'RELEASED BACK INTO THE WATER', x + w / 2, y + h - 9, C.moon, { align: 'center' });
+    }
+  }
+
   draw(ui: UICanvas, t: number, controls = true): void {
+    if (controls) this.drawExtras(ui, t);
     this.drawHaiku(ui);
     this.drawDialogue(ui, t);
     const s = ui.safe;
@@ -129,10 +173,19 @@ export class Hud {
       ui.sprite(this.tokenArt, rx, ry, 1, idle);
       ui.sprite(icon('jump', C.gold), rx + 5, ry + 5, 1, idle);
       this.actRect = { x: rx - 26, y: ry - 14, w: 19, h: 19 };
-      if (this.prompt) {
+      if (this.prompt || this.reel !== null || this.status) {
         ui.sprite(this.tokenArt, this.actRect.x, this.actRect.y, 1, 0.95);
-        ui.sprite(icon(this.prompt.icon, C.amberCore), this.actRect.x + 5, this.actRect.y + 5);
+        ui.sprite(icon(this.prompt?.icon ?? 'fish', C.amberCore), this.actRect.x + 5, this.actRect.y + 5);
       }
+      // journal, map, camera and tool tokens next to the menu
+      this.quick = [];
+      const keys: (keyof Hud['taps'])[] = this.held ? ['journal', 'map', 'photo', 'tool'] : ['journal', 'map', 'photo'];
+      keys.forEach((k, i) => {
+        const qx = this.menuRect.x - 24 * (i + 1), qy = this.menuRect.y;
+        this.quick.push({ key: k, x: qx, y: qy });
+        ui.sprite(this.tokenArt, qx, qy, 1, idle);
+        ui.sprite(icon(k === 'journal' ? 'book' : k === 'photo' ? 'camera' : k, C.gold), qx + 5, qy + 5, 1, idle);
+      });
       this.timeRect = { x: rx, y: ry - 30, w: 19, h: 19 };
       if (this.canTimelapse) {
         ui.sprite(this.tokenArt, this.timeRect.x, this.timeRect.y, 1, this.timelapseHeld ? 1 : 0.8);
@@ -162,7 +215,9 @@ export class Hud {
     if (p.type === 'down' && p.x >= m.x - 6 && p.y >= m.y - 6 && p.x < m.x + m.w + 6 && p.y < m.y + m.h + 6) { this.onMenu(); return true; }
     const inRect = (r: { x: number; y: number; w: number; h: number }) => p.x >= r.x - 5 && p.y >= r.y - 5 && p.x < r.x + r.w + 5 && p.y < r.y + r.h + 5;
     if (p.type === 'down' && inRect(this.jumpRect)) { this.jumpTap = true; return true; }
-    if (p.type === 'down' && this.prompt && inRect(this.actRect)) { this.actTap = true; return true; }
+    for (const q of this.quick) if (p.type === 'down' && inRect({ x: q.x, y: q.y, w: 19, h: 19 })) { this.taps[q.key] = true; return true; }
+    if (p.type === 'down' && (this.prompt || this.reel !== null || this.status) && inRect(this.actRect)) { this.actTap = true; this.actHeld = true; this.actId = p.id; return true; }
+    if (p.type === 'up' && p.id === this.actId) { this.actHeld = false; this.actId = -1; return true; }
     if (p.type === 'down' && this.canTimelapse && inRect(this.timeRect)) { this.timelapseHeld = true; this.timeId = p.id; return true; }
     if (p.type === 'up' && p.id === this.timeId) { this.timelapseHeld = false; this.timeId = -1; return true; }
     const R = 16;

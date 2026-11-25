@@ -16,6 +16,7 @@ import { uiSound } from './ui/widgets';
 import { DebugPanel } from './debug/panel';
 import { Benchmark } from './debug/benchmark';
 import { shotByName } from './app/shots';
+import { wireScreens } from './app/screens';
 
 const gameCanvas = document.getElementById('game') as HTMLCanvasElement;
 const uiCanvas = document.getElementById('ui') as HTMLCanvasElement;
@@ -58,6 +59,7 @@ const ui = new UIManager(uiCanvas, {
   penLook: (dx, dy) => { game.input.lastDevice = 'pen'; game.input.addLook(dx, dy, 0.006); },
 });
 game.input.attachLookElement(uiCanvas);
+const screens = wireScreens(game, ui);
 ui.settings.onRebind = (done) => { game.input.rebindListener = (code) => { game.input.rebindListener = null; done(code); }; };
 const bench = new Benchmark(game);
 const debug = new DebugPanel(game, bench, () => { state.mode = 'gallery'; ui.show('gallery'); });
@@ -100,7 +102,7 @@ function resize(): void {
 async function save(): Promise<void> {
   if (state.mode !== 'play') return;
   const c = game.controller;
-  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0 });
+  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0, adv: game.adv.toJSON() as SaveData['adv'] });
   state.save = await readSave(1);
 }
 
@@ -117,6 +119,7 @@ function startPlay(continueSave: boolean): void {
     if (s.found) game.world.secrets.found = new Set(s.found);
     if (s.shrines) { game.world.secrets.shrineState = s.shrines; game.world.secrets.refresh(); }
     if (s.gate) game.world.landmarks.openGate();
+    if (s.adv) game.adv.load(s.adv as Parameters<typeof game.adv.load>[0]);
   } else {
     const S = game.world.dock.anchors.shore!;
     c.placeAt(S.x + 1, S.z + 3);
@@ -182,7 +185,8 @@ function loop(now: number): void {
   if (ui.hud.jumpTap) { game.input.touchJump = true; ui.hud.jumpTap = false; }
   if (ui.hud.actTap) { game.input.touchInteract = true; ui.hud.actTap = false; }
   game.input.touchTimelapse = ui.hud.timelapseHeld;
-  if (game.input.menuPressed) { game.input.menuPressed = false; if (state.mode === 'play') openMenu(); }
+  if (game.input.menuPressed) { game.input.menuPressed = false; if (state.mode === 'play' && !screens.close()) openMenu(); }
+  if (state.mode === 'play') screens.update();
   game.input.enabled = state.mode === 'play';
   bench.update(dt, frameMs);
   if (state.mode !== 'gallery') game.frame(dt);
@@ -193,7 +197,10 @@ function loop(now: number): void {
   // interact prompt: the targeted thing, or sit / lie / stand where you are
   if (state.mode === 'play') {
     const c = game.controller, t = game.interactions.target;
-    ui.hud.prompt = t && !c.sitting ? { icon: t.kind === 'sit' ? 'sit' : 'hand', label: t.label }
+    const ICON: Record<string, string> = { sit: 'sit', pick: 'pick', fish: 'fish', row: 'row', give: 'gift', read: 'book' };
+    const shore = game.adv.boating && game.adv.boat.landing();
+    ui.hud.prompt = game.adv.fishing.active ? null : game.adv.boating ? (shore ? { icon: 'row', label: 'Step ashore' } : null)
+      : t && !c.sitting ? { icon: ICON[t.kind] ?? 'hand', label: t.label }
       : c.sitHint ? { icon: c.sitHint, label: '' } : null;
     ui.hud.canTimelapse = c.sitting;
   } else ui.hud.prompt = null;

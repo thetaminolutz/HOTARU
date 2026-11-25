@@ -113,7 +113,7 @@ export class PixelPipeline {
       uSrc: { value: null }, uDepth: { value: null }, uLut: { value: this.lutTex }, uPalette: { value: this.paletteTex },
       uTexel: { value: new THREE.Vector2() }, uLutSize: { value: LUT_SIZE }, uPaletteSize: { value: PALETTE_SIZE },
       uQuantize: { value: 1 }, uDither: { value: 0.85 }, uOutline: { value: 0.75 }, uVignette: { value: 0.2 },
-      uDitherOffset: { value: this.ditherOffset }, uNearFar: { value: new THREE.Vector2(0.1, 1000) }, uSize: { value: new THREE.Vector2() },
+      uFilter: { value: 0 }, uDitherOffset: { value: this.ditherOffset }, uNearFar: { value: new THREE.Vector2(0.1, 1000) }, uSize: { value: new THREE.Vector2() },
     });
     this.mats.pixel.glslVersion = null;
     this.mats.upscale = mk(UPSCALE_FRAG, {
@@ -368,6 +368,11 @@ export class PixelPipeline {
   }
 
   /** Read the internal-resolution final image (for tests). */
+  /** Photo filter: 0 none, 1 sepia, 2 ukiyo-e, 3 ink, 4 night blue. */
+  set filter(f: number) { this.mats.pixel!.uniforms.uFilter!.value = f; }
+  get filter(): number { return this.mats.pixel!.uniforms.uFilter!.value as number; }
+  get pixelSize(): [number, number] { return [this.pixelRT.width, this.pixelRT.height]; }
+
   readPixels(): Uint8Array {
     const out = new Uint8Array(this.pixelRT.width * this.pixelRT.height * 4);
     this.renderer.readRenderTargetPixels(this.pixelRT, 0, 0, this.pixelRT.width, this.pixelRT.height, out);
