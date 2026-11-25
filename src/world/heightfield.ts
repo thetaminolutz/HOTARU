@@ -121,6 +121,9 @@ export function createWorld(seed: number): World {
 
     // Lantern Lake and its shores
     h = lakeShape(x, z, h);
+    // the boathouse (your house) stands on a small levelled terrace on its stilts, never in the slope
+    const bd = Math.max(Math.abs(x + 8.25) - 4.75, Math.abs(z - 303) - 5.2);
+    if (bd < 7) h = Math.min(h, lerp(0.55 + 0.04 * n.noise2(x / 3, z / 3), h, smoothstep(1.2, 7, bd)));
 
     // the eastern sea with cliffs and a cove; border ranges on the other three sides
     const coastX = HALF - 650 + 260 * n.fbm2(z / 1200, 3.3, 3) + 120 * n.noise2(z / 300, 1.1);
