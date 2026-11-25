@@ -22,6 +22,8 @@ export type Person = {
   home: HouseSpec | null; work: HouseSpec | null; pitch: number;
   clothes: [THREE.Color, THREE.Color]; hair: THREE.Color; skin: number; hat: boolean; basket: boolean;
   wanderer?: WandererDef;
+  /** the masked stranger, after the story's ending */
+  unmasked?: boolean;
   // live state
   pos: THREE.Vector3; yaw: number; path: THREE.Vector3[]; act: Activity; place: Place; target: THREE.Vector3;
   inside: boolean; visible: boolean; phase: number; gait: number; pose: number; arm: number; armT: number;
@@ -48,6 +50,8 @@ export class People {
   private geo: THREE.InstancedBufferGeometry;
   /** met counts and nicknames (saved) */
   memory: { met: Record<string, number>; nick: Record<string, string> } = { met: {}, nick: {} };
+  /** a festival in progress: guests gather around this spot (SPEC §22) */
+  festival: { id: string; spot: THREE.Vector3; village: string } | null = null;
   onNear: ((p: Person, near: boolean) => void) | null = null;
   private near = new Set<string>();
   private places = new Map<string, Record<string, THREE.Vector3>>();
@@ -223,6 +227,7 @@ export class People {
     }
     for (const p of this.people) {
       if (p.wanderer) { this.wanderer(p, dt, player, hour, day); continue; }
+      if (this.festival && this.isGuest(p)) { this.guest(p, dt, player); continue; }
       if (!this.active.has(p.village)) { p.visible = false; continue; }
       const s = this.slotFor(p, hour, storm);
       const key = s.act + s.place;
@@ -231,6 +236,8 @@ export class People {
         const pt = this.placePoint(p, s.place, s.act);
         p.target.copy(pt.pos);
         p.path = this.route(p, pt.pos);
+        // back from a festival far away: they're simply home again
+        if (p.pos.distanceTo(pt.pos) > 400) { p.pos.copy(pt.pos); p.path = []; }
         if (p.inside && !pt.inside && p.home) { p.pos.copy(houseDoor(p.inside && p.work && p.act !== 'sleep' ? p.work : p.home, new THREE.Vector3(), 1.0)); }
         p.inside = false;
         (p as Person & { goingInside?: boolean }).goingInside = pt.inside;
@@ -241,6 +248,34 @@ export class People {
     }
     this.lanternRound(dt, hour);
     this.upload();
+  }
+
+  /** Everyone of the festival's village goes, plus every third person from elsewhere. */
+  private isGuest(p: Person): boolean {
+    return p.village === this.festival!.village || hashString(p.id) % 3 === 0;
+  }
+
+  /** A festival guest: mill about the spot, chatting; children run around. */
+  private guest(p: Person, dt: number, player: THREE.Vector3): void {
+    const F = this.festival!;
+    if (p.slotKey !== 'fest-' + F.id) {
+      p.slotKey = 'fest-' + F.id; p.act = p.age === 'child' ? 'play' : 'chat'; p.place = 'plaza'; p.actT = 0; p.inside = false;
+      const t = F.spot.clone().add(H2.set((p.r.next() - 0.5) * 30, 0, (p.r.next() - 0.5) * 30));
+      t.y = this.w.groundHeight(t.x, t.z);
+      p.target.copy(t);
+      // far away (another village): they're there already
+      if (p.pos.distanceTo(t) > 60 || !p.visible) { p.pos.copy(t); p.path = []; } else p.path = [t];
+    }
+    p.actT += dt;
+    if (p.actT > 25 + (hashString(p.id) % 20)) {
+      p.actT = 0;
+      const t = F.spot.clone().add(H2.set((p.r.next() - 0.5) * 30, 0, (p.r.next() - 0.5) * 30));
+      t.y = this.w.groundHeight(t.x, t.z);
+      p.target.copy(t); p.path = [t];
+    }
+    p.umbrella = false;
+    if (F.spot.distanceTo(player) > 500) { p.visible = false; return; }
+    this.live(p, dt, player);
   }
 
   private live(p: Person, dt: number, player: THREE.Vector3): void {

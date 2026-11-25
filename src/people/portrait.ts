@@ -13,7 +13,8 @@ const toHex = (c: { r: number; g: number; b: number }) => {
 };
 
 export function portrait(p: Person): Pixmap {
-  const hit = cache.get(p.id);
+  const key = p.id + (p.unmasked ? '-u' : '');
+  const hit = cache.get(key);
   if (hit) return hit;
   const S = 28, m = new Pixmap(S, S);
   const bg = 0xe8d8b4, kim = toHex(p.clothes[0]), acc = toHex(p.clothes[1]), hair = toHex(p.hair);
@@ -50,7 +51,7 @@ export function portrait(p: Person): Pixmap {
     if (x >= 1 && x < S - 1) m.set(x, top - 7 + y, (x + y) % 3 === 0 ? 0xa88a4a : 0xc8a860);
   }
   // the fox mask
-  if (p.wanderer?.id === 'masked') {
+  if (p.wanderer?.id === 'masked' && !p.unmasked) {
     for (let y = top; y < top + fh; y++) for (let x = cx - (fw >> 1); x < cx + (fw >> 1); x++) m.set(x, y, 0xf4f0e8);
     for (const ex of [cx - 5, cx + 4]) { m.set(ex, top - 1, 0xf4f0e8); m.set(ex, top - 2, 0xf4f0e8); }
     for (const ex of [cx - 3, cx + 2]) { m.set(ex, ey, 0x1a1418); m.set(ex - 1, ey - 1, 0xc83a2a); m.set(ex + 1, ey - 1, 0xc83a2a); }
@@ -58,6 +59,6 @@ export function portrait(p: Person): Pixmap {
   }
   // frame
   for (let i = 0; i < S; i++) { m.set(i, 0, 0x4e2e22); m.set(i, S - 1, 0x4e2e22); m.set(0, i, 0x4e2e22); m.set(S - 1, i, 0x4e2e22); }
-  cache.set(p.id, m);
+  cache.set(key, m);
   return m;
 }

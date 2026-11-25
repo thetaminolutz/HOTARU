@@ -8,7 +8,7 @@ import type { Job } from '../people/data/people';
 export type ToolId = 'lantern' | 'rod' | 'camera' | 'sketchbook' | 'map' | 'flute' | 'umbrella' | 'boat';
 export type KeepsakeId =
   | 'shell' | 'stone' | 'feather' | 'flower' | 'crane' | 'letter' | 'omamori' | 'coin' | 'foxMask' | 'incense'
-  | 'riceBall' | 'persimmon' | 'tea' | 'chime' | 'top' | 'seeds' | 'fan' | 'doll' | 'key' | 'brush' | 'luckyCat' | 'starChart' | 'pinwheel' | 'fish';
+  | 'riceBall' | 'persimmon' | 'tea' | 'chime' | 'top' | 'seeds' | 'fan' | 'doll' | 'key' | 'brush' | 'luckyCat' | 'starChart' | 'pinwheel' | 'fish' | 'lantern1000';
 
 export type ToolDef = { id: ToolId; name: string; text: string; color: number };
 export type KeepsakeDef = { id: KeepsakeId; name: string; text: string; color: number; likedBy: Job[]; offering?: boolean };
@@ -48,6 +48,7 @@ export const KEEPSAKES: KeepsakeDef[] = [
   { id: 'luckyCat', name: 'Lucky cat', text: 'Beckons good fortune.', color: 0xf8f4ec, likedBy: ['merchant'] },
   { id: 'starChart', name: 'Star chart', text: 'One star is missing.', color: 0x2a3a6a, likedBy: [] },
   { id: 'pinwheel', name: 'Pinwheel', text: 'Turns with the faintest breeze.', color: 0xe8c040, likedBy: ['child'] },
+  { id: 'lantern1000', name: 'The thousandth lantern', text: 'Painted with a single firefly. Float it on the lake on festival night.', color: 0xffc860, likedBy: [] },
   { id: 'fish', name: 'Dried fish', text: 'The cats will follow you.', color: 0xb8a088, likedBy: ['fisher', 'elder'] },
 ];
 

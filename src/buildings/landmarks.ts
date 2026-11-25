@@ -192,6 +192,35 @@ export class Landmarks {
   }
   private gateCollider: Col | null = null;
 
+  /** The castle gardens bloom as the story is pieced together (SPEC §24): 0..1. */
+  private blooms: THREE.Mesh | null = null;
+  private bloomVerts = 0;
+  setBloom(k: number): void {
+    if (!this.blooms) {
+      const C = this.w.sites.castle, L = C.level, half = 34, r = createRng(0xb100);
+      const parts: THREE.BufferGeometry[] = [];
+      const cols: [number, number, number][] = [[0.95, 0.55, 0.65], [1, 0.85, 0.4], [0.75, 0.55, 0.95], [0.98, 0.96, 0.92], [0.95, 0.4, 0.3], [0.5, 0.65, 1]];
+      const area = (x0: number, z0: number, w: number, d: number, n: number) => {
+        for (let i = 0; i < n; i++) {
+          const x = x0 + r.range(-w / 2, w / 2), z = z0 + r.range(-d / 2, d / 2), h = r.range(0.25, 0.6);
+          parts.push(boxUV(0.03, h, 0.03, 1, [0.3, 0.5, 0.25]).translate(x, L + h / 2, z));
+          parts.push(boxUV(0.13, 0.1, 0.13, 1, cols[i % cols.length]!).translate(x, L + h, z));
+        }
+      };
+      area(C.x - 18, C.z - half - 9, 16, 12, 260);
+      area(C.x - 16, C.z + 12 + 6.5, 12, 2.5, 60);
+      area(C.x - 16, C.z + 12 - 6, 12, 2, 50);
+      const g = mergeGeoms(parts);
+      this.bloomVerts = g.getAttribute('position').count;
+      this.blooms = new THREE.Mesh(g, litMaterial({ outline: true }));
+      this.blooms.name = 'castle-blooms';
+      this.group.add(this.blooms);
+    }
+    const per = this.bloomVerts / 740; // two boxes per flower
+    this.blooms.geometry.setDrawRange(0, Math.floor(Math.round(740 * Math.max(0, Math.min(1, k)) / 2) * 2 * per));
+    this.blooms.visible = k > 0;
+  }
+
   /** Open the hidden gate (once found). */
   openGate(): void {
     if (this.gateCollider) { this.gateCollider.top = -1e9; this.gateCollider = null; }
