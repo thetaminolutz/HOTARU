@@ -13,7 +13,9 @@
     "e2e:offline": "node scripts/offline-test.mjs",
     "e2e:stability": "node scripts/stability-test.mjs",
     "perf": "node scripts/perf.mjs",
-    "e2e:controls": "node scripts/controls-test.mjs"
+    "e2e:controls": "node scripts/controls-test.mjs",
+    "e2e:audio": "node scripts/audio-test.mjs",
+    "audio:samples": "node scripts/audio-samples.mjs"
   },
   "dependencies": {
     "three": "0.187.0"

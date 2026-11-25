@@ -10,11 +10,15 @@ import { settings, setSetting } from '../../app/settings';
 import type { QualityName } from '../../config';
 import { ACTIONS, ACTION_LABELS, keyName, type Action } from '../../player/bindings';
 
-type Tab = 'graphics' | 'camera' | 'keys';
+type Tab = 'graphics' | 'camera' | 'sound' | 'keys';
+const TABS: Tab[] = ['graphics', 'camera', 'sound', 'keys'];
+const FREQS = ['often', 'occasional', 'rare', 'off'] as const;
 
 export class SettingsScreen {
   tab: Tab = 'graphics';
   private tabs: Button[];
+  private vols: Slider[];
+  private freq: Button[];
   private q: Button[];
   private dither: Slider;
   private outlines: Toggle;
@@ -33,7 +37,14 @@ export class SettingsScreen {
   persisted = true;
 
   constructor(onBack: () => void) {
-    this.tabs = (['graphics', 'camera', 'keys'] as Tab[]).map((t) => new Button(t[0]!.toUpperCase() + t.slice(1), () => (this.tab = t), 60, 15));
+    this.tabs = TABS.map((t) => new Button(t[0]!.toUpperCase() + t.slice(1), () => (this.tab = t), 52, 15));
+    const vol = (label: string, key: 'volMaster' | 'volMusic' | 'volAmbience' | 'volSfx') => {
+      const sl = new Slider(label, settings[key], (v) => setSetting(key, v), 150);
+      sl.format = (v) => Math.round(v * 100) + '%';
+      return sl;
+    };
+    this.vols = [vol('Volume', 'volMaster'), vol('Music', 'volMusic'), vol('Nature & places', 'volAmbience'), vol('Footsteps & UI', 'volSfx')];
+    this.freq = FREQS.map((f) => new Button(f[0]!.toUpperCase() + f.slice(1), () => setSetting('musicFrequency', f), 50));
     const names: QualityName[] = ['low', 'medium', 'high'];
     this.q = names.map((n) => new Button(n[0]!.toUpperCase() + n.slice(1), () => setSetting('quality', n), 50));
     this.dither = new Slider('Dithering', settings.dither, (v) => setSetting('dither', v), 150);
@@ -62,15 +73,16 @@ export class SettingsScreen {
     const common: Widget[] = [...this.tabs, this.back];
     if (this.tab === 'graphics') return [...common, ...this.q, this.dither, this.outlines, this.fps];
     if (this.tab === 'camera') return [...common, this.fov, this.sens, this.invert, this.bob, this.toggleJog];
+    if (this.tab === 'sound') return [...common, ...this.vols, ...this.freq];
     return [...common, ...this.keys];
   }
 
   draw(ui: UICanvas, t: number): void {
-    const pw = 240, ph = 196;
+    const pw = 240, ph = 214;
     const x = Math.round(ui.w / 2 - pw / 2), y = Math.round(ui.h / 2 - ph / 2);
     panel(ui, 'indigo', x, y, pw, ph);
     ui.text(headingFont, 'Settings', x + pw / 2, y + 5, C.amberCore, { align: 'center', shadow: C.indigoDark });
-    this.tabs.forEach((b, i) => { b.selected = this.tab === (['graphics', 'camera', 'keys'] as Tab[])[i]; b.place(x + 18 + i * 70, y + 29); b.draw(ui); });
+    this.tabs.forEach((b, i) => { b.selected = this.tab === TABS[i]; b.place(x + 10 + i * 56, y + 29); b.draw(ui); });
     const cy = y + 52;
     if (this.tab === 'graphics') {
       ui.text(bodyFont, 'Quality', x + 14, cy, C.moon, { shadow: C.indigoDark });
@@ -85,6 +97,10 @@ export class SettingsScreen {
       this.invert.place(x + 14, cy + 54).draw(ui, t);
       this.bob.place(x + 120, cy + 54).draw(ui, t);
       this.toggleJog.place(x + 14, cy + 74).draw(ui, t);
+    } else if (this.tab === 'sound') {
+      this.vols.forEach((sl, i) => sl.place(x + 14, cy + i * 24).draw(ui));
+      ui.text(bodyFont, 'Music', x + 14, cy + 98, C.moon, { shadow: C.indigoDark });
+      this.freq.forEach((b, i) => { b.selected = settings.musicFrequency === FREQS[i]; b.place(x + 14 + i * 54, cy + 110); b.draw(ui); });
     } else {
       ACTIONS.forEach((a, i) => {
         const col = i % 2, row = Math.floor(i / 2);

@@ -180,3 +180,38 @@ Non-obvious decisions and why. Newest at the bottom.
   Ground mist is a second fog term in the shared fog function — dense near the ground, fading in
   over tens of metres — so trunks step back into layers (deep forests always, valleys and lakes
   in the morning). It eases in and out as you move between regions.
+
+## M13 (audio, pulled forward)
+
+- **Everything is synthesised with Web Audio, nothing is a recording** (offline, tiny download):
+  koto and shamisen are Karplus-Strong strings rendered once per pitch in JS and cached;
+  shakuhachi = sine + triangle with a delayed vibrato, a "meri" bend into each note and
+  band-passed breath noise; soft piano and music box are additive partials; bells and wind
+  chimes use inharmonic partials; pads are detuned saws through a low-pass; taiko is a pitch-
+  dropping sine plus a noise thump.
+- **Music in arcs, silence between (Minecraft-like):** one generated piece of 2–4 minutes, then
+  2½–6 minutes of pure ambience ("occasional"; also often / rare / off in Settings → Sound). The
+  first piece comes 25–60 s after you start; the title screen opens with the main theme.
+- **Composer:** pure and deterministic (`composePiece(seed, mood)`), so it's unit-tested. Scales
+  yo, in, miyako-bushi, ryūkyū and major/minor pentatonic; a mood per region and hour (forests
+  get shakuhachi over koto in the *in* scale, villages koto and shamisen, the coast ryūkyū,
+  flower hills music box, night sparse piano and music box). Sections A A′ B A″ (+ intro/coda),
+  B built from a motif hashed from the region's name, A from the **Lantern Lake theme** at the
+  lake, at dusk and on the title (in variations elsewhere). A short rising sting plays the first
+  time you enter a region.
+- **Ambience = beds + events.** Beds (wind low/high with gusts, leaf rustle tuned by autumn, pine
+  and bamboo whoosh, lake lapping, surf swells, rain, a far night-insect chorus) follow place,
+  wind and exposure. Events are Poisson-scheduled per minute from the same context and placed
+  around the listener with HRTF panners and distance low-pass: bush warbler, tits, sparrows,
+  turtle doves, crows, owls, woodpeckers, gulls, crickets, bell crickets, evening cicadas,
+  frogs, kajika frogs, wind chimes at the dock, the temple bell at 6 and 18 h, bamboo knocks,
+  shishi-odoshi, creaking cedar trunks, snapping twigs, dripping leaves, fish jumping. Dawn
+  chorus in the morning, insects and frogs at night, gulls and surf at the coast.
+- **Reverb per space** from generated impulse responses (open, forest, valley, room, hall, cave);
+  two convolvers cross-fade when the space changes. Rooms/halls/caves get used from M7/M10.
+- **Footsteps by surface** (grass, autumn litter, wood boards, gravel, sand, snow, shallow water,
+  tatami ready for interiors), jump, landing thump by impact, swim strokes; the controller emits
+  a step at the bottom of each head-bob cycle. UI buttons tick softly.
+- **iOS:** the AudioContext is created on the first gesture and resumed when the app returns.
+- **Listenable samples** are rendered offline (`npm run audio:samples` → `docs/audio/*.wav`)
+  since nobody can hear this container.

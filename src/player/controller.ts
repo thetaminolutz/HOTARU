@@ -57,6 +57,12 @@ export class Controller {
   private turnTo: { yaw: number; pitch: number } | null = null;
   /** Called on hard landings so the UI can do a soft fade. */
   onSoftLanding: (() => void) | null = null;
+  /** Sound hooks: a footfall (speed m/s), jump, landing (impact m/s), swim stroke. */
+  onStep: ((speed: number) => void) | null = null;
+  onJump: (() => void) | null = null;
+  onLand: ((impact: number) => void) | null = null;
+  onStroke: (() => void) | null = null;
+  private stepPhase = 0;
   /** Hint for the HUD: what interact would do now. */
   sitHint: 'sit' | 'lie' | 'stand' | null = null;
 
@@ -196,7 +202,7 @@ export class Controller {
       this.feet = lerp(this.feet, target, 1 - Math.exp(-dt * 3));
       this.vel.y = 0;
     } else {
-      if (input.jumpPressed && this.pose !== 'air') { this.vel.y = JUMP_V; this.fallStart = this.feet; }
+      if (input.jumpPressed && this.pose !== 'air') { this.vel.y = JUMP_V; this.fallStart = this.feet; this.onJump?.(); }
       if (this.feet > g + 0.02 || this.vel.y > 0) {
         if (this.vel.y <= 0 && this.pose !== 'air') this.fallStart = this.feet;
         this.vel.y -= GRAVITY * dt;
@@ -206,6 +212,7 @@ export class Controller {
           const impact = -this.vel.y;
           this.dipV -= Math.min(impact * 0.05, 0.4);
           if (this.fallStart - g > 9) this.onSoftLanding?.();
+          if (impact > 1.5) this.onLand?.(impact);
           this.feet = g; this.vel.y = 0;
         }
       } else {
@@ -236,6 +243,12 @@ export class Controller {
     this.dipV *= Math.exp(-dt * 9);
     this.dip += this.dipV * dt * 10;
     this.bob += dt * speed * 2.2;
+    // footfalls at the bottom of each bob (one per step), swim strokes every ~1.4 s
+    const grounded = this.pose === 'stand' || this.pose === 'wade' || this.pose === 'slide';
+    const ph = Math.floor(this.bob / Math.PI + 0.25);
+    if (grounded && speed > 0.4 && this.feet <= this.q.ground(this.position.x, this.position.z) + 0.05 && ph !== this.stepPhase) this.onStep?.(speed);
+    this.stepPhase = ph;
+    if (this.pose === 'swim' && speed > 0.3 && Math.floor(this.t / 1.4) !== Math.floor((this.t - dt) / 1.4)) this.onStroke?.();
     const bobAmt = this.headBob && (this.pose === 'stand' || this.pose === 'wade') ? Math.min(1, speed / 2) : 0;
     const bobY = Math.sin(this.bob * 2) * 0.035 * bobAmt;
     const swimBob = this.pose === 'swim' ? Math.sin(this.t * 1.6) * 0.05 : 0;
