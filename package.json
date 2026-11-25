@@ -23,6 +23,7 @@
     "e2e:items": "node scripts/items-test.mjs",
     "e2e:story": "node scripts/story-test.mjs",
     "e2e:release": "node scripts/release-test.mjs",
+    "e2e:collision": "node scripts/collision-test.mjs",
     "audio:samples": "node scripts/audio-samples.mjs"
   },
   "dependencies": {

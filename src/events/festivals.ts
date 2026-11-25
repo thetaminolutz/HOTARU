@@ -18,6 +18,7 @@ import { U } from '../render/uniforms';
 import { createRng } from '../core/rng';
 import { FESTIVALS, type FestivalDef, type FestivalId } from './calendar';
 import type { GameWorld } from '../scene/gameWorld';
+import type { CollisionWorld } from '../player/collision';
 
 type Light = { pos: THREE.Vector3; color: THREE.Color; radius: number; intensity: number; halo: number; phase: number };
 const AMBER = new THREE.Color(1, 0.6, 0.28);
@@ -80,7 +81,9 @@ export class Festivals {
   onBell: ((n: number) => void) | null = null;
   /** a firework burst (for the sound): position, delay already applied */
   onBoom: ((pos: THREE.Vector3) => void) | null = null;
-  private decor = new Map<FestivalId, { group: THREE.Group; spot: THREE.Vector3; lights: Light[] }>();
+  private decor = new Map<FestivalId, { group: THREE.Group; spot: THREE.Vector3; lights: Light[]; boxes: { x0: number; z0: number; x1: number; z1: number; top: number }[] }>();
+  /** stalls and the yagura block your way while a festival is up */
+  collision: CollisionWorld | null = null;
   private mat = litMaterial({ outline: true, emissive: AMBER, emissiveIntensity: 2.6, flicker: true });
   private floaters: Glow | null = null;
   private floatSeeds: { x: number; z: number; a: number; s: number; t0: number }[] = [];
@@ -112,8 +115,9 @@ export class Festivals {
     }
   }
 
-  private build(id: FestivalId): { group: THREE.Group; spot: THREE.Vector3; lights: Light[] } {
+  private build(id: FestivalId): { group: THREE.Group; spot: THREE.Vector3; lights: Light[]; boxes: { x0: number; z0: number; x1: number; z1: number; top: number }[] } {
     const spot = this.spotOf(id), parts: THREE.BufferGeometry[] = [], lights: Light[] = [];
+    const boxes: { x0: number; z0: number; x1: number; z1: number; top: number }[] = [];
     const r = createRng(0x5eed ^ id.length * 977);
     const at = (g: THREE.BufferGeometry, x: number, z: number, dy = 0, ry = 0) => { if (ry) g.rotateY(ry); parts.push(g.translate(x, this.ground(x, z) + dy, z)); };
     const lantern = (x: number, y: number, z: number, rgb: [number, number, number] = [1, 0.55, 0.4]) => {
@@ -127,6 +131,7 @@ export class Festivals {
       for (let k = 0; k < 7; k++) {
         const x = spot.x - 24 + k * 7, z = spot.z + 8 + Math.sin(k) * 2, gy = this.ground(x, z);
         at(boxUV(3, 0.9, 1.4, 1, [0.55, 0.38, 0.24]), x, z, 0.45);
+        boxes.push({ x0: x - 1.5, z0: z - 0.7, x1: x + 1.5, z1: z + 0.7, top: gy + 2.4 });
         for (let s = 0; s < 5; s++) at(boxUV(0.62, 0.08, 1.9, 1, s % 2 ? [0.92, 0.9, 0.85] : [0.75, 0.2, 0.18]), x - 1.25 + s * 0.62, z, 2.3);
         pole(x - 1.4, z + 0.8, 2.3); pole(x + 1.4, z + 0.8, 2.3);
         lantern(x, gy + 2.1, z + 0.9);
@@ -134,7 +139,7 @@ export class Festivals {
       }
       // the yagura: a small tower with a taiko on top and lantern strings
       const yx = spot.x + 2, yz = spot.z - 4, gy = this.ground(yx, yz);
-      for (const [dx, dz] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) at(boxUV(0.2, 3, 0.2, 1, [0.6, 0.2, 0.15]), yx + dx!, yz + dz!, 1.5);
+      for (const [dx, dz] of [[-1.5, -1.5], [1.5, -1.5], [-1.5, 1.5], [1.5, 1.5]]) { at(boxUV(0.2, 3, 0.2, 1, [0.6, 0.2, 0.15]), yx + dx!, yz + dz!, 1.5); boxes.push({ x0: yx + dx! - 0.15, z0: yz + dz! - 0.15, x1: yx + dx! + 0.15, z1: yz + dz! + 0.15, top: gy + 3 }); }
       at(boxUV(3.6, 0.2, 3.6, 1, [0.55, 0.38, 0.24]), yx, yz, 3);
       at(boxUV(3.8, 0.5, 0.06, 1, [0.92, 0.9, 0.85]), yx, yz + 1.85, 2.6); at(boxUV(3.8, 0.5, 0.06, 1, [0.92, 0.9, 0.85]), yx, yz - 1.85, 2.6);
       parts.push(ensureColor(new THREE.CylinderGeometry(0.55, 0.55, 0.7, 10).toNonIndexed(), [0.45, 0.22, 0.12]).rotateZ(Math.PI / 2).translate(yx, gy + 3.5, yz));
@@ -152,6 +157,7 @@ export class Festivals {
     } else if (id === 'tsukimi') {
       // a low table: a pyramid of white dumplings, a vase of pampas grass
       at(boxUV(1.4, 0.4, 0.8, 1, [0.5, 0.32, 0.2]), spot.x, spot.z, 0.2);
+      boxes.push({ x0: spot.x - 0.7, z0: spot.z - 0.4, x1: spot.x + 0.7, z1: spot.z + 0.4, top: spot.y + 0.75 });
       let n = 0;
       for (let lv = 0; lv < 3; lv++) for (let i = 0; i < 3 - lv; i++) for (let j = 0; j < 3 - lv; j++) { n++; parts.push(ensureColor(new THREE.SphereGeometry(0.07, 6, 4).toNonIndexed(), [0.97, 0.96, 0.92]).translate(spot.x - 0.3 + (i + lv * 0.5) * 0.14, spot.y + 0.47 + lv * 0.12, spot.z - 0.14 + (j + lv * 0.5) * 0.14)); }
       void n;
@@ -179,14 +185,19 @@ export class Festivals {
     group.name = 'festival-' + id;
     if (parts.length) { const m = new THREE.Mesh(mergeGeoms(parts), this.mat); m.userData.castShadow = true; group.add(m); }
     this.group.add(group);
-    return { group, spot, lights };
+    return { group, spot, lights, boxes };
   }
 
   /** The festival for now (from the calendar) → scenery, lights, effects. */
   update(f: FestivalDef | null, hour: number, player: THREE.Vector3, dt: number, elapsed: number): void {
     this.active = f;
     const near = f ? this.spotOf(f.id).distanceTo(player) < 900 : false;
-    for (const [id, d] of this.decor) d.group.visible = !!f && f.id === id && near;
+    for (const [id, d] of this.decor) {
+      d.group.visible = !!f && f.id === id && near;
+      const tag = 'festival-' + id;
+      if (this.collision && d.group.visible && !this.collision.has(tag)) for (const b of d.boxes) this.collision.addBox(b, tag);
+      if (this.collision && !d.group.visible && this.collision.has(tag)) this.collision.remove(tag);
+    }
     this.lights.length = 0;
     this.spot = null;
     if (f && near) {

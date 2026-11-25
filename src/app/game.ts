@@ -28,6 +28,7 @@ import { Pixmap } from '../render/pixmap';
 import { Adventure } from './adventure';
 import { PhotoMode } from './photoMode';
 import { Mystic } from './mystic';
+import { CollisionWorld } from '../player/collision';
 
 let stoneImg: Pixmap | null = null;
 /** A little grey stone for the dialogue box when a tablet or shrine 'speaks'. */
@@ -79,12 +80,16 @@ export class Game {
       snowy: (x, z, h) => h > 980 || (h > 620 && w.world.biome(x, z).special === 3),
       colliders,
       water: (x, z) => w.world.hydro.waterAt(x, z),
+      collide: (x, z, feet, r) => { const p = this.collision.resolve(x, z, feet, r); return { x: p.x, z: p.z, slow: this.collision.slowed }; },
+      blocked: (x, z, feet, r) => this.collision.blocked(x, z, feet, r),
     });
     this.colliders = colliders;
     this.controller.onSoftLanding = () => { this.fade = 1; };
   }
 
   private colliders: Collider[];
+  /** everything you can bump into (walls, trunks, posts, people, animals) */
+  readonly collision = new CollisionWorld();
   readonly interactions = new Interactions();
   /** items, journal, map, fishing, boats, your house (M11) */
   readonly adv = new Adventure(this);
@@ -168,6 +173,7 @@ export class Game {
     };
     this.adv.init();
     this.mystic.init();
+    this.buildCollision();
     this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
     clock.setHour(hour);
@@ -232,6 +238,36 @@ export class Game {
     c.lookAt(S.clone().add(new THREE.Vector3(-8, 2.4, -14)));
   }
 
+  /** Static obstacles into the collision grid; trees arrive with their forest tiles. */
+  private buildCollision(): void {
+    const C = this.collision, w = this.world;
+    for (const b of this.colliders) C.addBox(b);
+    for (const p of w.villages.posts) C.addCircle(p);
+    for (const s of w.secrets.list) {
+      const { x, y, z } = s.pos;
+      if (s.kind === 'shrine') C.addCircle({ x, z, r: 0.55, top: y + 1.2 });
+      else if (s.kind === 'tablet') C.addCircle({ x, z, r: 0.4, top: y + 1.1 });
+      else if (s.kind === 'view' && s.id !== 'view-keep' && s.id !== 'view-pier') C.addCircle({ x, z, r: 0.55, top: y + 0.42 + 0.31 });
+    }
+    // stone lanterns at the castle and the temple
+    for (const l of w.landmarks.lights) if (l.halo > 0.5) C.addCircle({ x: l.pos.x, z: l.pos.z, r: 0.4, top: l.pos.y + 0.6 });
+    // the dock's standing lanterns
+    for (const l of w.dock.lights) if (l.pos.y - w.world.height(l.pos.x, l.pos.z) < 1.6 && l.pos.y > 0.3) C.addCircle({ x: l.pos.x, z: l.pos.z, r: 0.22, top: l.pos.y + 0.5 });
+    w.forest.collision = C;
+    this.mystic.festivals.collision = C;
+  }
+
+  /** People and large animals near you, as moving obstacles this frame. */
+  updateDynamicObstacles(): void {
+    const p = this.controller.position, out = this.collision.dynamic;
+    out.length = 0;
+    for (const q of this.world.people.people) if (q.visible && !q.inside && Math.abs(q.pos.x - p.x) < 30 && Math.abs(q.pos.z - p.z) < 30) out.push({ x: q.pos.x, z: q.pos.z, r: q.age === 'child' ? 0.22 : 0.3, top: q.pos.y + 1.6 });
+    for (const a of this.world.fauna.animals) {
+      if (a.sp.size < 0.7 || !(a.sp.move === 'walk' || a.sp.move === 'still') || Math.abs(a.pos.x - p.x) > 30 || Math.abs(a.pos.z - p.z) > 30) continue;
+      out.push({ x: a.pos.x, z: a.pos.z, r: a.sp.size * 0.32, top: a.pos.y + a.sp.size });
+    }
+  }
+
   frame(dt: number): void {
     const t0 = performance.now();
     clock.tick(dt);
@@ -264,7 +300,7 @@ export class Game {
     }
     this.fade = Math.max(0, this.fade - dt * 0.8);
     if (c0.mode === 'drift') this.updateDrift(dt);
-    else c0.update(dt, this.input);
+    else { this.updateDynamicObstacles(); c0.update(dt, this.input); }
     this.input.endFrame();
 
     // M1 look shots use a full moon; the running game follows the 8-day cycle

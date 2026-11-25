@@ -25,13 +25,19 @@ export type WorldQuery = {
   colliders: Collider[];
   /** Water surface at (x, z): rivers and ponds above the lake (optional; default the lake/sea at 0). */
   water?(x: number, z: number): number;
+  /** Push a body (radius r) out of obstacles; how much a bush slows it (0..1). */
+  collide?(x: number, z: number, feet: number, r: number): { x: number; z: number; slow: number };
+  /** Does a body (radius r) at (x, z) overlap anything solid? */
+  blocked?(x: number, z: number, feet: number, r: number): boolean;
 };
 
 const WATER = 0;
 const GRAVITY = 13;
 const JUMP_V = 4.4;
 const STEP_UP = 0.6;
-const MAX_CLIMB = 0.95; // rise per metre of travel that can still be walked up (~43°)
+const MAX_CLIMB = 0.95;
+/** the player's body radius for collisions (m) */
+const BODY_R = 0.28; // rise per metre of travel that can still be walked up (~43°)
 
 export class Controller {
   readonly position = new THREE.Vector3();
@@ -199,7 +205,17 @@ export class Controller {
       if (!this.q.onDeck(nx, nz) && rise > 0 && rise / Math.max(dist, 1e-3) > MAX_CLIMB && rise > 0.05) return false;
       return true;
     };
-    const nx = this.position.x + this.vel.x * dt, nz = this.position.z + this.vel.z * dt;
+    let nx = this.position.x + this.vel.x * dt, nz = this.position.z + this.vel.z * dt;
+    // bump into things: slide along walls, around trunks and posts; bushes slow you down
+    if (this.q.collide && (this.mode === 'walk')) {
+      const r = this.q.collide(nx, nz, this.feet, BODY_R);
+      nx = r.x; nz = r.z;
+      // pushing through a bush: at most ~half speed in the thick of it
+      if (r.slow > 0) {
+        const cap = this.walkSpeed * (1 - 0.5 * r.slow), sp = Math.hypot(this.vel.x, this.vel.z);
+        if (sp > cap) { this.vel.x *= cap / sp; this.vel.z *= cap / sp; }
+      }
+    }
     if (tryMove(nx, nz)) { this.position.x = nx; this.position.z = nz; }
     else if (tryMove(nx, this.position.z)) { this.position.x = nx; this.vel.z *= 0.5; }
     else if (tryMove(this.position.x, nz)) { this.position.z = nz; this.vel.x *= 0.5; }
@@ -239,6 +255,7 @@ export class Controller {
   }
 
   private blocked(x: number, z: number): boolean {
+    if (this.q.blocked) return this.q.blocked(x, z, this.feet, BODY_R - 0.03);
     for (const c of this.q.colliders) {
       if (x > c.x0 - 0.25 && x < c.x1 + 0.25 && z > c.z0 - 0.25 && z < c.z1 + 0.25 && this.feet < c.top - 0.3) return true;
     }
