@@ -76,6 +76,8 @@ Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ do
   - react to gifts by personality, and say goodbye
   - The new lines also cover proverbs, food, spirits, Japanese words explained, late-night
     talk, children's games and ten more lines per wanderer.
+- **Headless perf** (relative only): Low 313 draws · 1.32 M triangles, Medium 363 · 1.68 M,
+  High 411 · 1.99 M. That is +4 draws for the spirits (pooled, hidden when not in use).
 
 ### M11 at a glance (items, journal, map, photos, boats, fishing)
 
