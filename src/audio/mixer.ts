@@ -29,9 +29,11 @@ export class Mixer {
   private comp: DynamicsCompressorNode;
   /** Mono mode (SPEC §26): everything folded down to one channel. */
   setMono(on: boolean): void {
-    this.comp.channelCount = on ? 1 : 2;
-    this.comp.channelCountMode = on ? 'explicit' : 'max';
-    this.comp.channelInterpretation = 'speakers';
+    try {
+      this.comp.channelCount = on ? 1 : 2;
+      this.comp.channelCountMode = on ? 'explicit' : 'clamped-max';
+      this.comp.channelInterpretation = 'speakers';
+    } catch { /* an older browser: stay in stereo */ }
   }
   space: Space | null = null;
   readonly noise: { white: AudioBuffer; pink: AudioBuffer; brown: AudioBuffer };

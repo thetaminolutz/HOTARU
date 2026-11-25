@@ -265,7 +265,7 @@ function loop(now: number): void {
   } else ui.hud.prompt = null;
   ui.frame(now / 1000, dt);
   debug.update(fps);
-  updateAudio(dt);
+  try { updateAudio(dt); } catch (e) { console.warn('audio', e); }
   requestAnimationFrame(loop);
 }
 
