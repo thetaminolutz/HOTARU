@@ -501,8 +501,8 @@ triangles); frame times need the iPad run.
 
 | | Desktop | iPad (touch) | Apple Pencil | Gamepad |
 |---|---|---|---|---|
-| Look | click, then mouse | drag on the right side | drag (fine) | right stick |
-| Walk / jog / slow | WASD · Shift · Ctrl/C | koi stick (rim = jog, gentle = slow) | — | left stick · L3/RT · LB/LT |
+| Look | click, then mouse | drag on the right side (any finger while the Pencil walks) | in "Pencil looks" mode: drag | right stick |
+| Walk / jog / slow | WASD · Shift · Ctrl/C | koi stick (rim = jog, gentle = slow) | drag from where the Pencil touches down; press harder to jog | left stick · L3/RT · LB/LT |
 | Jump | Space | jump token | — | A |
 | Interact · sit · lie · stand | E | interact token | tap the thing (also turns your view) | X / B |
 | Time-lapse (while sitting) | hold T | hold the hourglass token | — | hold Y |
@@ -513,6 +513,11 @@ triangles); frame times need the iPad run.
 | Debug panel | `` ` `` | three-finger tap | — | — |
 
 All keys can be rebound in Settings → Keys. In photo mode Q / E roll the camera.
+
+**Apple Pencil + thumb:** with *Settings → Comfort → Pencil walks* on (the default), the Pencil
+is a floating walking stick: touch down anywhere and drag the way you want to go, pressing
+harder to jog, while your thumb or any finger looks around. A quick Pencil tap still turns
+toward something and uses it, and Pencil taps on the tokens work like a finger.
 
 ## Settings
 

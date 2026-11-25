@@ -56,6 +56,10 @@ export class Hud {
   landed: { name: string; text: string; size: number; best: boolean; colors: [string, string] } | null = null;
   /** comfort: touch controls mirrored; outlined text; subtitles for the sounds around you */
   leftHanded = false;
+  /** the Apple Pencil is walking: every finger looks around, wherever it touches */
+  penActive = false;
+  /** the Pencil stick to draw (set by the UI manager) */
+  penStick: { x: number; z: number; active: boolean; x0: number; y0: number; px: number; py: number } | null = null;
   highContrast = false;
   private toastY: [number, number][] = [];
   private captions: { text: string; until: number }[] = [];
@@ -175,6 +179,13 @@ export class Hud {
       const a = Math.min(1, (this.hintUntil - t) / 1.5);
       ui.text(bodyFont, this.hint, ui.w / 2, ui.h - s.bottom - 16, C.paperLight, { align: 'center', shadow: C.indigoDark, alpha: a });
     }
+    // the Pencil stick: a faint ink ring where it came down, and the nib
+    const ps = this.penStick;
+    if (ps?.active && controls) {
+      for (let a = 0; a < 32; a++) ui.blend(Math.round(ps.x0 + Math.cos(a / 5.09) * 20), Math.round(ps.y0 + Math.sin(a / 5.09) * 20), C.paperLight, 110);
+      ui.disc(Math.round(ps.x0), Math.round(ps.y0), 1, C.paperLight, 160);
+      ui.line(Math.round(ps.x0), Math.round(ps.y0), Math.round(ps.px), Math.round(ps.py), C.vermilion, 150);
+    }
     if (this.touchMode && controls) {
       const idle = t - this.lastUse > 4 ? 0.35 : 0.85;
       if (this.stick.active) {
@@ -241,7 +252,7 @@ export class Hud {
     if (p.type === 'up' && p.id === this.timeId) { this.timelapseHeld = false; this.timeId = -1; return true; }
     const R = 16;
     if (p.type === 'down') {
-      if ((this.leftHanded ? p.x > ui.w * 0.55 : p.x < ui.w * 0.45) && !this.stick.active) {
+      if (!this.penActive && (this.leftHanded ? p.x > ui.w * 0.55 : p.x < ui.w * 0.45) && !this.stick.active) {
         Object.assign(this.stick, { active: true, id: p.id, cx: p.x, cy: p.y, x: p.x, y: p.y });
         return true;
       }
@@ -263,6 +274,13 @@ export class Hud {
       if (p.id === this.look.id) { this.look.id = -1; return true; }
     }
     return false;
+  }
+
+  /** Is (x, y) on one of the touch tokens (menu, journal, map, photo, tool, jump, interact, time)? */
+  hitsToken(x: number, y: number): boolean {
+    const inR = (r: { x: number; y: number; w: number; h: number }) => x >= r.x - 5 && y >= r.y - 5 && x < r.x + r.w + 5 && y < r.y + r.h + 5;
+    return inR(this.menuRect) || inR(this.jumpRect) || ((!!this.prompt || this.reel !== null || !!this.status) && inR(this.actRect))
+      || (this.canTimelapse && inR(this.timeRect)) || this.quick.some((q) => inR({ x: q.x, y: q.y, w: 19, h: 19 }));
   }
 
   /** Stick vector in -1..1 (x right, z forward). */

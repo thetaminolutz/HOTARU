@@ -43,6 +43,8 @@ export class Villages {
   readonly group = new THREE.Group();
   readonly clearings = new Clearings();
   readonly villages: VillageRT[] = [];
+  /** round obstacles: lantern posts, torii posts (for collision) */
+  readonly posts: { x: number; z: number; r: number; top: number }[] = [];
   readonly decks: [number, number, number, number, number][] = [];
   readonly colliders: { x0: number; z0: number; x1: number; z1: number; top: number }[] = [];
   readonly lights: Light[] = [];
@@ -114,6 +116,7 @@ export class Villages {
     const an = andon(0.32, 0.42);
     for (const l of layout.lanterns) {
       post.push(boxUV(0.14, 1.3, 0.14, 1).translate(l.x, l.y + 0.65, l.z));
+      this.posts.push({ x: l.x, z: l.z, r: 0.12, top: l.y + 1.8 });
       lamp.push(an.clone().translate(l.x, l.y + 1.3, l.z));
       const light = { pos: new THREE.Vector3(l.x, l.y + 1.65, l.z), color: AMBER.clone(), radius: 8, intensity: 1.8, halo: 1.2, phase: l.x };
       this.lights.push(light);
@@ -129,6 +132,7 @@ export class Villages {
       const t = layout.torii;
       const g: THREE.BufferGeometry[] = [];
       for (const sx of [-1.6, 1.6]) g.push(new THREE.CylinderGeometry(0.17, 0.2, 3.6, 8).toNonIndexed().translate(sx, 1.8, 0));
+      for (const sx of [-1.6, 1.6]) this.posts.push({ x: t.x + Math.cos(t.rot) * sx, z: t.z - Math.sin(t.rot) * sx, r: 0.2, top: t.y + 3.6 });
       g.push(boxUV(4.6, 0.26, 0.4, 1).translate(0, 3.55, 0)); // kasagi
       g.push(boxUV(3.8, 0.2, 0.25, 1).translate(0, 2.9, 0));  // nuki
       for (const p of g) verm.push(p.rotateY(t.rot).translate(t.x, t.y, t.z));
@@ -185,6 +189,11 @@ export class Villages {
     };
     const H = this.world.height;
     const addPath = (path: Path, width: number) => {
+      // remember where the paths run (footsteps on packed earth)
+      for (let i = 1; i < path.length; i++) {
+        const [ax, az] = path[i - 1]!, [bx, bz] = path[i]!, n = Math.ceil(Math.hypot(bx - ax, bz - az) / 1.5);
+        for (let k = 0; k <= n; k++) this.roadCells.add(Math.floor((ax + ((bx - ax) * k) / n) / 2) * 100003 + Math.floor((az + ((bz - az) * k) / n) / 2));
+      }
       const meshes: THREE.Mesh[] = [];
       for (const c of roadMeshes(path, width, H, this.world.hydro.waterAt)) {
         const m = new THREE.Mesh(c.geo, this.M.road);
@@ -250,6 +259,10 @@ export class Villages {
   }
 
   /** Walkable floor height at (x, z) (house floors, steps, bridges), or -Infinity. */
+  private roadCells = new Set<number>();
+  /** Is (x, z) on a road or village street (2 m cells)? */
+  onRoad(x: number, z: number): boolean { return this.roadCells.has(Math.floor(x / 2) * 100003 + Math.floor(z / 2)); }
+
   floorHeight(x: number, z: number, feet = Infinity): number {
     return deckAt(this.decks, x, z, feet);
   }

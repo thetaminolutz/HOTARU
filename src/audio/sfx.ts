@@ -6,11 +6,18 @@
 import type { Mixer } from './mixer';
 import { createRng } from '../core/rng';
 
-export type Surface = 'grass' | 'leaves' | 'wood' | 'gravel' | 'sand' | 'snow' | 'water' | 'tatami';
+import { Footsteps, type StepSurface } from './footsteps';
+
+export type Surface = StepSurface;
+/** the old live-synthesis fallback, while the sample bank renders */
+type OldSurface = 'grass' | 'leaves' | 'wood' | 'gravel' | 'sand' | 'snow' | 'water' | 'tatami';
+const FALLBACK: Record<StepSurface, OldSurface> = { grass: 'grass', dirt: 'grass', gravel: 'gravel', stone: 'gravel', wood: 'wood', tatami: 'tatami', leaves: 'leaves', sand: 'sand', snow: 'snow', mud: 'sand', water: 'water' };
 
 export class Sfx {
   private r = createRng(0x5f5);
-  constructor(private mix: Mixer) {}
+  private feet: Footsteps;
+  private rustleT = 0;
+  constructor(private mix: Mixer) { this.feet = new Footsteps(mix.ctx); }
 
   private grain(out: AudioNode, t: number, dur: number, amp: number, type: BiquadFilterType, f: number, q: number, kind: 'white' | 'pink' | 'brown' = 'white'): void {
     const ctx = this.mix.ctx;
@@ -39,9 +46,13 @@ export class Sfx {
   }
 
   /** One footstep; `speed` m/s makes jogging steps heavier. */
-  step(surface: Surface, speed: number): void {
-    const out = this.mix.direct('sfx', 1, surface === 'wood' ? 0.25 : 0.12, (this.r.next() - 0.5) * 0.3);
+  step(surface0: Surface, speed: number): void {
+    const out = this.mix.direct('sfx', 1, surface0 === 'wood' || surface0 === 'stone' ? 0.25 : 0.12, (this.r.next() - 0.5) * 0.3);
     const t = this.mix.now + 0.01;
+    // clothes and a straw hat rustle when you jog
+    if (speed > 3 && t > this.rustleT) { this.rustleT = t + 0.5 + this.r.next() * 0.4; this.grain(out, t + 0.05, 0.14, 0.025, 'bandpass', 1800 + this.r.next() * 800, 0.6, 'pink'); }
+    if (this.feet.play(surface0, out, t, speed)) return;
+    const surface = FALLBACK[surface0];
     const k = Math.min(1.3, 0.55 + speed * 0.14) * (0.85 + this.r.next() * 0.3);
     const p = 0.9 + this.r.next() * 0.2;
     switch (surface) {

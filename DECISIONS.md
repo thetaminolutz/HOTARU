@@ -452,3 +452,21 @@ Non-obvious decisions and why. Newest at the bottom.
   save). Toasts wrap and stay up longer for long text.
 - **Save robustness:** atomic swap plus a `.prev` backup. `readSave` validates the seed
   and position and falls back to the backup. Export and import are plain JSON files.
+
+## After release: feedback round 1
+
+- **Menu buttons that are rebuilt every frame now act on touch-down** (the journal, photo
+  mode). On the iPad a tap spans several frames, so a press that only completed on release
+  was often lost, and the menus didn't close.
+- **The Apple Pencil walks** (a floating stick from where it touches down; pressure above
+  0.75 jogs) while fingers look anywhere. "Pencil looks" mode keeps the old behaviour.
+- **Collision is a spatial grid** (8 m cells) of boxes (buildings, walls, festival stalls) and
+  circles (tree trunks per forest tile, lantern and torii posts, shrines, tablets, benches,
+  stone lanterns), plus moving circles (people, large animals).
+  - The player is a 0.28 m circle pushed out of overlaps, so it slides instead of sticking.
+  - Bushes are soft: they cap your speed instead of blocking.
+- **Footsteps are pre-rendered sample banks:** 11 surfaces × 6 variants, rendered in slices
+  after audio starts, with the old synthesis as a fallback until they're ready. Each step is
+  a heel strike plus a toe roll, with alternating feet and jitter.
+  - Surfaces now include dirt roads (mud when wet), gravel, stone (castle and temple), mud
+    (paddies and marsh) and snow cover.

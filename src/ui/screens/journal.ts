@@ -7,7 +7,7 @@
 import type { UICanvas } from '../uiCanvas';
 import { bodyFont, tinyFont, headingFont } from '../font';
 import { C } from '../art';
-import { Button, panel, type Pointer } from '../widgets';
+import { uiSound, Button, panel, type Pointer } from '../widgets';
 import type { Pixmap } from '../../render/pixmap';
 import { itemIcon, keepsakeDef, toolDef, TOOLS, KEEPSAKES, type KeepsakeId, type ToolId } from '../../items/items';
 import type { Journey, AlbumEntry } from '../../items/journey';
@@ -287,7 +287,8 @@ export class JournalScreen {
   private view = { x: 0, y: 0, k: 1 };
 
   pointer(p: Pointer & { pressure?: number }): void {
-    for (const b of this.buttons) if (b.pointer(p)) return;
+    // these buttons are rebuilt every frame, so they act on touch-down (a press can't span frames)
+    if (p.type === 'down') for (const b of this.buttons) if (b.hit(p.x, p.y)) { uiSound.press(); b.onTap(); return; }
     const v = this.viewing;
     if (v?.drawing) {
       const ix = (p.x - this.view.x) / this.view.k, iy = (p.y - this.view.y) / this.view.k;

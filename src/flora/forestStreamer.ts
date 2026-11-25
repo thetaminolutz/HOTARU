@@ -5,6 +5,7 @@
  * radius, forests are painted onto the terrain.
  */
 import * as THREE from 'three';
+import type { CollisionWorld } from '../player/collision';
 import type { WorkerPool } from '../world/workerPool';
 import type { TreeKit } from './trees';
 import type { Clearings } from '../world/clearings';
@@ -25,6 +26,9 @@ export class ForestStreamer {
   /** Full-detail crowns (and trunks, shadows) within this distance. */
   nearDist = 220;
   stats = { tiles: 0, trees: 0 };
+
+  /** where tree trunks (and bushes, softly) are registered for collisions */
+  collision: CollisionWorld | null = null;
 
   constructor(private pool: WorkerPool, private seed: number, private kits: Map<string, TreeKit>) {
     this.group.name = 'forest';
@@ -62,6 +66,7 @@ export class ForestStreamer {
       if (t.group) {
         this.group.remove(t.group);
         for (const p of t.parts) { p.near.geometry.dispose(); p.far.geometry.dispose(); p.trunks.dispose(); }
+        this.collision?.remove('tree-' + k);
       }
       this.tiles.delete(k);
     }
@@ -79,6 +84,14 @@ export class ForestStreamer {
       const kit = this.kits.get(id);
       if (!kit || packed.length === 0) continue;
       const p = kit.makeTile(packed, hash3(t.x0, t.z0, id.length));
+      // trunks block; bushes are soft and only slow you down
+      if (this.collision) {
+        const sp = kit.sp, bush = sp.shape === 'bush';
+        for (let i = 0; i < packed.length; i += 5) {
+          const x = packed[i]!, y = packed[i + 1]!, z = packed[i + 2]!, sc = packed[i + 3]!;
+          this.collision.addCircle(bush ? { x, z, r: sp.radius * sc * 0.55, top: y + sp.height * sc, soft: true } : { x, z, r: Math.max(0.1, sp.trunkRadius * sc * 1.1), top: y + sp.height * sc }, 'tree-' + t.key);
+        }
+      }
       g.add(p.near, p.far, p.trunks);
       p.near.visible = false; p.trunks.visible = false;
       p.trunks.userData.noReflect = true;

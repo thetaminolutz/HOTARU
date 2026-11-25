@@ -12,6 +12,7 @@ import { REGIONS } from '../world/data/regions';
 import { clock } from '../core/clock';
 import { playVoice, type VoiceId } from './voices';
 import { createRng } from '../core/rng';
+import { deckAt } from '../buildings/villages';
 import { playNote } from './instruments';
 import { SCALES, degreeToMidi } from './composer';
 
@@ -154,16 +155,26 @@ export class AudioSystem {
 
   /** What the player is standing on. */
   surface(): Surface {
-    const g = this.game, w = g.world, p = g.controller.position;
+    const g = this.game, w = g.world, p = g.controller.position, feet = g.controller.feet, W = g.weather.out;
     if (g.controller.pose === 'wade' || g.controller.pose === 'swim') return 'water';
     if (w.villages.indoors(p)) return 'tatami';
-    if (w.dock.deckHeight(p.x, p.z) > -Infinity || w.villages.floorHeight(p.x, p.z) > -Infinity) return 'wood';
+    if (w.dock.deckHeight(p.x, p.z) > -Infinity || w.villages.floorHeight(p.x, p.z, feet + 0.3) > -Infinity) return 'wood';
+    // the castle and the temple: stone steps and walls, wooden floors inside the keep
+    const L = w.landmarks;
+    if (deckAt(L.decks, p.x, p.z, feet + 0.3) > -Infinity) return Math.hypot(p.x - L.keepCenter.x, p.z - L.keepCenter.z) < 9 ? 'wood' : 'stone';
+    const C = w.world.sites.castle;
+    if (Math.hypot(p.x - C.x, p.z - C.z) < C.r * 0.8 && Math.abs(feet - C.level) < 2) return 'gravel';
     const h = w.height(p.x, p.z), b = w.world.biome(p.x, p.z, this.b);
     const rid = REGIONS[b.region]?.id ?? '';
-    if (h > 980 || (h > 620 && b.special === 3)) return 'snow';
+    const snowCover = (W.snowCover ?? 0) > 0.5;
+    if (h > 980 || (h > 620 && b.special === 3) || snowCover) return 'snow';
+    if (w.villages.onRoad(p.x, p.z)) return W.wet > 0.6 ? 'mud' : rid === 'market' ? 'gravel' : 'dirt';
     if (b.special === 4 || h > 900) return 'gravel';
     if ((b.special === 2 && h < 6) || (rid === 'lake' && h < 1.2)) return 'sand';
+    if (b.special === 1 && b.specialW > 0.5) return 'mud';
+    if (b.special === 7 && b.specialW > 0.5 && h < 3) return 'mud';
     if (b.forest > 0.55 && b.autumn > 0.4) return 'leaves';
+    if (b.forest > 0.75) return 'dirt';
     return 'grass';
   }
 

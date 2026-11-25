@@ -40,6 +40,8 @@ export type Settings = {
   monoAudio: boolean;
   leftHanded: boolean;
   hints: 'gentle' | 'off';
+  /** Apple Pencil in play: walk with it (fingers look), or look with it */
+  penMode: 'move' | 'look';
   /** active save slot (1–3) */
   saveSlot: number;
 };
@@ -52,7 +54,7 @@ const DEFAULTS: Settings = {
   volMaster: 0.8, volMusic: 0.7, volAmbience: 0.8, volSfx: 0.7, musicFrequency: 'occasional',
   seasonMode: 'cycle', seasonDays: 7, weatherMode: 'dynamic',
   autoQuality: true, fpsCap: 60, reducedMotion: false, largeText: false, highContrast: false, subtitles: false,
-  monoAudio: false, leftHanded: false, hints: 'gentle', saveSlot: 1,
+  monoAudio: false, leftHanded: false, hints: 'gentle', saveSlot: 1, penMode: 'move',
 };
 
 function load(): Settings {

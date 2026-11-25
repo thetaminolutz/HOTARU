@@ -7,7 +7,7 @@
 import type { UICanvas } from '../uiCanvas';
 import { bodyFont, tinyFont } from '../font';
 import { C } from '../art';
-import { Button, Slider, panel, type Pointer } from '../widgets';
+import { uiSound, Button, Slider, panel, type Pointer } from '../widgets';
 import { FILTERS, FRAMES } from '../../items/photo';
 import type { PhotoMode } from '../../app/photoMode';
 
@@ -74,7 +74,8 @@ export class PhotoScreen {
   /** Returns true if the pointer was used by the overlay (else it looks around). */
   pointer(p: Pointer): boolean {
     if (this.hidden) { if (p.type === 'down') { this.hidden = false; return true; } return false; }
-    for (const b of this.buttons) if (b.pointer(p)) return true;
+    // these buttons are rebuilt every frame, so they act on touch-down (a press can't span frames)
+    if (p.type === 'down') for (const b of this.buttons) if (b.hit(p.x, p.y)) { uiSound.press(); b.onTap(); return true; }
     if (this.fov.pointer(p) || this.roll.pointer(p)) return true;
     const r = this.shutter;
     if (p.type === 'down' && p.x >= r.x && p.y >= r.y && p.x < r.x + r.w && p.y < r.y + r.h) { this.snap(); return true; }

@@ -56,7 +56,8 @@ export class SettingsScreen {
     this.caps = CAPS.map((c) => new Button(c ? c + ' fps' : 'No cap', () => setSetting('fpsCap', c), 50));
     const tg = (label: string, key: 'reducedMotion' | 'largeText' | 'highContrast' | 'subtitles' | 'monoAudio' | 'leftHanded') => new Toggle(label, settings[key], (v) => setSetting(key, v));
     this.comfort = [tg('Reduced motion', 'reducedMotion'), tg('Large text', 'largeText'), tg('High contrast', 'highContrast'), tg('Subtitles', 'subtitles'), tg('Mono sound', 'monoAudio'), tg('Left-handed', 'leftHanded'),
-      new Toggle('Villager hints', settings.hints === 'gentle', (v) => setSetting('hints', v ? 'gentle' : 'off'))];
+      new Toggle('Villager hints', settings.hints === 'gentle', (v) => setSetting('hints', v ? 'gentle' : 'off')),
+      new Toggle('Pencil walks', settings.penMode === 'move', (v) => setSetting('penMode', v ? 'move' : 'look'))];
     this.slots = [1, 2, 3].map((n) => new Button('Slot ' + n, () => this.saves?.useSlot(n), 52));
     this.saveBtns = [new Button('Export save', () => this.saves?.exportSave(), 90), new Button('Import save', () => this.saves?.importSave(), 90)];
     this.seasonBtns = SEASON_MODES.map((m) => new Button(m === 'cycle' ? 'Cycle' : m[0]!.toUpperCase() + m.slice(1), () => setSetting('seasonMode', m), 42));
@@ -122,7 +123,7 @@ export class SettingsScreen {
       this.caps.forEach((b, i) => { b.selected = settings.fpsCap === CAPS[i]; b.place(x + 80 + i * 54, cy + 103); b.draw(ui); });
     } else if (this.tab === 'comfort') {
       this.comfort.forEach((tg, i) => tg.place(x + 14 + (i % 2) * 150, cy + Math.floor(i / 2) * 24).draw(ui, t));
-      ui.textBlock(bodyFont, 'Reduced motion: no head bob, no lightning flashes, gentler camera. Subtitles name the sounds around you.', x + 14, cy + 100, pw - 28, C.moon);
+      ui.textBlock(bodyFont, 'Pencil walks: drag the Apple Pencil to walk (press harder to jog) while a finger looks around. Off: the Pencil looks.', x + 14, cy + 100, pw - 28, C.moon);
     } else if (this.tab === 'saves') {
       this.slots.forEach((b, i) => {
         b.selected = settings.saveSlot === i + 1;
