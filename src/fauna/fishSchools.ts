@@ -52,10 +52,10 @@ void main(){
   float body = (x > -0.3) ? step(pow((x - 0.08) / 0.42, 2.0) + y * y / pow(0.9 - 0.5 * max(0.0, x - 0.1), 2.0), 1.0) : 0.0;
   float tail = (x <= -0.28 && x > -0.5) ? step(abs(y), 0.15 + (-0.28 - x) * 3.2) * step(0.08 + (-0.28 - x) * 0.9, abs(y) + 0.12) : 0.0;
   float a = max(body, tail) * vInfo.w;
-  if (a * 0.75 < bayer4(gl_FragCoord.xy)) discard;
+  if (a * 0.95 < bayer4(gl_FragCoord.xy)) discard;
   vec3 col = vInfo.y > 1.5 ? vec3(0.55, 0.62, 0.66) : vInfo.y > 0.5 ? (fract(vInfo.z * 7.0) > 0.5 ? vec3(0.95, 0.45, 0.15) : vec3(0.92, 0.9, 0.86)) : vec3(0.06, 0.08, 0.1);
   // seen through the water: tinted toward the water's own colour
-  col = mix(col, uAmbSky * 0.35, vInfo.y > 0.5 ? 0.35 : 0.2) * (0.7 + 0.3 * uKeyColor);
+  col = mix(col, uAmbSky * 0.25, vInfo.y > 0.5 ? 0.25 : 0.1) * (0.7 + 0.3 * uKeyColor);
   gl_FragColor = vec4(applyFog(col, vWorldPos), 0.5);
 }`;
 
@@ -77,7 +77,8 @@ export class FishSchools {
     g.setAttribute('iPos', new THREE.InstancedBufferAttribute(this.iPos, 4));
     g.setAttribute('iInfo', new THREE.InstancedBufferAttribute(this.iInfo, 4));
     g.instanceCount = N;
-    this.mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({ uniforms: { ...U }, vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide }));
+    this.mesh = new THREE.Mesh(g, new THREE.ShaderMaterial({ uniforms: { ...U }, vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -8 }));
+    this.mesh.renderOrder = 5;
     this.mesh.frustumCulled = false;
     this.mesh.name = 'fish';
     this.mesh.userData.noReflect = true;
@@ -108,7 +109,7 @@ export class FishSchools {
         for (const f of this.fish) if (f.school === k) {
           f.x = s2.x + (this.r.next() - 0.5) * 4; f.z = s2.z + (this.r.next() - 0.5) * 4; f.h = s2.h; f.fade = 0;
           f.kind = pond ? 1 : sea && this.r.next() < 0.6 ? 2 : 0;
-          f.len = (pond ? 0.45 : 0.22) + this.r.next() * (pond ? 0.35 : 0.3);
+          f.len = (pond ? 0.55 : 0.4) + this.r.next() * (pond ? 0.4 : 0.4);
         }
         continue;
       }
@@ -130,7 +131,7 @@ export class FishSchools {
       f.speed += (sp - f.speed) * Math.min(1, dt * 2);
       const nx = f.x + Math.sin(f.h) * f.speed * dt, nz = f.z + Math.cos(f.h) * f.speed * dt;
       const l = this.deep(nx, nz);
-      if (!Number.isNaN(l)) { f.x = nx; f.z = nz; f.y = l - 0.02; } else f.h += 1.5 * dt;
+      if (!Number.isNaN(l)) { f.x = nx; f.z = nz; f.y = l + 0.025; } // drawn on the (opaque) surface, tinted as if under it else f.h += 1.5 * dt;
       f.fade = Math.min(1, f.fade + dt * 0.5);
       this.iPos.set([f.x, f.y, f.z, f.h], i * 4);
       this.iInfo.set([f.len, f.kind, f.ph, f.fade * (pd > 60 ? 0 : 1)], i * 4);
