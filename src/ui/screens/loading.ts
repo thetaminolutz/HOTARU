@@ -7,6 +7,11 @@ const HAIKU = [
   ['one paper lantern', 'and the whole dark lake leans in', 'to remember light'],
   ['fireflies at dusk', 'stitching the reeds to the stars', 'with thread made of gold'],
   ['the boat knocks its post', 'softly, softly, like someone', 'coming home at last'],
+  ['mist on the water', 'the far shore is a rumour', 'the lanterns believe'],
+  ['a heron, standing', 'so still the whole lake waits', 'for it to decide'],
+  ['first snow on the pier', 'the lantern maker sweeps it', 'and lights one more flame'],
+  ['cicadas at noon', 'the shade of the old cherry', 'is a small, cool house'],
+  ['red maple leaves drift', 'into the paper lantern', 'and glow for a while'],
 ];
 
 export class LoadingScreen {

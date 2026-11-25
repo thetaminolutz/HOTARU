@@ -32,6 +32,7 @@ const state = {
   save: null as SaveData | null,
   running: true,
   persisted: false,
+  played: false,
 };
 
 let game: Game;
@@ -44,7 +45,7 @@ try {
 
 const ui = new UIManager(uiCanvas, {
   wander: () => startPlay(true),
-  newJourney: () => startPlay(false),
+  newJourney: () => newJourney(),
   openMenu: () => openMenu(),
   hasSave: () => state.save !== null,
   gameClick: () => game.input.requestPointerLock(),
@@ -135,6 +136,7 @@ function startPlay(continueSave: boolean): void {
   const c = game.controller;
   const s = continueSave ? state.save : null;
   game.frozenElapsed = null;
+  state.played = true;
   if (s) {
     c.placeAt(s.pos[0], s.pos[2]);
     c.yaw = s.yaw; c.pitch = s.pitch;
@@ -163,6 +165,20 @@ function startPlay(continueSave: boolean): void {
   ui.hud.hint = ui.hud.touchMode ? 'Left thumb to walk · drag on the right to look' : 'Click to look around · WASD to walk · Esc for the menu';
   ui.hud.hintUntil = performance.now() / 1000 + 8;
   void save();
+}
+
+/** A new journey replaces the slot's save: ask once; start from a clean world (reload) if we've played. */
+let confirmNew = 0;
+function newJourney(): void {
+  const now = performance.now() / 1000;
+  if (state.save && now > confirmNew) {
+    confirmNew = now + 6;
+    ui.hud.toast(`Tap New Journey again to start over in slot ${settings.saveSlot}. (Other slots: Settings - Saves.)`, 6, undefined, now);
+    return;
+  }
+  if (state.played) { try { sessionStorage.setItem('hotaru.new', '1'); } catch { /* fine */ } location.reload(); return; }
+  state.save = null;
+  startPlay(false);
 }
 
 function openMenu(): void {
@@ -315,7 +331,7 @@ async function boot(): Promise<void> {
       game.renderer.readRenderTargetPixels(t, 0, 0, t.width, t.height, raw);
       return { w: t.width, h: t.height, px: Array.from(raw, (v) => Math.min(255, Math.round(Math.pow(THREE.DataUtils.fromHalfFloat(v), 1 / 2.2) * 255))) };
     },
-    save, readSave: () => readSave(settings.saveSlot),
+    save, readSave: () => readSave(settings.saveSlot), autoQuality, setSetting,
   };
 }
 

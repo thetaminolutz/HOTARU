@@ -164,7 +164,19 @@ const M12_SHOTS = [
   { name: 'garden-bloom', q: 'play=1', wait: 5000, action: act12(`at(7, 10, 'summer'); g.world.landmarks.setBloom(1); g.world.landmarks.openGate(); M.update = () => {}; const C = g.world.world.sites.castle; c.placeAt(C.x - 18, C.z - 37); c.lookAt(new h.THREE.Vector3(C.x - 16, C.level + 0.2, C.z - 46));`) },
 ];
 
-const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M10: M10_SHOTS, M11: M11_SHOTS, M12: M12_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
+// M14: settings & comfort, saves, gentle hints, touch layouts, the title
+const M14_SHOTS = [
+  { name: 'title', q: '', wait: 3500 },
+  { name: 'settings-graphics', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'graphics'; }) },
+  { name: 'settings-comfort', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'comfort'; }) },
+  { name: 'settings-saves', q: '', wait: 2500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'saves'; }) },
+  { name: 'settings-keys', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'keys'; }) },
+  { name: 'hint-akari', q: 'play=1', wait: 3000, action: setup(() => { const h = window.__hotaru, g = h.game; h.clock.setHour(18.4); h.clock.paused = true; g.pipeline.buildLutNow(18.4); localStorage.removeItem('hotaru.hints.v1'); h.ui.hud.toast('Akari: "It is getting dark. Come to the pier, I have a lantern for you."', 90); h.ui.hud.caption('a bush warbler sings', performance.now() / 1000 + 80); localStorage.setItem('hotaru.hints.v1', JSON.stringify(['welcome', 'journal', 'dusk', 'sit'])); }) },
+  { name: 'touch-left-handed', q: 'play=1', touch: true, wait: 3000, action: setup(() => { const h = window.__hotaru; h.ui.hud.leftHanded = true; h.ui.hud.highContrast = true; h.clock.setHour(16); h.clock.paused = true; h.game.pipeline.buildLutNow(16); h.game.adv.inv.give('lantern'); h.game.adv.inv.current = 'lantern'; }) },
+  { name: 'large-text-journal', q: 'play=1', wait: 3000, action: setup(() => { const h = window.__hotaru; localStorage.setItem('hotaru.settings.v1', JSON.stringify({ ...JSON.parse(localStorage.getItem('hotaru.settings.v1') ?? '{}') })); h.ui.ui.resize(h.game.pipeline.scale + 1); h.game.input.journalPressed = true; }) },
+];
+
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M10: M10_SHOTS, M11: M11_SHOTS, M12: M12_SHOTS, M14: M14_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();
