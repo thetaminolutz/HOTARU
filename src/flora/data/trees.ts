@@ -1,4 +1,4 @@
-/** Tree species for the M1 test scene. More species arrive in M5 (SPEC §14). */
+/** Tree species (SPEC §14). More species and seasons arrive in M5/M6. */
 export type TreeShape = 'dome' | 'cone' | 'pads' | 'bush';
 
 export type TreeSpecies = {
@@ -25,11 +25,11 @@ export const TREE_SPECIES: TreeSpecies[] = [
   },
   {
     id: 'larch', name: 'Golden larch', shape: 'cone', height: 12, radius: 2.4, trunkHeight: 1.6, trunkRadius: 0.2,
-    clusters: 16, clusterSize: [1.5, 2.4], colors: ['#e8b84a', '#d9a03a', '#f0c860', '#d08a32'], trunkColor: '#3a2c24', sway: 0.08,
+    clusters: 22, clusterSize: [1.8, 2.8], colors: ['#e8b84a', '#d9a03a', '#f0c860', '#d08a32'], trunkColor: '#3a2c24', sway: 0.08,
   },
   {
     id: 'fir', name: 'Fir', shape: 'cone', height: 13, radius: 2.6, trunkHeight: 1.4, trunkRadius: 0.24,
-    clusters: 16, clusterSize: [1.6, 2.6], colors: ['#2f5a4a', '#2a4e40', '#355e48', '#264638'], trunkColor: '#2a2024', sway: 0.06,
+    clusters: 24, clusterSize: [2.0, 3.0], colors: ['#2f5a4a', '#2a4e40', '#355e48', '#264638'], trunkColor: '#2a2024', sway: 0.06,
   },
   {
     id: 'pine', name: 'Black pine (kuromatsu)', shape: 'pads', height: 9, radius: 3.4, trunkHeight: 4.5, trunkRadius: 0.26,
@@ -39,4 +39,25 @@ export const TREE_SPECIES: TreeSpecies[] = [
     id: 'shrub', name: 'Autumn shrub', shape: 'bush', height: 1.6, radius: 1.3, trunkHeight: 0.2, trunkRadius: 0.06,
     clusters: 6, clusterSize: [1.0, 1.4], colors: ['#b8402a', '#d06a2a', '#9a3a2a', '#c8902e'], trunkColor: '#2a2020', sway: 0.15,
   },
+  {
+    id: 'cedar', name: 'Japanese cedar (sugi)', shape: 'cone', height: 26, radius: 3.4, trunkHeight: 5, trunkRadius: 0.55,
+    clusters: 36, clusterSize: [3.0, 4.4], colors: ['#34584a', '#2e5244', '#3a6050', '#2a4a3e'], trunkColor: '#5a3a2e', sway: 0.03,
+  },
+  {
+    id: 'cherry', name: 'Cherry (sakura), autumn leaves', shape: 'dome', height: 7.5, radius: 4.2, trunkHeight: 2.6, trunkRadius: 0.24,
+    clusters: 22, clusterSize: [1.7, 2.6], colors: ['#d06a3a', '#c8503a', '#e08a4a', '#b84a40'], trunkColor: '#3a2626', sway: 0.12,
+  },
+  {
+    id: 'ginkgo', name: 'Ginkgo (ichō)', shape: 'dome', height: 14, radius: 4.6, trunkHeight: 4, trunkRadius: 0.4,
+    clusters: 24, clusterSize: [2.0, 3.0], colors: ['#e8c040', '#f0cc50', '#dcb038'], trunkColor: '#4a3a30', sway: 0.07,
+  },
+  {
+    id: 'bamboo', name: 'Bamboo (take)', shape: 'cone', height: 15, radius: 1.3, trunkHeight: 6, trunkRadius: 0.09,
+    clusters: 12, clusterSize: [1.4, 2.2], colors: ['#7aa84a', '#8ab456', '#6a9a42'], trunkColor: '#7a9a4a', sway: 0.16,
+  },
+  {
+    id: 'birch', name: 'Birch', shape: 'dome', height: 11, radius: 2.4, trunkHeight: 4.5, trunkRadius: 0.16,
+    clusters: 14, clusterSize: [1.4, 2.0], colors: ['#d8b048', '#c8a040', '#b89a3e'], trunkColor: '#d8d4c8', sway: 0.1,
+  },
 ];
+

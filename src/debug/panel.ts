@@ -7,6 +7,7 @@ import { clock } from '../core/clock';
 import type { Benchmark } from './benchmark';
 import { setSetting, settings } from '../app/settings';
 import type { QualityName } from '../config';
+import { WorldMap } from './worldMap';
 
 export class DebugPanel {
   readonly el: HTMLDivElement;
@@ -14,6 +15,7 @@ export class DebugPanel {
   private time: HTMLInputElement;
   private benchOut: HTMLTextAreaElement;
   visible = false;
+  private map: WorldMap;
 
   constructor(private game: Game, bench: Benchmark, onGallery: () => void) {
     const el = (this.el = document.createElement('div'));
@@ -77,7 +79,7 @@ export class DebugPanel {
 
     const tp = document.createElement('div');
     tp.append(document.createTextNode('teleport: '));
-    for (const s of game.shots) tp.append(btn(s.label, () => game.applyShot(s)));
+    for (const s of game.shots) tp.append(btn(s.label, () => { game.applyShot(s); void game.world.preload(game.controller.position); }));
     tp.append(btn('walk', () => { game.frozenElapsed = null; game.controller.mode = 'walk'; }));
     el.append(tp);
 
@@ -109,6 +111,11 @@ export class DebugPanel {
     el.append(this.benchOut);
     el.append(btn('Copy result', () => { this.benchOut.select(); void navigator.clipboard?.writeText(this.benchOut.value); }));
     el.append(btn('UI gallery', onGallery));
+    const mapHead = document.createElement('div');
+    mapHead.textContent = 'world map (click to teleport):';
+    mapHead.style.marginTop = '6px';
+    this.map = new WorldMap(game);
+    el.append(mapHead, this.map.el);
     bench.onProgress = (t) => (this.benchOut.value = t);
     bench.onDone = (line) => { this.benchOut.value = line; this.show(true); };
 
@@ -120,6 +127,7 @@ export class DebugPanel {
   show(v: boolean): void {
     this.visible = v;
     this.el.style.display = v ? 'block' : 'none';
+    if (v) this.map.draw();
   }
 
   update(fps: number): void {
@@ -129,8 +137,10 @@ export class DebugPanel {
       `fps ${fps.toFixed(0)}  frame ${s.frameMs.toFixed(1)}ms (cpu)\n` +
       `draws ${s.drawCalls}  tris ${(s.triangles / 1000).toFixed(0)}k\n` +
       `internal ${p.width}x${p.height} ×${p.scale}  ${p.isHdr ? 'HDR' : 'LDR'}\n` +
-      `chunks 1 (test scene; streaming in M2)  lights ${g.world.dock.lights.length}\n` +
+      `terrain nodes ${g.world.terrain.stats.drawn} drawn / ${g.world.terrain.stats.cached} cached, jobs ${g.world.terrain.stats.loading}\n` +
+      `forest tiles ${g.world.forest.stats.tiles}, trees ${g.world.forest.stats.trees}  lights ${g.world.dock.lights.length}\n` +
       `hour ${clock.hour.toFixed(2)}  pos ${g.controller.position.toArray().map((v) => v.toFixed(1)).join(',')}`;
     if (document.activeElement !== this.time) this.time.value = String(clock.hour);
+    this.map.update();
   }
 }

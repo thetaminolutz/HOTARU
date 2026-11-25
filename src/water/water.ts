@@ -26,6 +26,7 @@ uniform mat4 uReflMatrix;
 uniform sampler2D uHeightTex;
 uniform vec3 uHeightRect;
 uniform float uWaves;
+uniform float uReflOn;
 uniform vec2 uCamFwd;
 uniform vec4 uBoats[MAX_BOATS];
 uniform int uBoatCount;
@@ -91,7 +92,7 @@ void main(){
 
   // depth below the surface from the baked height texture
   vec2 huv = (P.xz - uHeightRect.xy) / uHeightRect.z;
-  float ground = texture2D(uHeightTex, huv).r;
+  float ground = (huv.x < 0.0 || huv.y < 0.0 || huv.x > 1.0 || huv.y > 1.0) ? -30.0 : texture2D(uHeightTex, huv).r;
   float depth = max(-ground, 0.0);
 
   // reflection lookup with vertical displacement
@@ -100,7 +101,8 @@ void main(){
   float amp = 0.01 + 0.022 / (1.0 + dist * 0.05);
   ruv.y += wy * amp;
   ruv.x += wx * amp * 0.25;
-  vec3 refl = texture2D(uReflection, clamp(ruv, 0.001, 0.999)).rgb;
+  vec3 refl = uReflOn > 0.5 ? texture2D(uReflection, clamp(ruv, 0.001, 0.999)).rgb
+    : skyColor(normalize(vec3(-V.x, abs(V.y) + 0.02, -V.z))) * 0.9; // far away: reflected sky
 
   float cosT = max(V.y, 0.0);
   float fres = 0.04 + 0.96 * pow(1.0 - cosT, 5.0);
@@ -166,6 +168,7 @@ export class Water {
         uHeightTex: { value: heightTex },
         uHeightRect: { value: new THREE.Vector3(...heightRect) },
         uWaves: { value: 1 },
+        uReflOn: { value: 1 },
         uCamFwd: { value: new THREE.Vector2(0, -1) },
         uBoats: { value: [new THREE.Vector4(), new THREE.Vector4()] },
         uBoatCount: { value: 0 },
@@ -177,11 +180,31 @@ export class Water {
       vertexShader: VERT,
       fragmentShader: FRAG,
     });
-    const g = new THREE.PlaneGeometry(2400, 1800, 1, 1);
+    const g = new THREE.PlaneGeometry(40000, 40000, 1, 1);
     g.rotateX(-Math.PI / 2);
     this.mesh = new THREE.Mesh(g, this.material);
-    this.mesh.position.set(0, level, -20);
+    this.mesh.position.set(0, level, 0);
+    this.mesh.frustumCulled = false;
     this.mesh.name = 'water';
+  }
+
+  /**
+   * Is reflective water close enough to matter? Planar reflections re-render the scene, so
+   * they only run near Lantern Lake or the eastern sea; farther away water uses the sky.
+   */
+  visibleFrom(p: THREE.Vector3): boolean {
+    const lake = Math.hypot(p.x / 440, (p.z + 10) / 300);
+    const nearLake = lake < 1 + 1800 / 300 && p.y < 700 + 0.4 * Math.hypot(p.x, p.z);
+    const nearSea = p.x > 3300;
+    return nearLake || nearSea;
+  }
+
+  /** Reflection field of view for a render-camera fov (degrees). */
+  static reflFov(camFov: number): number { return Math.min(150, camFov * 1.35); }
+
+  /** Angle of one reflection texel (radians) for a render-camera fov — used to snap rotation. */
+  texelAngle(camFov: number): number {
+    return (2 * Math.tan(THREE.MathUtils.degToRad(Water.reflFov(camFov)) / 2)) / Math.max(1, this.target.height);
   }
 
   setSize(w: number, h: number): void {
@@ -192,8 +215,10 @@ export class Water {
   renderReflection(renderer: THREE.WebGLRenderer, scene: THREE.Scene, cam: THREE.PerspectiveCamera, sky: THREE.Object3D): void {
     const rc = this.reflCam;
     rc.copy(cam, false);
-    rc.projectionMatrix.copy(cam.projectionMatrix);
-    rc.projectionMatrixInverse.copy(cam.projectionMatrixInverse);
+    // a wider frustum than the main camera, so rippled lookups near the screen edges never
+    // fall outside the reflection (clamping would smear the edge into vertical bars)
+    rc.fov = Water.reflFov(cam.fov);
+    rc.updateProjectionMatrix();
     const camPos = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
@@ -212,6 +237,10 @@ export class Water {
     const prevSky = sky.position.clone();
     sky.position.copy(rc.position);
     this.mesh.visible = false;
+    // small near-camera detail (grass, particles) is skipped in the mirror: cheaper, and it
+    // never reads well at reflection resolution
+    const skipped: THREE.Object3D[] = [];
+    scene.traverse((o) => { if (o.userData.noReflect && o.visible) { o.visible = false; skipped.push(o); } });
     U.uClipPlane.value.set(0, 1, 0, -this.level + 0.08);
     U.uReflectPass.value = 1;
     const prevCam = U.uCamPos.value.clone();
@@ -223,6 +252,7 @@ export class Water {
     U.uReflectPass.value = 0;
     U.uClipPlane.value.set(0, 0, 0, 1);
     this.mesh.visible = true;
+    for (const o of skipped) o.visible = true;
     sky.position.copy(prevSky);
   }
 

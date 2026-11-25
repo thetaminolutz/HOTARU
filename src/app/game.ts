@@ -1,10 +1,10 @@
 /** The game: renderer, world, time of day, camera and the per-frame update. */
 import * as THREE from 'three';
 import { PixelPipeline } from '../render/pipeline';
-import { TestWorld } from '../scene/testWorld';
+import { GameWorld } from '../scene/gameWorld';
 import { Controller } from '../player/controller';
 import { InputState } from '../player/input';
-import { createTodState, evaluateTod, type TodState } from '../sky/timeOfDay';
+import { createTodState, evaluateTod, moonPhase, type TodState } from '../sky/timeOfDay';
 import { U } from '../render/uniforms';
 import { clock } from '../core/clock';
 import { QUALITY, type Quality, type QualityName } from '../config';
@@ -14,8 +14,8 @@ import { srgbToLinear } from '../render/color';
 export class Game {
   readonly renderer: THREE.WebGLRenderer;
   readonly pipeline: PixelPipeline;
-  readonly world: TestWorld;
-  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.1, 9000);
+  readonly world: GameWorld;
+  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.2, 22000);
   readonly tod: TodState = createTodState();
   readonly input: InputState;
   readonly controller: Controller;
@@ -27,6 +27,8 @@ export class Game {
   private driftT = 0;
   stats = { drawCalls: 0, triangles: 0, frameMs: 0 };
   windStrength = 0.5;
+  /** Cloud cover 0..1 (until the weather system in M6). */
+  cloudCover = 0.45;
 
   constructor(readonly canvas: HTMLCanvasElement, seed: number, quality: QualityName) {
     this.quality = QUALITY[quality];
@@ -35,12 +37,12 @@ export class Game {
     this.renderer.autoClear = false;
     this.renderer.info.autoReset = false;
     this.pipeline = new PixelPipeline(this.renderer, this.quality);
-    this.world = new TestWorld(seed, this.quality);
+    this.world = new GameWorld(seed, this.quality);
     this.input = new InputState(canvas);
     const w = this.world;
     this.controller = new Controller(
       (x, z) => w.groundHeight(x, z),
-      (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.terrain.height(x, z) > -0.3,
+      (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.height(x, z) > -0.3,
     );
   }
 
@@ -57,6 +59,7 @@ export class Game {
 
   setQuality(name: QualityName): void {
     this.quality = QUALITY[name];
+    this.world.setQuality(this.quality);
     this.resize();
   }
 
@@ -110,7 +113,11 @@ export class Game {
     if (this.controller.mode === 'drift') this.updateDrift(dt);
     else this.controller.update(dt, this.input);
 
-    evaluateTod(clock.hour, this.tod);
+    // M1 look shots use a full moon; the running game follows the 8-day cycle
+    const phase = this.frozenElapsed !== null ? 0.5 : moonPhase(clock.day + 4, clock.hour);
+    this.world.sky.uniforms.uMoonPhase.value = phase;
+    evaluateTod(clock.hour, this.tod, phase);
+    U.uCloudCover.value = this.cloudCover * (this.tod.stars > 0.5 ? 0.6 : 1);
     this.applyTod();
 
     // wind: calm at dusk (mirror lake), a light breeze otherwise
@@ -120,6 +127,7 @@ export class Game {
     waterU.uWaves!.value = 0.04 + this.windStrength * 1.7;
 
     this.world.dock.update(elapsed, w);
+    this.world.update(this.controller.position);
     this.pipeline.uploadLights(this.world.dock.lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
 
@@ -133,7 +141,9 @@ export class Game {
       this.pipeline.shift.set(((c.yaw - yaw) / q), -((c.pitch - pitch) / q));
       this.pipeline.ditherOffset.set(-yi, pi);
       // reflections render at a lower resolution: snap them to whole reflection texels
-      const rq = q / this.quality.reflectionScale;
+      const H = this.pipeline.height, M = 2;
+      const renderFov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(this.camera.fov) / 2) * (H + 2 * M) / H));
+      const rq = this.world.water.texelAngle(renderFov);
       Object.assign(this.pipeline.reflectAngles, { yaw: Math.round(c.yaw / rq) * rq, pitch: Math.round(c.pitch / rq) * rq, use: true });
     } else {
       this.pipeline.shift.set(0, 0);
