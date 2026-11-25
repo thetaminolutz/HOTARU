@@ -139,7 +139,32 @@ const M11_SHOTS = [
   { name: 'garden-chest', q: 'play=1', wait: 4000, action: act(`hour(10); A.garden = [0, 0, 1, 2]; h.clock.day = 4; const G = A.gardenPos; c.placeAt(G.x + 5, G.z + 4); c.lookAt(G.clone().setY(G.y + 1.6));`) },
 ];
 
-const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M10: M10_SHOTS, M11: M11_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
+// M12: festivals, spirits, world events, the ending
+const prep12 = `
+  const h = window.__hotaru, g = h.game, c = g.controller, d = g.world.dock, M = g.mystic, S = g.world.secrets, ui = h.ui;
+  const at = (day, hour, lock) => { g.weather.seasonLock = lock ?? null; g.weather.set('clear', 99); h.clock.day = day; h.clock.setHour(hour); h.clock.paused = true; g.pipeline.buildLutNow(hour); };
+  g.onToast = () => {};
+  const step = (n = 20) => { for (let i = 0; i < n; i++) { M.update(0.1); g.world.people.update(0.1, c.position, h.clock.hour, h.clock.day, { rain: 0, snow: 0, storm: 0 }); } };
+`;
+const act12 = (body) => setup(new Function(prep12 + body));
+const M12_SHOTS = [
+  { name: 'lantern-festival', q: 'play=1', wait: 6000, action: act12(`at(3, 21.3, 'summer'); const pe = d.anchors.pierEnd; c.placeAt(pe.x - 1, pe.z + 4); c.lookAt(pe.clone().add(new h.THREE.Vector3(-30, 22, -150))); step(40);`) },
+  { name: 'festival-stalls', q: 'play=1', wait: 6000, action: act12(`at(3, 19.6, 'summer'); const sp = M.festivals.spotOf('tanabata'); c.placeAt(sp.x - 14, sp.z + 2); c.lookAt(sp.clone().add(new h.THREE.Vector3(8, 1.5, 4))); step(60);`) },
+  { name: 'tsukimi', q: 'play=1', wait: 6000, action: act12(`at(3, 20.2); const sp = M.festivals.spotOf('tsukimi'); c.placeAt(sp.x - 3, sp.z + 5); step(60); setTimeout(() => { const m = g.tod.moonDir; c.yaw = Math.atan2(-m.x, -m.z); c.pitch = 0.22; }, 300);`) },
+  { name: 'hanami-night', q: 'play=1', wait: 6000, action: act12(`at(3, 20.5, 'spring'); g.onToast = () => {}; const sp = M.festivals.spotOf('hanami'); c.placeAt(sp.x - 22, sp.z + 6); c.lookAt(sp.clone().setY(sp.y + 2)); step(60);`) },
+  { name: 'snow-lanterns', q: 'play=1', wait: 6000, action: act12(`at(3, 21.5, 'winter'); g.weather.set('snow', 99); const sp = M.festivals.spotOf('yukitoro'); c.placeAt(sp.x + 6, sp.z + 6); c.yaw = 0.8; c.pitch = -0.15; step(30);`) },
+  { name: 'lantern-spirits', q: 'play=1', wait: 5000, action: act12(`at(4, 22); const pe = d.anchors.pierEnd; c.placeAt(pe.x, pe.z); c.yaw = 0.2; c.pitch = 0.02; step(10); h.clock.elapsed += 30; step(5);`) },
+  { name: 'kodama', q: 'play=1', wait: 6000, action: act12(`at(5, 10.5); c.placeAt(-3500, -200); g.world.update(c.position); const look = new h.THREE.Vector3(0, 0, -1); for (let i = 0; i < 90; i++) M.spirits.update(0.1, i * 0.1, c.position, look, 10.5, 5, { cloud: 0.2, fog: 0, rain: 0 }, 0, false); c.yaw = 0; c.pitch = -0.35;`) },
+  { name: 'forest-guardian', q: 'play=1', wait: 6000, action: act12(`at(5, 6.2); c.placeAt(-3500, -200); g.world.update(c.position); c.yaw = 0; c.pitch = 0.18; step(10);`) },
+  { name: 'castle-echo', q: 'play=1', wait: 6000, action: act12(`at(5, 18.2); const C = g.world.world.sites.castle; c.placeAt(C.x + 6, C.z + 30); c.lookAt(new h.THREE.Vector3(C.x + 10, C.level + 0.8, C.z + 22)); for (let i = 0; i < 60; i++) M.update(0.1);`) },
+  { name: 'aurora', q: 'play=1', wait: 6000, action: act12(`at(6, 23, 'winter'); const s = d.anchors.shore; c.placeAt(s.x + 4, s.z); c.yaw = 0; c.pitch = 0.35; for (let i = 0; i < 300; i++) M.update(0.1);`) },
+  { name: 'red-moon', q: 'play=1', wait: 5000, action: act12(`const day = [...Array(300).keys()].find((k) => window.__ev && 0) ?? 0; M.events.eclipse = 1; at(4, 1.5); const s = d.anchors.shore; c.placeAt(s.x + 4, s.z); M.update = () => {}; g.world.sky.uniforms.uEclipse.value = 1; g.world.sky.uniforms.uMoonScale.value = 1.3; setTimeout(() => c.lookAt(c.position.clone().add(g.tod.moonDir.clone().multiplyScalar(100)).add(new h.THREE.Vector3(0, -12, 0))), 300);`) },
+  { name: 'ending-firefly-path', q: 'play=1', wait: 6000, action: act12(`at(3, 21.4, 'summer'); for (let i = 0; i < 15; i++) S.found.add('tablet-' + i); const m = g.world.people.people.find((p) => p.wanderer?.id === 'masked'); g.talkTo(m); g.dialogue = null; const pe = d.anchors.pierEnd; c.placeAt(pe.x, pe.z); step(5); g.interactions.items.find((i) => i.id === 'float-lantern').use(); for (let i = 0; i < 100; i++) M.update(0.25);`) },
+  { name: 'ending-unmasked', q: 'play=1', wait: 5000, action: act12(`at(3, 21.4, 'summer'); for (let i = 0; i < 15; i++) S.found.add('tablet-' + i); const m = g.world.people.people.find((p) => p.wanderer?.id === 'masked'); g.talkTo(m); g.dialogue = null; const pe = d.anchors.pierEnd; c.placeAt(pe.x, pe.z); step(5); g.interactions.items.find((i) => i.id === 'float-lantern').use(); for (let i = 0; i < 180; i++) M.update(0.25); if (g.dialogue) { g.dialogue.index = 2; g.dialogue.shown = 200; } c.lookAt(m.pos.clone().setY(m.pos.y + 1.5));`) },
+  { name: 'garden-bloom', q: 'play=1', wait: 5000, action: act12(`at(7, 10, 'summer'); g.world.landmarks.setBloom(1); g.world.landmarks.openGate(); M.update = () => {}; const C = g.world.world.sites.castle; c.placeAt(C.x - 18, C.z - 37); c.lookAt(new h.THREE.Vector3(C.x - 16, C.level + 0.2, C.z - 46));`) },
+];
+
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M10: M10_SHOTS, M11: M11_SHOTS, M12: M12_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();

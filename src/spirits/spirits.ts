@@ -91,11 +91,12 @@ float bayer4(vec2 p){
   return (float(m[i]) + 0.5) / 16.0;
 }
 void main(){
-  float band = vnoise(vec2(vUv.x * 14.0 + uTime * 0.05, uTime * 0.03)) * (1.0 - vUv.y) * smoothstep(0.0, 0.25, vUv.y);
-  float a = band * uFade * 1.4;
+  float band = vnoise(vec2(vUv.x * 9.0 + uTime * 0.05, uTime * 0.03)) * (1.0 - vUv.y * 0.8) * smoothstep(0.0, 0.2, vUv.y);
+  float rays = 0.55 + 0.45 * sin(vUv.x * 160.0 + vnoise(vec2(vUv.x * 30.0, uTime * 0.1)) * 6.0);
+  float a = band * rays * uFade * 1.8;
   if (a < bayer4(gl_FragCoord.xy) * 0.9 + 0.08) discard;
-  vec3 c = mix(vec3(0.2, 1.0, 0.6), vec3(0.5, 0.4, 1.0), vUv.y);
-  gl_FragColor = vec4(c * (0.8 + a), 0.0);
+  vec3 c = mix(vec3(0.15, 1.0, 0.55), vec3(0.6, 0.35, 1.0), smoothstep(0.3, 1.0, vUv.y));
+  gl_FragColor = vec4(c * (1.4 + 1.5 * a), 0.0);
 }`;
 
 export const ghostMat = (rgb: [number, number, number]) => new THREE.ShaderMaterial({ uniforms: { ...U, uFade: { value: 0 }, uGhost: { value: new THREE.Vector3(...rgb) } }, vertexShader: GHOST_VERT, fragmentShader: GHOST_FRAG });
@@ -162,7 +163,7 @@ export class Spirits {
     echo('spirit-echo-tea', -12, 8, [[0, 0, 1.6, true], [1.3, 0, 1.6, true], [0.65, 1.1, 1.6, true], [0.65, -1.1, 1.5, true]], [0.55, 0.75, 1]);
     // aurora: a long curtain, high in the northern sky
     const ag = new THREE.PlaneGeometry(4200, 900, 40, 1);
-    this.aurora = new THREE.Mesh(ag, new THREE.ShaderMaterial({ uniforms: { ...U, uFade: { value: 0 } }, vertexShader: AURORA_VERT, fragmentShader: AURORA_FRAG, side: THREE.DoubleSide, depthWrite: false }));
+    this.aurora = new THREE.Mesh(ag, new THREE.ShaderMaterial({ uniforms: { ...U, uFade: { value: 0 } }, vertexShader: AURORA_VERT, fragmentShader: AURORA_FRAG, side: THREE.DoubleSide, depthWrite: true }));
     this.aurora.frustumCulled = false; this.aurora.visible = false; this.aurora.renderOrder = -1;
     this.group.add(this.aurora);
     // the old umbrella on your engawa
@@ -189,9 +190,11 @@ export class Spirits {
     this.lanterns.forEach((m, i) => {
       m.visible = lakeNight;
       if (!lakeNight) return;
-      // a loose line drifting from near you toward the island shrine, and around again
-      const k = ((t * 0.012 + i / 7) % 1), sx = cam.x + Math.sin(i * 2.1) * 20, sz = cam.z - 40;
-      m.position.set(sx + (isl.x - sx) * k + Math.sin(t * 0.6 + i) * 3, 2.2 + Math.sin(t * 1.3 + i * 1.7) * 0.5 + i * 0.1, sz + (isl.z - sz) * k + Math.cos(t * 0.5 + i) * 3);
+      // a loose group 30–60 m out, drifting slowly toward the island shrine and back
+      const k = 0.5 - 0.5 * Math.cos(t * 0.01), dir = isl.clone().sub(cam).setY(0);
+      const len = Math.min(dir.length(), 400); dir.normalize();
+      const cx = cam.x + dir.x * (16 + k * len * 0.6), cz = cam.z + dir.z * (16 + k * len * 0.6);
+      m.position.set(cx + Math.sin(i * 2.1 + t * 0.2) * 8, 1.6 + Math.sin(t * 1.3 + i * 1.7) * 0.5 + (i % 3) * 0.6, cz + Math.cos(i * 1.7 + t * 0.15) * 8);
       m.rotation.y = Math.sin(t * 0.4 + i) * 0.5;
     });
     if (lakeNight && this.lanterns[0]!.position.distanceTo(cam) < 80) this.seen('spirit-lanterns');
@@ -205,7 +208,8 @@ export class Spirits {
     const want = forest && this.still > 6 ? 1 : 0;
     if (want && !this.kodamaOn) {
       this.kodama.forEach((m, i) => {
-        const a = i * 1.05 + t * 0.01, d = 4 + (i % 3) * 2.2, x = cam.x + Math.cos(a) * d, z = cam.z + Math.sin(a) * d;
+        // in a loose arc ahead of you, half hidden among the roots
+        const a = Math.atan2(look.x, look.z) + (i - 2.5) * 0.32, d = 4 + (i % 3) * 1.8, x = cam.x + Math.sin(a) * d, z = cam.z + Math.cos(a) * d;
         m.position.set(x, this.w.groundHeight(x, z), z);
         m.rotation.y = Math.atan2(cam.x - x, cam.z - z);
       });
@@ -233,8 +237,8 @@ export class Spirits {
     const guard = dawn && REGION_IDS[r] === 'cedar';
     this.guardian.visible = guard;
     if (guard) {
-      const yaw = Math.atan2(look.x, look.z) + 0.35, gx = cam.x + Math.sin(yaw) * 220, gz = cam.z + Math.cos(yaw) * 220;
-      if (this.guardian.position.distanceTo(cam) > 300 || this.guardian.position.distanceTo(cam) < 150) this.guardian.position.set(gx, this.w.groundHeight(gx, gz), gz);
+      const yaw = Math.atan2(look.x, look.z) + 0.3, gx = cam.x + Math.sin(yaw) * 75, gz = cam.z + Math.cos(yaw) * 75;
+      if (this.guardian.position.distanceTo(cam) > 120 || this.guardian.position.distanceTo(cam) < 50) this.guardian.position.set(gx, this.w.groundHeight(gx, gz), gz);
       this.guardian.position.x += Math.sin(t * 0.02) * dt * 0.8;
       this.guardian.rotation.y = 1.2 + Math.sin(t * 0.03) * 0.2;
       if (look.dot(this.guardian.position.clone().sub(cam).normalize()) > 0.8) this.seen('spirit-guardian');
@@ -249,9 +253,9 @@ export class Spirits {
       if (f.value > 0.6) this.seen(e.id);
     }
     // ---- aurora: clear winter nights, one in four
-    const aur = night && winter > 0.5 && W.cloud < 0.4 && day % 4 === 2;
+    const aur = night && winter > 0.5 && W.cloud < 0.55 && day % 4 === 2;
     const af = (this.aurora.material as THREE.ShaderMaterial).uniforms.uFade!;
-    af.value = Math.max(0, Math.min(1, af.value + (aur ? dt * 0.05 : -dt * 0.1)));
+    af.value = Math.max(0, Math.min(1, af.value + (aur ? dt * 0.25 : -dt * 0.15)));
     this.aurora.visible = af.value > 0.01;
     if (this.aurora.visible) { this.aurora.position.set(cam.x, cam.y + 1600, cam.z - 3200); if (af.value > 0.5) this.seen('spirit-aurora'); }
     // ---- the umbrella: hop when you're not looking, blink when you are

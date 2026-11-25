@@ -32,7 +32,7 @@ void main(){
   vWorldPos = position;
   vec4 mv = viewMatrix * vec4(position, 1.0);
   gl_Position = projectionMatrix * mv;
-  gl_PointSize = aCol.a < 0.05 ? 0.0 : (-mv.z < 60.0 ? 3.0 : (-mv.z < 300.0 ? 2.0 : 1.0));
+  gl_PointSize = aCol.a < 0.05 ? 0.0 : (-mv.z < 40.0 ? 2.0 : 1.0);
 }`;
 const GLOW_FRAG = /* glsl */ `
 ${COMMON_PARS}
@@ -44,7 +44,7 @@ varying vec3 vWorldPos;
 void main(){
   if (vCol.a < 0.15) discard;
   if (dot(vec4(vWorldPos, 1.0), uClipPlane) < 0.0) discard;
-  gl_FragColor = vec4(applyFog(vCol.rgb * (1.5 + 2.0 * vCol.a), vWorldPos), 0.5);
+  gl_FragColor = vec4(applyFog(vCol.rgb * (0.9 + 0.9 * vCol.a), vWorldPos), 0.5);
 }`;
 
 /** A bag of glowing points the CPU moves. */
@@ -168,7 +168,7 @@ export class Festivals {
       pts.slice(0, 300).forEach(([x, z]) => {
         const gy = this.ground(x, z);
         parts.push(ensureColor(new THREE.SphereGeometry(0.22, 6, 4, 0, Math.PI * 2, 0, Math.PI / 2).toNonIndexed(), [0.95, 0.96, 1]).translate(x, gy, z));
-        parts.push(boxUV(0.09, 0.09, 0.09, 1, [1, 0.7, 0.35], 1).translate(x, gy + 0.1, z + 0.17));
+        parts.push(boxUV(0.1, 0.1, 0.06, 1, [1, 0.7, 0.35], 1).translate(x, gy + 0.1, z + 0.22));
       });
       lights.push({ pos: spot.clone().setY(spot.y + 1), color: AMBER.clone(), radius: 40, intensity: 0.9, halo: 0, phase: 0 });
     } else if (id === 'newYear') {
@@ -207,7 +207,7 @@ export class Festivals {
 
   /** Floating lanterns (tōrō nagashi): set out from the pier, drifting slowly across the lake. */
   private updateFloaters(on: boolean, t: number): void {
-    const N = this.brighter ? 240 : 140;
+    const N = this.brighter ? 160 : 90;
     if (!this.floaters) {
       this.floaters = new Glow(240);
       this.group.add(this.floaters.points);
@@ -249,7 +249,9 @@ export class Festivals {
         const age = t - b.t;
         if (age > 0.4 && !b.boomed) { b.boomed = true; this.onBoom?.(new THREE.Vector3(b.x, b.y, b.z)); }
         // a sphere of sparks: fixed directions per spark, falling and fading
-        const u = ((i * 0.618) % 1) * 2 - 1, ph = i * 2.399, rr = Math.sqrt(1 - u * u);
+        // a random direction per spark (stable for the burst)
+        const h1 = Math.sin((i + 1) * 12.9898 + b.t * 78.233) * 43758.5453, h2 = Math.sin((i + 1) * 39.346 + b.t * 11.135) * 24634.6345;
+        const u = (h1 - Math.floor(h1)) * 2 - 1, ph = (h2 - Math.floor(h2)) * Math.PI * 2, rr = Math.sqrt(1 - u * u);
         const sp = 22 * Math.min(1, age * 2.5);
         const x = b.x + Math.cos(ph) * rr * sp, y = b.y + u * sp - age * age * 3, z = b.z + Math.sin(ph) * rr * sp;
         const a = age < 0.25 ? 0 : Math.max(0, 1 - (age - 0.25) / 2.6) * (i % 4 === 0 ? 1 : 0.85);
