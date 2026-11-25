@@ -53,6 +53,11 @@ Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ do
   - The Medium preset at the busiest spot (the dock) is under 400 draw calls. The visible
     pass is at most about 615 k triangles, against a budget of 1.5 M.
   - `scripts/perf-breakdown.mjs` lists triangles and draws per pass and per group.
+  - Headless bench, all passes summed along the benchmark route:
+    - Low: 310 draws, 1.30 M triangles
+    - Medium: 359 draws, 1.68 M triangles
+    - High: 405 draws, 1.92 M triangles
+  - Real frame times still need the iPad benchmark (debug panel).
 - **Auto quality and a frame cap.**
 - **Comfort & accessibility:** reduced motion, large text, high contrast, subtitles, mono
   sound, a left-handed touch layout.
