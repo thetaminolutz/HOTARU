@@ -43,8 +43,19 @@ const ui = new UIManager(uiCanvas, {
   openMenu: () => openMenu(),
   hasSave: () => state.save !== null,
   gameClick: () => game.input.requestPointerLock(),
+  penTap: (x, y) => {
+    game.input.lastDevice = 'pen';
+    // turn toward the tapped point; if something interactable is there, use it
+    const ndc = new THREE.Vector3((x / ui.ui.w) * 2 - 1, -(y / ui.ui.h) * 2 + 1, 0.5);
+    const dir = ndc.unproject(game.camera).sub(game.camera.position).normalize();
+    game.controller.turnToward(dir);
+    game.interactions.update(game.controller.position, dir);
+    if (game.interactions.target) game.input.touchInteract = true;
+  },
+  penLook: (dx, dy) => { game.input.lastDevice = 'pen'; game.input.addLook(dx, dy, 0.006); },
 });
 game.input.attachLookElement(uiCanvas);
+ui.settings.onRebind = (done) => { game.input.rebindListener = (code) => { game.input.rebindListener = null; done(code); }; };
 const bench = new Benchmark(game);
 const debug = new DebugPanel(game, bench, () => { state.mode = 'gallery'; ui.show('gallery'); });
 if (params.debug) debug.show(true);
@@ -77,17 +88,17 @@ function startPlay(continueSave: boolean): void {
   const s = continueSave ? state.save : null;
   game.frozenElapsed = null;
   if (s) {
-    c.position.set(...s.pos);
+    c.placeAt(s.pos[0], s.pos[2]);
     c.yaw = s.yaw; c.pitch = s.pitch;
     clock.setHour(s.hour); clock.day = s.day;
   } else {
     const S = game.world.dock.anchors.shore!;
-    c.position.set(S.x + 1, game.world.groundHeight(S.x + 1, S.z + 3) + 1.6, S.z + 3);
+    c.placeAt(S.x + 1, S.z + 3);
     c.lookAt(game.world.dock.anchors.pierEnd!.clone().setY(1.5));
     clock.setHour(17.4);
   }
   c.mode = 'walk';
-  game.camera.fov = 75;
+  game.camera.fov = settings.fov;
   game.camera.updateProjectionMatrix();
   game.windStrength = 0.5;
   game.world.dock.rowOverride = null;
@@ -108,7 +119,7 @@ function openMenu(): void {
   ui.show('title');
 }
 
-addEventListener('keydown', (e) => { if (e.code === 'Escape') openMenu(); });
+
 
 // ---------- lifecycle (SPEC §2): pause & save when hidden, resume on return ----------
 document.addEventListener('visibilitychange', () => {
@@ -139,13 +150,25 @@ function loop(now: number): void {
   if (state.mode === 'play' && ui.hud.touchMode) {
     const v = ui.hud.stickVector();
     game.input.touchMove.x = v.x; game.input.touchMove.z = v.z; game.input.touchMove.active = v.active;
-    game.input.lookDX -= ui.hud.look.dx * 0.012; game.input.lookDY -= ui.hud.look.dy * 0.012;
+    game.input.addLook(ui.hud.look.dx, ui.hud.look.dy, 0.012);
     ui.hud.look.dx = 0; ui.hud.look.dy = 0;
   }
+  if (ui.hud.jumpTap) { game.input.touchJump = true; ui.hud.jumpTap = false; }
+  if (ui.hud.actTap) { game.input.touchInteract = true; ui.hud.actTap = false; }
+  game.input.touchTimelapse = ui.hud.timelapseHeld;
+  if (game.input.menuPressed) { game.input.menuPressed = false; if (state.mode === 'play') openMenu(); }
   game.input.enabled = state.mode === 'play';
   bench.update(dt, frameMs);
   if (state.mode !== 'gallery') game.frame(dt);
   ui.hud.fps = fps;
+  ui.hud.fade = game.fade;
+  // interact prompt: the targeted thing, or sit / lie / stand where you are
+  if (state.mode === 'play') {
+    const c = game.controller, t = game.interactions.target;
+    ui.hud.prompt = t && !c.sitting ? { icon: t.kind === 'sit' ? 'sit' : 'hand', label: t.label }
+      : c.sitHint ? { icon: c.sitHint, label: '' } : null;
+    ui.hud.canTimelapse = c.sitting;
+  } else ui.hud.prompt = null;
   ui.frame(now / 1000, dt);
   debug.update(fps);
   requestAnimationFrame(loop);
@@ -172,6 +195,7 @@ async function boot(): Promise<void> {
   resize();
   state.save = await readSave(1);
   state.persisted = await requestPersistence();
+  ui.settings.persisted = state.persisted;
   if (!params.nosw) void registerPwa();
 
   if (params.ui === 'gallery') { state.mode = 'gallery'; ui.show('gallery'); }
@@ -202,7 +226,7 @@ async function boot(): Promise<void> {
   last = performance.now();
   requestAnimationFrame(loop);
   (window as unknown as { __hotaru: unknown }).__hotaru = {
-    ready: true, game, ui, state, clock, bench,
+    ready: true, game, ui, state, clock, bench, THREE,
     readInternal: () => Array.from(game.pipeline.readPixels()),
     readReflection: () => {
       const t = game.world.water.target;

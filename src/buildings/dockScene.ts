@@ -71,6 +71,10 @@ export class DockScene {
   readonly boats: Boat[] = [];
   /** Walkable deck rectangles: [x0, z0, x1, z1, y]. */
   readonly decks: [number, number, number, number, number][] = [];
+  /** Solid volumes the player can't walk through (houses become enterable in M7). */
+  readonly colliders: { x0: number; z0: number; x1: number; z1: number; top: number }[] = [];
+  /** Places to sit (edge of the pier, the engawa). */
+  readonly sitSpots: { x: number; y: number; z: number; yaw: number; label: string }[] = [];
   /** Where key features are, for camera shots. */
   readonly anchors: Record<string, THREE.Vector3> = {};
   private strings: LanternString[] = [];
@@ -166,6 +170,12 @@ export class DockScene {
     const bh: THREE.BufferGeometry[] = [], walls: THREE.BufferGeometry[] = [], wins: THREE.BufferGeometry[] = [], roofs: THREE.BufferGeometry[] = [];
     bh.push(boxUV(W + 3, 0.2, D + 1, 2).translate(bx + 1, by - 0.1, bz)); // floor incl. east engawa
     this.decks.push([bx - W / 2, bz - D / 2 - 0.5, bx + W / 2 + 2.5, bz + D / 2 + 0.5, by]);
+    this.colliders.push({ x0: bx - W / 2, z0: bz - D / 2, x1: bx + W / 2, z1: bz + D / 2, top: by + H + 2 });
+    this.sitSpots.push(
+      { x: px + 1.5, y: deckY - 0.45, z: z1 - 3.2, yaw: 0, label: 'Sit at the end of the pier' },
+      { x: px - 2.0, y: deckY - 0.45, z: z1 - 3.2, yaw: 0, label: 'Sit at the end of the pier' },
+      { x: bx + W / 2 + 1.0, y: by, z: bz - 2, yaw: -Math.PI / 2, label: 'Sit on the engawa' },
+    );
     for (const [sx, sz2] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1], [1, 0], [-1, 0]] as const) {
       const x = bx + sx * (W / 2) + (sx > 0 ? 2.4 : 0), z = bz + sz2 * (D / 2);
       const bottom = Math.min(-0.3, height(x, z)) - 0.6;

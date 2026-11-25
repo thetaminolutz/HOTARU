@@ -229,3 +229,40 @@ export function bigLantern(lit: number, flicker: number): Pixmap {
   p.rect(11, 32, 2, 2, C.vermilion);
   return p;
 }
+
+/** 9×9 pixel icons drawn on tokens and in the interact bubble. */
+const ICONS: Record<string, string[]> = {
+  jump: ['....#....', '...###...', '..#####..', '.#######.', '...###...', '...###...', '...###...', '.........', '.........'],
+  sit: ['.........', '..#####..', '..#...#..', '..#...#..', '#########', '#.......#', '#########', '.#.....#.', '.#.....#.'],
+  lie: ['.........', '.........', '.##......', '#..#.....', '.########', '#########', '.........', '.........', '.........'],
+  stand: ['...##....', '...##....', '..####...', '.#.##.#..', '...##....', '...##....', '..#..#...', '..#..#...', '.##..##..'],
+  hand: ['...#.....', '...#.#...', '...#.#.#.', '.#.#.#.#.', '.#######.', '.#######.', '..#####..', '..#####..', '.........'],
+  time: ['#######..', '.#...#...', '..#.#....', '...#.....', '..#.#....', '.#.#.#...', '#######..', '.........', '.........'],
+  eye: ['.........', '..#####..', '.#.....#.', '#..###..#', '#..###..#', '.#.....#.', '..#####..', '.........', '.........'],
+};
+
+export function icon(name: string, color: number): Pixmap {
+  const rows = ICONS[name] ?? ICONS.hand!;
+  const p = new Pixmap(9, 9);
+  rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] === '#') p.set(x, y, color); });
+  return p;
+}
+
+/** Pixel brush cursor (desktop menus, Apple Pencil): a small ink brush, tip at (0,0). */
+export function brushCursor(): Pixmap {
+  const rows = [
+    '#.........',
+    '##........',
+    '.###......',
+    '..oo#.....',
+    '...ooo#...',
+    '....ooow#.',
+    '.....owww#',
+    '......www#',
+    '.......##.',
+  ];
+  const p = new Pixmap(10, 9);
+  const col: Record<string, number> = { '#': 0x2a1e24, o: 0xc2452f, w: 0xb0703a };
+  rows.forEach((r, y) => { for (let x = 0; x < r.length; x++) if (r[x] !== '.') p.set(x, y, col[r[x]!]!); });
+  return p;
+}

@@ -124,8 +124,8 @@ export class PixelPipeline {
     try {
       this.lutWorker = new Worker(new URL('./lutWorker.ts', import.meta.url), { type: 'module' });
       this.lutWorker.onmessage = (e: MessageEvent<{ id: number; hour: number; lut: Uint8Array<ArrayBuffer> }>) => {
-        this.lutPending = false;
         if (e.data.id !== this.lutId) return;
+        this.lutPending = false;
         (this.lutTex.image.data as Uint8Array).set(e.data.lut as Uint8Array<ArrayBuffer>);
         this.lutTex.needsUpdate = true;
         this.lutHour = e.data.hour;
@@ -139,6 +139,9 @@ export class PixelPipeline {
 
   /** Build the LUT for an hour synchronously (boot / tests). */
   buildLutNow(hour: number): void {
+    // invalidate any worker result still in flight: it belongs to an older hour
+    this.lutId++;
+    this.lutPending = false;
     buildLut(paletteAt(hour), LUT_SIZE, this.lutTex.image.data as Uint8Array);
     this.lutTex.needsUpdate = true;
     this.lutHour = hour;

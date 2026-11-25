@@ -1,4 +1,10 @@
-/** Input state shared by keyboard/mouse, touch (fed by the UI touch controls) and gamepad. */
+/**
+ * Input state shared by keyboard/mouse, touch & Apple Pencil (fed by the UI layer) and
+ * gamepad (standard mapping). Movement axes are continuous; actions are edge-triggered.
+ */
+import { settings } from '../app/settings';
+import type { Action } from './bindings';
+
 export class InputState {
   /** -1..1 strafe / forward */
   moveX = 0;
@@ -7,16 +13,49 @@ export class InputState {
   lookDX = 0;
   lookDY = 0;
   jog = false;
+  slow = false;
+  /** vertical axis for free-fly (debug) */
   up = 0;
+  /** held actions */
+  timelapse = false;
+  /** edge-triggered actions (consumed by the controller) */
+  jumpPressed = false;
+  interactPressed = false;
+  menuPressed = false;
   private keys = new Set<string>();
+  private jogToggled = false;
+  private padPrev: boolean[] = [];
   enabled = false;
+  /** Radians per mouse pixel at sensitivity 1. */
   mouseSensitivity = 0.0022;
+  /** Touch & Pencil writers. */
+  touchMove = { x: 0, z: 0, active: false };
+  touchJump = false;
+  touchInteract = false;
+  touchTimelapse = false;
+  lastDevice: 'keyboard' | 'touch' | 'pen' | 'gamepad' = 'keyboard';
+  rebindListener: ((code: string) => void) | null = null;
 
   constructor(private el: HTMLElement) {
-    addEventListener('keydown', (e: KeyboardEvent) => { this.keys.add(e.code); });
+    addEventListener('keydown', (e: KeyboardEvent) => {
+      if (this.rebindListener) { e.preventDefault(); this.rebindListener(e.code); return; }
+      if (!this.keys.has(e.code)) this.onPress(e.code);
+      this.keys.add(e.code);
+      this.lastDevice = 'keyboard';
+    });
     addEventListener('keyup', (e: KeyboardEvent) => { this.keys.delete(e.code); });
     addEventListener('blur', () => this.keys.clear());
     this.attachLookElement(el);
+  }
+
+  private is(action: Action, code: string): boolean { return settings.bindings[action].includes(code); }
+  held(action: Action): boolean { return settings.bindings[action].some((c) => this.keys.has(c)); }
+
+  private onPress(code: string): void {
+    if (this.is('jump', code)) this.jumpPressed = true;
+    if (this.is('interact', code)) this.interactPressed = true;
+    if (this.is('menu', code)) this.menuPressed = true;
+    if (this.is('jog', code) && settings.toggleJog) this.jogToggled = !this.jogToggled;
   }
 
   /** The element that captures the mouse (the UI canvas sits on top of the game canvas). */
@@ -24,9 +63,15 @@ export class InputState {
     this.el = el;
     el.addEventListener('mousemove', (e) => {
       if (!this.enabled || document.pointerLockElement !== el) return;
-      this.lookDX -= e.movementX * this.mouseSensitivity;
-      this.lookDY -= e.movementY * this.mouseSensitivity;
+      this.addLook(e.movementX, e.movementY, this.mouseSensitivity);
     });
+  }
+
+  /** Add look input in pixels × radians-per-pixel, honouring sensitivity and invert-Y. */
+  addLook(dx: number, dy: number, radPerPx: number): void {
+    const k = radPerPx * settings.sensitivity;
+    this.lookDX -= dx * k;
+    this.lookDY -= dy * k * (settings.invertY ? -1 : 1);
   }
 
   requestPointerLock(): void {
@@ -35,30 +80,52 @@ export class InputState {
 
   key(code: string): boolean { return this.keys.has(code); }
 
-  /** Merge keyboard + gamepad into move axes. Touch writes moveX/moveZ directly via touchMove. */
-  touchMove = { x: 0, z: 0, active: false };
-
   poll(): void {
     let x = 0, z = 0, up = 0;
-    if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) z += 1;
-    if (this.keys.has('KeyS') || this.keys.has('ArrowDown')) z -= 1;
-    if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) x -= 1;
-    if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) x += 1;
-    if (this.keys.has('Space')) up += 1;
-    if (this.keys.has('KeyC') || this.keys.has('ControlLeft')) up -= 1;
-    this.jog = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
+    if (this.held('forward')) z += 1;
+    if (this.held('back')) z -= 1;
+    if (this.held('left')) x -= 1;
+    if (this.held('right')) x += 1;
+    if (this.held('jump')) up += 1;
+    if (this.held('slow')) up -= 1;
+    this.jog = settings.toggleJog ? this.jogToggled : this.held('jog');
+    this.slow = this.held('slow');
+    this.timelapse = this.held('timelapse') || this.touchTimelapse;
+
+    // gamepad: standard mapping
     const pads = navigator.getGamepads?.() ?? [];
     for (const p of pads) {
       if (!p) continue;
       const dz = (v: number) => (Math.abs(v) < 0.15 ? 0 : v);
-      x += dz(p.axes[0] ?? 0); z -= dz(p.axes[1] ?? 0);
-      this.lookDX -= dz(p.axes[2] ?? 0) * 0.04; this.lookDY -= dz(p.axes[3] ?? 0) * 0.03;
-      if (p.buttons[10]?.pressed) this.jog = true;
+      const ax = dz(p.axes[0] ?? 0), az = dz(p.axes[1] ?? 0), lx = dz(p.axes[2] ?? 0), ly = dz(p.axes[3] ?? 0);
+      if (ax || az || lx || ly || p.buttons.some((b) => b.pressed)) this.lastDevice = 'gamepad';
+      x += ax; z -= az;
+      this.addLook(lx * 14, ly * 10, 0.0022);
+      const pressed = (i: number) => !!p.buttons[i]?.pressed;
+      const edge = (i: number) => pressed(i) && !this.padPrev[i];
+      if (edge(0)) this.jumpPressed = true;        // A
+      if (edge(2) || edge(1)) this.interactPressed = true; // X / B
+      if (edge(9)) this.menuPressed = true;        // Start
+      if (pressed(10) || pressed(7)) this.jog = true; // L3 / RT
+      if (pressed(4) || pressed(6)) this.slow = true; // LB / LT
+      if (pressed(3)) this.timelapse = true;       // Y (held)
+      this.padPrev = p.buttons.map((b) => b.pressed);
     }
-    if (this.touchMove.active) { x += this.touchMove.x; z += this.touchMove.z; this.jog ||= Math.hypot(this.touchMove.x, this.touchMove.z) > 0.92; }
+
+    if (this.touchMove.active) {
+      x += this.touchMove.x; z += this.touchMove.z;
+      const m = Math.hypot(this.touchMove.x, this.touchMove.z);
+      this.jog ||= m > 0.92; // push the stick to the rim to jog
+      this.slow ||= m < 0.35 && m > 0; // a gentle push walks slowly
+    }
+    if (this.touchJump) { this.jumpPressed = true; this.touchJump = false; }
+    if (this.touchInteract) { this.interactPressed = true; this.touchInteract = false; }
     const len = Math.hypot(x, z);
     this.moveX = len > 1 ? x / len : x;
     this.moveZ = len > 1 ? z / len : z;
     this.up = up;
   }
+
+  /** Clear edge-triggered actions after the frame consumed them. */
+  endFrame(): void { this.jumpPressed = false; this.interactPressed = false; }
 }
