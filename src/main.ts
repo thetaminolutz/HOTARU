@@ -77,6 +77,8 @@ function updateAudio(dt: number): void {
   audio.update(dt, state.mode);
 }
 
+game.onToast = (text) => ui.hud.toast(text, 5, undefined, performance.now() / 1000);
+
 function applySettings(): void {
   if (state.mode !== 'shot') game.setClimate(settings.seasonMode === 'cycle' ? null : settings.seasonMode, settings.seasonDays, settings.weatherMode === 'fair' ? 'clear' : null);
   game.pipeline.settings.dither = settings.dither;
@@ -98,7 +100,7 @@ function resize(): void {
 async function save(): Promise<void> {
   if (state.mode !== 'play') return;
   const c = game.controller;
-  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust });
+  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0 });
   state.save = await readSave(1);
 }
 
@@ -112,6 +114,9 @@ function startPlay(continueSave: boolean): void {
     clock.setHour(s.hour); clock.day = s.day;
     if (s.memory) game.world.people.memory = s.memory;
     if (s.trust) game.world.fauna.trust = s.trust;
+    if (s.found) game.world.secrets.found = new Set(s.found);
+    if (s.shrines) { game.world.secrets.shrineState = s.shrines; game.world.secrets.refresh(); }
+    if (s.gate) game.world.landmarks.openGate();
   } else {
     const S = game.world.dock.anchors.shore!;
     c.placeAt(S.x + 1, S.z + 3);
@@ -183,6 +188,7 @@ function loop(now: number): void {
   if (state.mode !== 'gallery') game.frame(dt);
   ui.hud.fps = fps;
   ui.hud.dialogue = game.dialogue;
+  ui.hud.haiku = game.viewPan ? { text: game.viewPan.haiku, t: game.viewPan.t } : null;
   ui.hud.fade = game.fade;
   // interact prompt: the targeted thing, or sit / lie / stand where you are
   if (state.mode === 'play') {

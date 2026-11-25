@@ -56,6 +56,14 @@ export class AudioSystem {
       o.connect(bp); bp.connect(g); g.connect(out);
       o.start(t); o.stop(t + 0.15);
     };
+    game.onEvent = (kind, pos) => {
+      const p = game.controller.position;
+      if (kind === 'found') { this.music.sting(); return; }
+      const out = this.mix.spatial(kind === 'bell' ? 'ambience' : 'sfx', pos.x - p.x, pos.y - p.y, pos.z - p.z, kind === 'bell' ? 14 : 3, 0.5);
+      if (kind === 'bell') playVoice('templeBell', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
+      else if (kind === 'offer') { playVoice('furin', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white); this.music.sting(); }
+      else playVoice('bambooKnock', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
+    };
     game.onSplash = (pos) => {
       const p = game.controller.position;
       const out = this.mix.spatial('nature', pos.x - p.x, pos.y - p.y, pos.z - p.z, 2, 0.4);

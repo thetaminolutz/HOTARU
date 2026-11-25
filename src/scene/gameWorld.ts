@@ -20,6 +20,7 @@ import { createLeaves } from '../particles/particles';
 import { AmbientFx } from '../particles/ambient';
 import { Villages, deckAt } from '../buildings/villages';
 import { Landmarks } from '../buildings/landmarks';
+import { Secrets } from '../secrets/secrets';
 import { Fauna } from '../fauna/fauna';
 import { People } from '../people/people';
 import { Rivers } from '../water/rivers';
@@ -45,6 +46,7 @@ export class GameWorld {
   fauna!: Fauna;
   people!: People;
   landmarks!: Landmarks;
+  secrets!: Secrets;
   rivers!: Rivers;
   kits = new Map<string, TreeKit>();
   readonly rainbow = new SkyRainbow();
@@ -107,6 +109,8 @@ export class GameWorld {
       const kumoji = this.villages.villages.find((v) => v.layout.def.id === 'kumoji')?.layout.torii;
       this.landmarks = new Landmarks(this.world, kumoji ? { x: kumoji.x, z: kumoji.z, rot: kumoji.rot } : null);
       this.scene.add(this.landmarks.group);
+      this.villages.clearings.rects.push(...this.landmarks.clear.rects);
+      this.villages.clearings.segs.push(...this.landmarks.clear.segs);
       const C = this.world.sites.castle;
       this.villages.clearings.rects.push([C.x - 40, C.z - 55, C.x + 40, C.z + 40]);
       registerPoi({ x: C.x, z: C.z, kind: 'landmark', name: 'Kagejō castle' });
@@ -116,6 +120,9 @@ export class GameWorld {
       this.scene.add(this.fauna.group);
       this.people = new People(this, seed);
       this.scene.add(this.people.mesh);
+      this.secrets = new Secrets(this);
+      this.scene.add(this.secrets.group);
+      for (const sc of this.secrets.list) registerPoi({ x: sc.pos.x, z: sc.pos.z, kind: 'secret-' + sc.kind, name: sc.label });
     });
     this.steps.push(() => {
       const kits = new Map(TREE_SPECIES.map((sp, i) => [sp.id, new TreeKit(sp, atlas, seed + i * 101)]));

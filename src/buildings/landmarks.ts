@@ -32,6 +32,9 @@ export class Landmarks {
   gateOpen = 0;
   bellPos = new THREE.Vector3();
   readonly keepTop = new THREE.Vector3();
+  readonly keepCenter = new THREE.Vector3();
+  /** ground kept free of trees and grass (stairway, temple terrace) */
+  readonly clear: { rects: [number, number, number, number][]; segs: [number, number, number, number, number][] } = { rects: [], segs: [] };
   private parts = new Map<string, THREE.BufferGeometry[]>();
   private M: Record<string, THREE.ShaderMaterial>;
 
@@ -110,6 +113,7 @@ export class Landmarks {
     this.box('wood', cx, L + 3.4, cz + half + 2.35, 10, 0.3, 0.2);
     // the keep (tenshu) on a battered stone base, five storeys climbing to a balcony
     const kx = cx + 4, kz = cz - 8, base = 6, bw = 18;
+    this.keepCenter.set(kx, L + base, kz);
     for (let c = 0; c < 4; c++) this.box('stone', kx, L + (c + 0.5) * (base / 4), kz, bw - c * 1.2, base / 4 + 0.02, bw - c * 1.2);
     this.colliders.push({ x0: kx - bw / 2, z0: kz - bw / 2, x1: kx + bw / 2, z1: kz + bw / 2, top: L + base - 0.2 });
     // a stone stair up the base on the south side
@@ -151,7 +155,7 @@ export class Landmarks {
         }
       }
       fy += fh + 0.5;
-      fw -= 2.6;
+      fw -= 1.6;
     }
     // the top roof and a ridge with shachi ornaments
     this.box('tile', kx, fy + 0.6, kz, fw + 2.4, 1.2, fw + 2.4);
@@ -220,6 +224,7 @@ export class Landmarks {
       y = Math.max(y, Math.min(g + 0.2, y + 0.3));
       steps.push(new THREE.Vector3(x, y, z));
     }
+    this.clear.segs.push([tx, tz, steps[steps.length - 1]!.x, steps[steps.length - 1]!.z, 4]);
     for (const s of steps) {
       this.box('stone', s.x, s.y - 0.8, s.z, 3.2, 1.6, 0.66, rot);
       this.decks.push([s.x - 1.6, s.z - 1.6, s.x + 1.6, s.z + 1.6, s.y]);
@@ -232,6 +237,7 @@ export class Landmarks {
     const top = steps[steps.length - 1]!;
     const hx = top.x + ax * 14, hz = top.z + az * 14, hy = top.y;
     this.box('stone', hx, hy - 1, hz, 26, 2.2, 26);
+    this.clear.rects.push([hx - 16, hz - 16, hx + 16, hz + 16]);
     this.decks.push([hx - 13, hz - 13, hx + 13, hz + 13, hy + 0.1]);
     // main hall
     const mx = hx + az * 4, mz = hz - ax * 4;
