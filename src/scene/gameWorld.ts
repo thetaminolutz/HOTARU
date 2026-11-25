@@ -16,7 +16,8 @@ import { GrassField } from '../flora/grass';
 import { groundAtlas } from '../flora/groundAtlas';
 import { TREE_SPECIES } from '../flora/data/trees';
 import { DockScene } from '../buildings/dockScene';
-import { createFireflies, createLeaves } from '../particles/particles';
+import { createLeaves } from '../particles/particles';
+import { AmbientFx } from '../particles/ambient';
 import { toTexture, leafAtlas, glowSprite } from '../render/textures';
 import type { Quality } from '../config';
 import { registerPoi } from '../secrets/poi';
@@ -33,6 +34,7 @@ export class GameWorld {
   dock!: DockScene;
   terrainMaterial!: THREE.ShaderMaterial;
   grass!: GrassField;
+  fx!: AmbientFx;
   private steps: (() => void | Promise<void>)[] = [];
 
   constructor(readonly seed: number, private quality: Quality) {
@@ -82,12 +84,17 @@ export class GameWorld {
     });
     this.steps.push(() => {
       const H = this.world.height;
-      const S = this.dock.anchors.shore!;
       this.grass = new GrassField(this.pool, seed, gAtlas);
       this.grass.exclude = this.dock.decks.map(([x0, z0, x1, z1]) => [x0 - 0.2, z0 - 0.2, x1 + 0.2, z1 + 0.2]);
       this.applyGrassQuality(this.quality);
       this.scene.add(this.grass.mesh);
-      this.scene.add(createFireflies(new THREE.Vector3(S.x + 10, 0, S.z - 2), 28, Math.round(180 * this.quality.particles), H));
+      this.fx = new AmbientFx(this.world, seed);
+      this.fx.scale = this.quality.particles;
+      // hot-spring steam at Yukemuri and fumaroles on the volcano
+      for (const [x, z, a] of [[-380, -4050, 1], [-260, -4180, 0.7], [1900, -4200, 0.8], [2050, -4120, 0.5]] as const) {
+        this.fx.addEmitter({ effect: 'steam', pos: new THREE.Vector3(x, H(x, z), z), amount: a });
+      }
+      this.scene.add(this.fx.group);
       const m = this.dock.anchors.maple!;
       this.scene.add(createLeaves(new THREE.Vector3(m.x + 3, m.y + 9, m.z - 3), new THREE.Vector3(12, 9, 12), Math.round(90 * this.quality.particles), 0.1));
     });
@@ -116,6 +123,7 @@ export class GameWorld {
     this.terrainMaterial.uniforms.uTreeRadius!.value = this.forest.radius;
     this.terrain.splitFactor = q.name === 'low' ? 0.8 : q.name === 'high' ? 1.3 : 1.0;
     this.applyGrassQuality(q);
+    if (this.fx) this.fx.scale = q.particles;
   }
 
   private applyGrassQuality(q: Quality): void {

@@ -146,6 +146,15 @@ function clusterLayout(sp: TreeSpecies, seed: number): { c: THREE.Vector3; size:
         p = new THREE.Vector3(Math.cos(a) * rr, y, Math.sin(a) * rr);
         break;
       }
+      case 'weep': { // a crown with curtains of hanging branches
+        const a = (i / sp.clusters) * Math.PI * 2 + r.next() * 0.4;
+        const hang = i % 3;
+        const rr = sp.radius * (hang === 0 ? 0.45 : 0.85 + r.next() * 0.15);
+        const y = hang === 0 ? sp.height * (0.78 + r.next() * 0.15) : sp.height * (hang === 1 ? 0.62 : 0.36) + r.range(-0.3, 0.3);
+        p = new THREE.Vector3(Math.cos(a) * rr, y, Math.sin(a) * rr);
+        out.push({ c: p, size: size * (hang === 2 ? 0.8 : 1) });
+        continue;
+      }
       default: {
         const a = r.next() * Math.PI * 2, u = r.next();
         p = new THREE.Vector3(Math.cos(a) * sp.radius * 0.6 * u, sp.height * (0.35 + 0.3 * r.next()), Math.sin(a) * sp.radius * 0.6 * u);
@@ -171,7 +180,7 @@ function trunkGeometry(sp: TreeSpecies): THREE.BufferGeometry {
   }
   g.computeVertexNormals();
   parts.push(g);
-  if (sp.shape === 'dome' || sp.shape === 'pads') {
+  if (sp.shape === 'dome' || sp.shape === 'pads' || sp.shape === 'weep') {
     for (let b = 0; b < 3; b++) {
       const br = new THREE.CylinderGeometry(sp.trunkRadius * 0.2, sp.trunkRadius * 0.45, sp.radius * 0.9, 4, 1);
       br.translate(0, sp.radius * 0.45, 0);

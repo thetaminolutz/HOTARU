@@ -168,6 +168,8 @@ export class Game {
 
     this.world.dock.update(elapsed, w);
     this.world.update(this.controller.position);
+    const cp = this.controller.position;
+    this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.pipeline.uploadLights(this.world.dock.lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
 

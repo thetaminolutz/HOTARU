@@ -80,7 +80,7 @@ export function placeGround(w: World, x0: number, z0: number, size: number, dens
     gr *= 1 - lush * 0.35; gg *= 1 + lush * 0.25; gb *= 1 - lush * 0.2;
     const dryT = Math.max(0, 0.5 - moist) + Math.max(0, patch) * 0.3 * b.autumn;
     gr += (lin(0.62) - gr) * dryT * 0.5; gg += (lin(0.52) - gg) * dryT * 0.4; gb += (lin(0.26) - gb) * dryT * 0.4;
-    const j = 0.85 + u3 * 0.3;
+    const j = (0.85 + u3 * 0.3) * (forest > 0.55 ? 1.35 : 1);
     out.push(px, h - 0.05, pz, height, gr * j * 1.3, gg * j * 1.3, gb * j * 1.3, variant);
   }
   return new Float32Array(out);
