@@ -45,7 +45,7 @@ export class Controller {
   slowSpeed = 1.1;
   flySpeed = 18;
   headBob = true;
-  private vel = new THREE.Vector3();
+  readonly vel = new THREE.Vector3();
   private bob = 0;
   private dip = 0;
   private dipV = 0;

@@ -14,6 +14,8 @@ export type Shot = {
   wind?: number;
   /** Rowing boat position relative to the shore point: [x, z, heading]. */
   boat?: [number, number, number];
+  /** animals placed in view: [species, metres ahead, metres to the right, count] */
+  fauna?: [string, number, number, number][];
 };
 
 const off = (w: GameWorld, x: number, y: number, z: number) => w.dock.anchors.shore!.clone().add(new THREE.Vector3(x, y, z));
@@ -63,6 +65,15 @@ export const SHOTS: Shot[] = [
   { name: 'harbour', label: 'Shiomachi fishing village', hour: 8.5, elapsed: 1200, pos: (w) => street(w, 'shiomachi', 0.25, 1.7), look: (w) => street(w, 'shiomachi', 0.6, 2), fov: 70 },
   { name: 'onsen-village', label: 'Yukemuri hot-spring village', hour: 17.8, elapsed: 1200, pos: (w) => street(w, 'yukemuri', 0.35, 1.7), look: (w) => street(w, 'yukemuri', 0.65, 2), fov: 70 },
   { name: 'shrine-torii', label: 'Torii at Kumoji', hour: 15, elapsed: 1200, pos: (w) => street(w, 'kumoji', 0.82, 1.7), look: (w) => street(w, 'kumoji', 1, 2.6), fov: 70 },
+  // M8: fauna
+  { name: 'temple-deer', label: 'Deer at the temple', hour: 9.5, elapsed: 1200, pos: (w) => street(w, 'kumoji', 0.6, 1.7), look: (w) => street(w, 'kumoji', 0.8, 0.8), fov: 70, fauna: [['sikaDeer', 7, 0, 5], ['pigeon', 4, -2, 6]] },
+  { name: 'village-cats', label: 'Cats and sparrows in Ichiba', hour: 15.5, elapsed: 1200, pos: (w) => street(w, 'ichiba', 0.5, 1.7), look: (w) => street(w, 'ichiba', 0.6, 0.4), fov: 70, fauna: [['cat', 3.5, 0.6, 1], ['calico', 4.5, -1.2, 1], ['shiba', 6, 1.5, 1], ['sparrow', 5, -0.5, 7]] },
+  { name: 'farm-animals', label: 'Horses and chickens at Inaho', hour: 10.5, elapsed: 1200, pos: (w) => street(w, 'inaho', 0.3, 1.7), look: (w) => street(w, 'inaho', 0.42, 0.8), fov: 72, fauna: [['horse', 12, 4, 2], ['chicken', 5, -1, 6], ['crow', 9, -4, 2]] },
+  { name: 'lake-ducks', label: 'Ducks on Lantern Lake', hour: 16.8, elapsed: 900, wind: 0.2, pos: (w) => off(w, -12, 2.2, -32), look: (w) => off(w, -14, 0, -44), fov: 62, fauna: [['duck', 10, 0, 5], ['mandarin', 13, 3, 3], ['heron', 7, -5, 1]] },
+  { name: 'onsen-macaques', label: 'Macaques at Yukemuri', hour: 13, elapsed: 1200, pos: (w) => street(w, 'yukemuri', 0.45, 1.7), look: (w) => street(w, 'yukemuri', 0.6, 0.6), fov: 70, fauna: [['macaque', 6, 0, 5], ['akita', 4, 2, 1]] },
+  { name: 'marsh-cranes', label: 'Cranes in the reed marsh', hour: 8.2, elapsed: 1200, pos: (w) => at(w, 3700, 1700, 3.6), look: (w) => at(w, 3790, 1650, 0.5), fov: 62, fauna: [['crane', 14, 0, 4], ['egret', 9, -5, 2], ['dragonfly', 3, 0, 6]] },
+  { name: 'meadow-wildlife', label: 'Foxes and butterflies at golden hour', hour: 17.3, elapsed: 1200, wind: 0.5, pos: (w) => at(w, 2900, 3000, 1.6), look: (w) => at(w, 2960, 2940, 1), fov: 70, fauna: [['fox', 9, 1, 2], ['swallowtail', 3, -1, 3], ['smallWhite', 4, 1, 4], ['pheasant', 12, -4, 1]] },
+  { name: 'forest-night', label: 'Tanuki at night', hour: 22.5, elapsed: 1200, pos: (w) => street(w, 'inaho', 0.85, 1.6), look: (w) => street(w, 'inaho', 0.95, 0.3), fov: 70, fauna: [['tanuki', 5, 0, 3], ['frog', 3, -1.5, 4]] },
   // M5: vegetation, wind & particles
   { name: 'meadow-flowers', label: 'Cosmos fields', hour: 15.5, elapsed: 1200, wind: 0.7, pos: (w) => at(w, 2900, 3000, 1.6), look: (w) => at(w, 2960, 2940, 1), fov: 70 },
   { name: 'cherry-hills', label: 'Cherry hills, falling leaves', hour: 16.5, elapsed: 1200, wind: 0.8, pos: (w) => at(w, 2300, -400, 1.7), look: (w) => at(w, 2380, -460, 4), fov: 70 },

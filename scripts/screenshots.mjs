@@ -57,11 +57,14 @@ const M5_SHOTS = ['dock-night', 'dock-day', 'cedar-forest', 'meadow-flowers', 'c
 const M7_SHOTS = ['market-street', 'market-dusk', 'villages-night', 'interior-day', 'interior-night', 'thatch-village', 'harbour', 'onsen-village', 'shrine-torii']
   .map((n) => ({ name: n, q: 'shot=' + n }));
 
+const M8_SHOTS = ['temple-deer', 'village-cats', 'farm-animals', 'lake-ducks', 'onsen-macaques', 'marsh-cranes', 'meadow-wildlife', 'forest-night']
+  .map((n) => ({ name: n, q: 'shot=' + n }));
+
 const M13_SHOTS = [
   { name: 'settings-sound', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'sound'; }) },
 ];
 
-const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M5: M5_SHOTS, M7: M7_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M5: M5_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();

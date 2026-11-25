@@ -15,11 +15,11 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M1 | Foundations & THE LOOK prototype | ✅ Done | [M1](docs/screenshots/M1/) | pending (run on iPad) |
 | M2 | Terrain & world streaming | ✅ Done | [M2](docs/screenshots/M2/) | pending (run on iPad) |
 | M3 | Player controller & controls | ✅ Done | [M3](docs/screenshots/M3/) | pending (run on iPad) |
-| M4 | Water | ⬜ Not started | — | — |
+| M4 | Water | 🔨 In progress | — | — |
 | M5 | Vegetation, wind & particles | ✅ Done | [M5](docs/screenshots/M5/) | pending (run on iPad) |
 | M6 | Regions, weather & seasons | ⬜ Not started | — | — |
 | M7 | Buildings, villages & interiors | ✅ Done | [M7](docs/screenshots/M7/) | pending (run on iPad) |
-| M8 | Fauna | 🔨 In progress | — | — |
+| M8 | Fauna | ✅ Done | [M8](docs/screenshots/M8/) | pending (run on iPad) |
 | M9 | Villagers & wanderers | ⬜ Not started | — | — |
 | M10 | Castle, shrines, caves & secrets | ⬜ Not started | — | — |
 | M11 | Items, journal, map, photo, boats, fishing | ⬜ Not started | — | — |
@@ -30,6 +30,37 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M8 at a glance (animals)
+
+**41 species**, all peaceful, all animated in code:
+
+- **Wild animals:** sika deer, tanuki, foxes (and a rare white fox at night), macaques, serow, hares, boar with striped piglets, squirrels, tortoises, tree frogs
+- **Village and farm animals:** cats (tabby, calico, black), shiba and akita dogs, horses, cows, chickens, a temple goat
+- **Birds:** cranes, herons, egrets, ducks, mandarin ducks, gulls, kites, crows, sparrows, swallows, pigeons, pheasants, ptarmigans, owls
+- **Water life and insects:** koi, crabs, red dragonflies, swallowtails, small whites, bees
+
+How they behave:
+- They live where they should, and at their own hours. Deer lie down in the grass at night, and tanuki come out at dusk.
+- Jogging scares them and birds take off. Stand still and the curious ones come over.
+- You can pet cats, dogs and horses, which slowly builds their trust.
+- Bow to the temple deer and they bow back.
+
+| Deer at the temple | Cats and sparrows in Ichiba |
+|---|---|
+| ![](docs/screenshots/M8/temple-deer.png) | ![](docs/screenshots/M8/village-cats.png) |
+| **Macaques at Yukemuri** | **Tanuki at night** |
+| ![](docs/screenshots/M8/onsen-macaques.png) | ![](docs/screenshots/M8/forest-night.png) |
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 47 passed (41 species, every body builds with animatable parts) |
+| Fauna e2e (`npm run e2e:fauna`) | ✅ animals in 100 % of 10 places × day/night, flee from a jogger, petting builds trust, deer bow back |
+| Other e2e | ✅ offline, stability, controls, audio, houses |
+| Draw calls · triangles (headless benchmark, all passes) | Low 281 · 1.29 M — Medium 329 · 1.65 M — High 374 · 1.95 M |
+
+Medium is now slightly over the 1.5 M triangle budget (forests + animals); M14 trims LODs
+against the real iPad benchmark.
 
 ### M7 at a glance (villages & houses)
 
@@ -245,6 +276,7 @@ npm run e2e:stability  # pixel stability test
 npm run e2e:controls   # walking, swimming, sitting, Pencil tap
 npm run e2e:audio      # audio unlock, output and per-place mix
 npm run e2e:houses     # walk into a house
+npm run e2e:fauna      # animals: presence, fleeing, petting, bowing
 npm run audio:samples  # render music samples → docs/audio/
 npm run icons          # regenerate app icons & launch images
 ```

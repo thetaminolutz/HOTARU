@@ -10,6 +10,8 @@ import { Sfx, type Surface } from './sfx';
 import type { Game } from '../app/game';
 import { REGIONS } from '../world/data/regions';
 import { clock } from '../core/clock';
+import { playVoice, type VoiceId } from './voices';
+import { createRng } from '../core/rng';
 
 export type AudioVolumes = { master: number; music: number; ambience: number; sfx: number; musicFrequency: MusicFrequency };
 
@@ -22,6 +24,7 @@ export class AudioSystem {
   private b = { forest: 0, moisture: 0, autumn: 0, special: 0, specialW: 0, grass: [0, 0, 0] as [number, number, number], region: 0 };
   private lastRegion = '';
   private visited = new Set<string>();
+  private rng = createRng(0xa71);
 
   constructor(ctx: AudioContext, private game: Game, vol: AudioVolumes) {
     this.mix = new Mixer(ctx);
@@ -35,6 +38,15 @@ export class AudioSystem {
     c.onJump = () => this.sfx.jump();
     c.onLand = (impact) => this.sfx.land(this.surface(), impact);
     c.onStroke = () => this.sfx.stroke();
+    // animals call from where they are
+    game.world.fauna.onCall = (voice, pos) => {
+      const id: VoiceId = voice === 'coo' ? 'dove' : voice;
+      const p = game.controller.position;
+      const dx = pos.x - p.x, dy = pos.y - p.y, dz = pos.z - p.z;
+      if (dx * dx + dz * dz > 120 * 120) return;
+      const out = this.mix.spatial('nature', dx, dy, dz, 4, 0.35);
+      playVoice(id, this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
+    };
   }
 
   setVolumes(v: AudioVolumes): void {
