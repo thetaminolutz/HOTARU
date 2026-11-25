@@ -256,7 +256,7 @@ export class Adventure {
   useTool(): void {
     const t = this.inv.current;
     if (t === 'rod') { if (this.fishing.active) this.fishing.stop(); else this.tryCast(); }
-    else if (t === 'flute') { this.onSound?.('flute', this.g.controller.position); this.g.onToast?.('You play a few soft notes.'); }
+    else if (t === 'flute') { this.onSound?.('flute', this.g.controller.position); this.g.onToast?.('You play a few soft notes.'); this.g.mystic.onFlute(this.g.controller.position); }
     else if (t === 'umbrella') this.umbrellaOpen = !this.umbrellaOpen;
     else if (t === 'lantern') this.lanternLit = !this.lanternLit;
   }

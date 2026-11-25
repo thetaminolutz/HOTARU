@@ -131,6 +131,7 @@ export class Ending {
     if (at(44)) {
       // the masked stranger takes off the mask
       const m = g.world.people.people.find((p) => p.wanderer?.id === 'masked');
+      g.controller.mode = 'walk';
       if (m) {
         m.unmasked = true;
         const pe = g.world.dock.anchors.pierEnd!;

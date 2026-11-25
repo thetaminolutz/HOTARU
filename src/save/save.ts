@@ -24,6 +24,8 @@ export type SaveV1 = {
   shrines?: Record<string, { level: number; lastDay: number }>;
   gate?: boolean;
   /** items, journal, map, album, garden (M11) */
+  /** the story's ending (M12) */
+  story?: { done?: boolean; given?: boolean };
   adv?: { journey?: Record<string, unknown>; garden?: number[] };
 };
 

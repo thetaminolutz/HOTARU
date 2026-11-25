@@ -102,7 +102,7 @@ function resize(): void {
 async function save(): Promise<void> {
   if (state.mode !== 'play') return;
   const c = game.controller;
-  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0, adv: game.adv.toJSON() as SaveData['adv'] });
+  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0, adv: game.adv.toJSON() as SaveData['adv'], story: game.mystic.toJSON() });
   state.save = await readSave(1);
 }
 
@@ -119,6 +119,7 @@ function startPlay(continueSave: boolean): void {
     if (s.found) game.world.secrets.found = new Set(s.found);
     if (s.shrines) { game.world.secrets.shrineState = s.shrines; game.world.secrets.refresh(); }
     if (s.gate) game.world.landmarks.openGate();
+    if (s.story) game.mystic.load(s.story);
     if (s.adv) game.adv.load(s.adv as Parameters<typeof game.adv.load>[0]);
   } else {
     const S = game.world.dock.anchors.shore!;
@@ -192,7 +193,8 @@ function loop(now: number): void {
   if (state.mode !== 'gallery') game.frame(dt);
   ui.hud.fps = fps;
   ui.hud.dialogue = game.dialogue;
-  ui.hud.haiku = game.viewPan ? { text: game.viewPan.haiku, t: game.viewPan.t } : null;
+  const ml = game.mystic.line;
+  ui.hud.haiku = game.viewPan ? { text: game.viewPan.haiku, t: game.viewPan.t } : ml ? { text: ml.text, t: ml.t + 1 } : null;
   ui.hud.fade = game.fade;
   // interact prompt: the targeted thing, or sit / lie / stand where you are
   if (state.mode === 'play') {

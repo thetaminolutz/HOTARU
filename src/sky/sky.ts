@@ -21,6 +21,9 @@ uniform float uStars;
 uniform vec3 uClouds;
 uniform vec3 uCloudLit;
 uniform float uMoonPhase;
+uniform float uMeteors;
+uniform float uEclipse;
+uniform float uMoonScale;
 varying vec3 vDir;
 
 vec3 stars(vec3 d){
@@ -76,12 +79,28 @@ void main(){
   if (uStars > 0.01) {
     c += stars(d) * uStars;
     c += vec3(0.22, 0.24, 0.36) * milkyWay(d) * uStars * 0.12;
+    // a meteor shower (world event): short bright streaks falling across the sky
+    if (uMeteors > 0.0 && d.y > 0.15) {
+      vec2 sp = vec2(atan(d.x, d.z), asin(d.y));
+      for (int k = 0; k < 4; k++) {
+        float tt = uTime * (0.35 + 0.1 * float(k)) + float(k) * 0.37;
+        float id = floor(tt), f = fract(tt);
+        if (hash12(vec2(id, float(k) * 7.1)) > uMeteors) continue;
+        vec2 st = vec2((hash12(vec2(id, 3.0 + float(k))) - 0.5) * 6.28, 0.45 + hash12(vec2(id, 9.0 + float(k))) * 0.7);
+        vec2 dir = normalize(vec2(-0.6 + hash12(vec2(id, 5.0)) * 0.3, -0.45));
+        vec2 head = st + dir * f * 0.45, tail = head - dir * 0.09;
+        vec2 pa = sp - tail, ba = head - tail;
+        float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+        float dist = length(pa - ba * h);
+        c += vec3(1.4, 1.35, 1.2) * step(dist, 0.0028) * h * (1.0 - f) * uStars;
+      }
+    }
   }
 
   // moon
   vec3 md = normalize(uMoonDir);
   float mdot = dot(d, md);
-  float mr = 0.028;
+  float mr = 0.028 * uMoonScale;
   if (md.y > -0.1) {
     float ang = acos(clamp(mdot, -1.0, 1.0));
     if (ang < mr) {
@@ -93,7 +112,8 @@ void main(){
       float lit = step(cos(6.2831853 * uMoonPhase) * sqrt(max(0.0, 1.0 - q.y * q.y)), side);
       float crater = step(0.62, vnoise(floor(q * 6.0) + 4.0));
       vec3 mc = mix(vec3(1.25, 1.22, 1.08), vec3(0.95, 0.95, 1.0), crater) * (0.85 + 0.15 * q.y);
-      c = mix(c, mc * 1.6, max(lit, 0.08) * smoothstep(0.0, 0.08, md.y + 0.05));
+      mc = mix(mc, vec3(0.75, 0.22, 0.12) * (0.7 + 0.3 * crater), uEclipse);
+      c = mix(c, mc * 1.6, max(max(lit, 0.08), uEclipse) * smoothstep(0.0, 0.08, md.y + 0.05));
     } else {
       c += vec3(0.25, 0.3, 0.5) * pow(max(mdot, 0.0), 900.0) * 1.2 * uStars;
       c += vec3(0.08, 0.1, 0.18) * pow(max(mdot, 0.0), 60.0) * uStars;
@@ -108,8 +128,8 @@ void main(){
 }
 `;
 
-export function createSky(): { mesh: THREE.Mesh; uniforms: { uPixelAngle: { value: number }; uMoonPhase: { value: number } } } {
-  const extra = { uPixelAngle: { value: 0.0036 }, uMoonPhase: { value: 0.0 } };
+export function createSky(): { mesh: THREE.Mesh; uniforms: { uPixelAngle: { value: number }; uMoonPhase: { value: number }; uMeteors: { value: number }; uEclipse: { value: number }; uMoonScale: { value: number } } } {
+  const extra = { uPixelAngle: { value: 0.0036 }, uMoonPhase: { value: 0.0 }, uMeteors: { value: 0.0 }, uEclipse: { value: 0.0 }, uMoonScale: { value: 1.0 } };
   const mat = new THREE.ShaderMaterial({
     uniforms: { ...U, ...extra },
     vertexShader: VERT, fragmentShader: FRAG, side: THREE.BackSide, depthWrite: false,

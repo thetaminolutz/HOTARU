@@ -89,6 +89,24 @@ export class AudioSystem {
         }
       }
     };
+    // festivals, spirits, the ending (M12)
+    game.mystic.onSound = (kind, pos) => {
+      const p = game.controller.position, ctx = this.mix.ctx, t = this.mix.now + 0.02;
+      const at = (bus: 'sfx' | 'ambience' | 'nature', ref: number) => this.mix.spatial(bus, pos.x - p.x, pos.y - p.y, pos.z - p.z, ref, 0.3);
+      switch (kind) {
+        case 'taiko': playNote(ctx, at('ambience', 12), 'taiko', t, 41 + (this.rng.next() < 0.3 ? 5 : 0), 0.4, 0.7); break;
+        case 'boom': {
+          // the light comes first, the boom later (distance / speed of sound)
+          const delay = Math.min(1.5, pos.distanceTo(p) / 340);
+          playNote(ctx, at('ambience', 60), 'taiko', t + delay, 31, 1.2, 0.9);
+          playVoice('twig', ctx, at('ambience', 40), t + delay + 0.25, this.rng, this.mix.noise.white);
+          break;
+        }
+        case 'click': playVoice('bambooKnock', ctx, at('nature', 1), t, this.rng, this.mix.noise.white); break;
+        case 'bell': playVoice('templeBell', ctx, at('ambience', 14), t, this.rng, this.mix.noise.white); break;
+        case 'chime': this.music.sting(); playVoice('furin', ctx, this.mix.direct('sfx', 1, 0.2), t, this.rng, this.mix.noise.white); break;
+      }
+    };
     game.photo.onShutter = () => game.adv.onSound?.('shutter', game.controller.position);
     game.onSplash = (pos) => {
       const p = game.controller.position;
