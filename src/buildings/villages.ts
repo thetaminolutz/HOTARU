@@ -19,6 +19,8 @@ import { U } from '../render/uniforms';
 import type { World } from '../world/heightfield';
 
 const NEAR = 480;
+
+export type Lantern = { village: string; pos: THREE.Vector3; lit: boolean; light: Light; start: number; count: number; mesh: THREE.Mesh | null };
 const AMBER = new THREE.Color(1.0, 0.6, 0.24);
 
 type VillageRT = {
@@ -41,6 +43,8 @@ export class Villages {
   readonly rooms: { r: Rect; y0: number; y1: number }[] = [];
   readonly roads: { path: Path; chunks: THREE.Mesh[] }[] = [];
   readonly emitters: THREE.Vector3[] = [];
+  /** street lanterns, each lit or out */
+  readonly lanterns: Lantern[] = [];
   private M: Record<MatKey | 'far' | 'farWin' | 'road' | 'door' | 'vermilion', THREE.ShaderMaterial>;
 
   constructor(private world: World, seed: number, dock: THREE.Vector3) {
@@ -99,11 +103,14 @@ export class Villages {
     }
     // lantern posts, the well and the torii
     const post: THREE.BufferGeometry[] = [], lamp: THREE.BufferGeometry[] = [], verm: THREE.BufferGeometry[] = [];
+    const lanternRecs: Lantern[] = [];
     const an = andon(0.32, 0.42);
     for (const l of layout.lanterns) {
       post.push(boxUV(0.14, 1.3, 0.14, 1).translate(l.x, l.y + 0.65, l.z));
       lamp.push(an.clone().translate(l.x, l.y + 1.3, l.z));
-      this.lights.push({ pos: new THREE.Vector3(l.x, l.y + 1.65, l.z), color: AMBER.clone(), radius: 8, intensity: 1.8, halo: 1.2, phase: l.x });
+      const light = { pos: new THREE.Vector3(l.x, l.y + 1.65, l.z), color: AMBER.clone(), radius: 8, intensity: 1.8, halo: 1.2, phase: l.x };
+      this.lights.push(light);
+      lanternRecs.push({ village: layout.def.id, pos: new THREE.Vector3(l.x, l.y + 1.5, l.z), lit: true, light, start: 0, count: 0, mesh: null });
     }
     const wl = layout.well;
     (parts.stone ??= []).push(new THREE.CylinderGeometry(0.8, 0.85, 0.8, 10, 1, true).toNonIndexed().translate(wl.x, wl.y + 0.4, wl.z));
@@ -120,7 +127,17 @@ export class Villages {
       for (const p of g) verm.push(p.rotateY(t.rot).translate(t.x, t.y, t.z));
     }
     if (post.length) (parts.darkwood ??= []).push(...post);
-    if (lamp.length) (parts.paper ??= []).push(...lamp);
+    if (lamp.length) {
+      // lantern posts get their own mesh so each can be lit or put out (the lantern maker's round)
+      let start = 0;
+      lamp.forEach((g, i) => { const n = g.index ? g.index.count : g.getAttribute('position').count; lanternRecs[i]!.start = start; lanternRecs[i]!.count = n; start += n; });
+      const m = new THREE.Mesh(mergeGeoms(lamp), this.M.paper);
+      m.name = 'village-lanterns';
+      const col = m.geometry.getAttribute('aColor') as THREE.BufferAttribute;
+      m.userData.alpha = Float32Array.from({ length: col.count }, (_, i) => col.getW(i));
+      for (const l of lanternRecs) { l.mesh = m; this.lanterns.push(l); }
+      rt.near.add(m);
+    }
     const nearMeshes: THREE.Mesh[] = [];
     for (const [k, list] of Object.entries(parts) as [MatKey, THREE.BufferGeometry[]][]) {
       if (!list.length) continue;
@@ -182,7 +199,7 @@ export class Villages {
   }
 
   /** Per frame: LOD, doors, futons, road chunks, nearby rooms for the shader. */
-  update(cam: THREE.Vector3, player: THREE.Vector3, hour: number, dt: number): void {
+  update(cam: THREE.Vector3, player: THREE.Vector3, hour: number, dt: number, openers: THREE.Vector3[] = []): void {
     const night = hour > 21.5 || hour < 6.2;
     for (const v of this.villages) {
       const d = Math.hypot(cam.x - v.center.x, cam.z - v.center.z) - v.layout.def.r;
@@ -192,7 +209,8 @@ export class Villages {
       if (v.night) v.night.visible = night;
       for (const dr of v.doors) {
         const dist = dr.mesh.position.distanceTo(player);
-        const want = dist < 2.6 ? 1 : 0;
+        let want = dist < 2.6 ? 1 : 0;
+        if (!want && dist < 60) for (const o of openers) if (Math.abs(o.x - dr.door.pos.x) < 2.2 && Math.abs(o.z - dr.door.pos.z) < 2.2) { want = 1; break; }
         dr.open += (want - dr.open) * Math.min(1, dt * 6);
         dr.mesh.position.copy(dr.door.pos).addScaledVector(dr.door.slide, dr.open);
         dr.mesh.visible = dist < 120;
@@ -211,6 +229,17 @@ export class Villages {
       (U.uRoomY.value[i] as THREE.Vector2).set(rm.y0, rm.y1);
     });
     U.uRoomCount.value = near.length;
+  }
+
+  /** Light or put out one street lantern. */
+  setLantern(l: Lantern, lit: boolean): void {
+    if (l.lit === lit || !l.mesh) return;
+    l.lit = lit;
+    l.light.intensity = lit ? 1.8 : 0;
+    const col = l.mesh.geometry.getAttribute('aColor') as THREE.BufferAttribute;
+    const base = l.mesh.userData.alpha as Float32Array;
+    for (let i = l.start; i < l.start + l.count; i++) col.setW(i, lit ? base[i]! : 0);
+    col.needsUpdate = true;
   }
 
   /** Walkable floor height at (x, z) (house floors, steps, bridges), or -Infinity. */

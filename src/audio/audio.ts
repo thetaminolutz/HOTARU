@@ -44,6 +44,18 @@ export class AudioSystem {
       const g = this.mix.ctx.createGain(); g.gain.value = 0.6 + loud * 1.4; g.connect(out);
       playVoice('thunder', this.mix.ctx, g, this.mix.now + delay, this.rng, this.mix.noise.brown);
     };
+    // soft syllable babble in each person's voice (no real speech)
+    game.onBabble = (pitch) => {
+      const ctx = this.mix.ctx, t = this.mix.now + 0.01, out = this.mix.direct('ui', 0.3, 0.1);
+      const o = ctx.createOscillator(), bp = ctx.createBiquadFilter(), g = ctx.createGain();
+      o.type = 'triangle';
+      const f = 190 * pitch * (0.9 + this.rng.next() * 0.25);
+      o.frequency.setValueAtTime(f, t); o.frequency.linearRampToValueAtTime(f * (0.92 + this.rng.next() * 0.16), t + 0.08);
+      bp.type = 'bandpass'; bp.frequency.value = 700 + this.rng.next() * 900; bp.Q.value = 2;
+      g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.18, t + 0.01); g.gain.setTargetAtTime(0, t + 0.05, 0.02);
+      o.connect(bp); bp.connect(g); g.connect(out);
+      o.start(t); o.stop(t + 0.15);
+    };
     game.onSplash = (pos) => {
       const p = game.controller.position;
       const out = this.mix.spatial('nature', pos.x - p.x, pos.y - p.y, pos.z - p.z, 2, 0.4);

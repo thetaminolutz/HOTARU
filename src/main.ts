@@ -98,7 +98,7 @@ function resize(): void {
 async function save(): Promise<void> {
   if (state.mode !== 'play') return;
   const c = game.controller;
-  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day });
+  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust });
   state.save = await readSave(1);
 }
 
@@ -110,6 +110,8 @@ function startPlay(continueSave: boolean): void {
     c.placeAt(s.pos[0], s.pos[2]);
     c.yaw = s.yaw; c.pitch = s.pitch;
     clock.setHour(s.hour); clock.day = s.day;
+    if (s.memory) game.world.people.memory = s.memory;
+    if (s.trust) game.world.fauna.trust = s.trust;
   } else {
     const S = game.world.dock.anchors.shore!;
     c.placeAt(S.x + 1, S.z + 3);
@@ -180,6 +182,7 @@ function loop(now: number): void {
   bench.update(dt, frameMs);
   if (state.mode !== 'gallery') game.frame(dt);
   ui.hud.fps = fps;
+  ui.hud.dialogue = game.dialogue;
   ui.hud.fade = game.fade;
   // interact prompt: the targeted thing, or sit / lie / stand where you are
   if (state.mode === 'play') {

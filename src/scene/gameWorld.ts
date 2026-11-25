@@ -20,6 +20,7 @@ import { createLeaves } from '../particles/particles';
 import { AmbientFx } from '../particles/ambient';
 import { Villages } from '../buildings/villages';
 import { Fauna } from '../fauna/fauna';
+import { People } from '../people/people';
 import { Rivers } from '../water/rivers';
 import { SkyRainbow } from '../sky/rainbow';
 import { toTexture, leafAtlas, glowSprite } from '../render/textures';
@@ -41,6 +42,7 @@ export class GameWorld {
   fx!: AmbientFx;
   villages!: Villages;
   fauna!: Fauna;
+  people!: People;
   rivers!: Rivers;
   kits = new Map<string, TreeKit>();
   readonly rainbow = new SkyRainbow();
@@ -103,6 +105,8 @@ export class GameWorld {
       for (const v of this.villages.villages) registerPoi({ x: v.layout.def.x, z: v.layout.def.z, kind: 'village', name: v.layout.def.name });
       this.fauna = new Fauna(this, seed);
       this.scene.add(this.fauna.group);
+      this.people = new People(this, seed);
+      this.scene.add(this.people.mesh);
     });
     this.steps.push(() => {
       const kits = new Map(TREE_SPECIES.map((sp, i) => [sp.id, new TreeKit(sp, atlas, seed + i * 101)]));
