@@ -71,6 +71,9 @@ Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ do
   - A ferry runs between Shiomachi and the lake every two hours.
 - **Your house:** the boathouse, with a storage chest on its engawa and a small garden
   where seeds grow over days.
+- **Headless perf** (software GL, so only relative): Low 309 draws · 1.32 M triangles,
+  Medium 359 · 1.68 M, High 407 · 1.99 M. That is +2 or 3 draws over M10, for the pickups,
+  the garden and the float.
 
 ### M10 at a glance (castle, temple, caves & secrets)
 
