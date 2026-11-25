@@ -6,6 +6,11 @@
  */
 import type { Rng } from '../core/rng';
 import type { Job, Personality, Age } from './data/people';
+import { JOB_MORE, FAREWELL, GIFT_LIKED, GIFT_KIND, SEASON_TIME } from './data/lines2';
+import { MEMORY, RUMOURS, FESTIVAL_TALK, AFTER_ENDING, STORY_TALK } from './data/lines3';
+import { PROVERBS, QUESTIONS, NEWS, WORDS, LATE_NIGHT, FOOD_TALK, SPIRIT_TALK, PLAY_TALK } from './data/lines5';
+import { WANDERER_MORE, MOOD_MORE, WEATHER_MORE, VILLAGE_MORE, TIPS, ANIMAL_TALK } from './data/lines4';
+export { GIFT_LIKED, GIFT_KIND };
 
 export type TalkCtx = {
   name: string; job: Job; personality: Personality; age: Age;
@@ -13,6 +18,8 @@ export type TalkCtx = {
   season: 'spring' | 'summer' | 'autumn' | 'winter';
   weather: 'fair' | 'rain' | 'snow' | 'storm' | 'fog';
   village: string; friend: string; wanderer?: string;
+  /** a region you visited recently (they notice), a festival going on, the story's ending done */
+  recent?: string; festival?: string; after?: boolean;
 };
 
 type L = string;
@@ -148,7 +155,7 @@ export const VILLAGE_LINES: Record<string, L[]> = {
 export function talk(c: TalkCtx, r: Rng): string[] {
   const out: string[] = [];
   if (c.wanderer) {
-    const lines = WANDERER_LINES[c.wanderer] ?? [];
+    const lines = [...(WANDERER_LINES[c.wanderer] ?? []), ...(WANDERER_MORE[c.wanderer] ?? [])];
     out.push(fill(pick(r, lines), c));
     if (c.wanderer !== 'masked' && r.next() < 0.6) out.push(fill(pick(r, lines.filter((l) => l !== out[0])), c));
     return out;
@@ -156,18 +163,29 @@ export function talk(c: TalkCtx, r: Rng): string[] {
   if (c.met === 0) out.push(fill(pick(r, GREET_FIRST[c.personality]), c));
   else if (c.met >= 5) out.push(fill(pick(r, GREET_FRIEND), c));
   else out.push(fill(pick(r, GREET_AGAIN[c.personality]), c));
+  // they notice where you've been
+  if (c.recent && MEMORY[c.recent] && c.met > 0 && r.next() < 0.35) out.push(fill(pick(r, MEMORY[c.recent]!), c));
   const tod = c.hour < 7 && c.hour >= 4 ? 'dawn' : c.hour < 17 ? 'day' : c.hour < 20 ? 'dusk' : 'night';
+  const todKey = c.hour < 4 ? 'night' : tod;
+  const rumours = Object.values(RUMOURS).flat();
   const pools: [L[], number][] = [
-    [JOB_LINES[c.job], 3], [MOOD_LINES[c.personality], 2], [SEASON_LINES[c.season], 2],
-    [WEATHER_LINES[c.weather], c.weather === 'fair' ? 1 : 3], [TIME_LINES[c.hour < 4 ? 'night' : tod], 1.5], [GOSSIP, c.met > 0 ? 1.5 : 0.3],
-    [VILLAGE_LINES[c.village] ?? [], VILLAGE_LINES[c.village] ? 1.2 : 0],
+    [[...JOB_LINES[c.job], ...JOB_MORE[c.job]], 3], [[...MOOD_LINES[c.personality], ...MOOD_MORE[c.personality]], 2], [SEASON_LINES[c.season], 1.2],
+    [SEASON_TIME[c.season + '-' + todKey] ?? [], 1.2],
+    [[...WEATHER_LINES[c.weather], ...(WEATHER_MORE[c.weather] ?? [])], c.weather === 'fair' ? 1 : 3], [TIME_LINES[todKey], 1], [GOSSIP, c.met > 0 ? 1.5 : 0.3],
+    [[...(VILLAGE_LINES[c.village] ?? []), ...(VILLAGE_MORE[c.village] ?? [])], VILLAGE_LINES[c.village] ? 1.2 : 0],
+    [rumours, c.met > 0 ? 1 : 0.4], [ANIMAL_TALK, 0.7], [TIPS, c.met < 3 ? 0.8 : 0.3],
+    [STORY_TALK, c.age === 'elder' ? 1.5 : 0.4], [PROVERBS, c.age === 'elder' ? 1.2 : 0.4], [QUESTIONS, c.met > 0 && c.met < 6 ? 1 : 0.3],
+    [NEWS, c.met > 1 ? 0.8 : 0], [WORDS, 0.5], [FOOD_TALK, 0.8], [SPIRIT_TALK, 0.6], [PLAY_TALK, c.age === 'child' ? 3 : 0], [LATE_NIGHT, c.hour >= 21 || c.hour < 4 ? 3 : 0],
+    [c.festival ? FESTIVAL_TALK[c.festival] ?? [] : [], c.festival ? 6 : 0],
+    [c.after ? AFTER_ENDING : [], c.after ? 1.5 : 0],
   ];
-  const tot = pools.reduce((a, [, w]) => a + w, 0);
+  const tot = pools.reduce((a, [p, w]) => a + (p.length ? w : 0), 0);
   const n = c.personality === 'chatty' ? 2 : c.personality === 'shy' ? 1 : r.next() < 0.5 ? 2 : 1;
   for (let k = 0; k < n; k++) {
     let u = r.next() * tot;
-    for (const [pool, w] of pools) { u -= w; if (u <= 0) { const line = fill(pick(r, pool), c); if (!out.includes(line)) out.push(line); break; } }
+    for (const [pool, w] of pools) { if (!pool.length) continue; u -= w; if (u <= 0) { const line = fill(pick(r, pool), c); if (!out.includes(line)) out.push(line); break; } }
   }
+  if (r.next() < 0.35) out.push(fill(pick(r, FAREWELL[c.personality]), c));
   return out;
 }
 
@@ -177,5 +195,9 @@ export function allLines(): string[] {
     ...Object.values(GREET_FIRST).flat(), ...Object.values(GREET_AGAIN).flat(), ...GREET_FRIEND,
     ...Object.values(TIME_LINES).flat(), ...Object.values(WEATHER_LINES).flat(), ...Object.values(SEASON_LINES).flat(),
     ...Object.values(JOB_LINES).flat(), ...Object.values(MOOD_LINES).flat(), ...GOSSIP, ...Object.values(WANDERER_LINES).flat(), ...Object.values(VILLAGE_LINES).flat(),
+    ...Object.values(JOB_MORE).flat(), ...Object.values(FAREWELL).flat(), ...Object.values(GIFT_LIKED).flat(), ...Object.values(GIFT_KIND).flat(), ...Object.values(SEASON_TIME).flat(),
+    ...Object.values(MEMORY).flat(), ...Object.values(RUMOURS).flat(), ...Object.values(FESTIVAL_TALK).flat(), ...AFTER_ENDING, ...STORY_TALK,
+    ...Object.values(WANDERER_MORE).flat(), ...Object.values(MOOD_MORE).flat(), ...Object.values(WEATHER_MORE).flat(), ...Object.values(VILLAGE_MORE).flat(), ...TIPS, ...ANIMAL_TALK,
+    ...PROVERBS, ...QUESTIONS, ...NEWS, ...WORDS, ...LATE_NIGHT, ...FOOD_TALK, ...SPIRIT_TALK, ...PLAY_TALK,
   ];
 }

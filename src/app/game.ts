@@ -403,7 +403,7 @@ export class Game {
     const season = SEASONS[W.weights.indexOf(Math.max(...W.weights))]!;
     const others = this.world.people.people.filter((o) => o.village === p.village && o.id !== p.id && !o.wanderer);
     const friend = others.length ? others[hashString(p.id + clock.day) % others.length]!.name.split(' ')[0]! : 'Akari';
-    const lines = talk({ name: p.name.split(' ')[0]!, job: p.job, personality: p.personality, age: p.age, met, nick: mem.nick[p.id] ?? 'friend', hour: clock.hour, season, weather, village: p.villageName || 'Tomoshibi', friend, wanderer: p.wanderer?.id }, createRng(hashString(p.id) + this.talkSeed++ * 7919));
+    const lines = talk({ name: p.name.split(' ')[0]!, job: p.job, personality: p.personality, age: p.age, met, nick: mem.nick[p.id] ?? 'friend', hour: clock.hour, season, weather, village: p.villageName || 'Tomoshibi', friend, wanderer: p.wanderer?.id, ...this.talkContext(p) }, createRng(hashString(p.id) + this.talkSeed++ * 7919));
     mem.met[p.id] = met + 1;
     this.adv.afterTalk(p, lines);
     this.mystic.afterTalk(p, lines);
@@ -412,6 +412,15 @@ export class Game {
     this.dialogue = { who: p, name: p.name, title: p.wanderer?.title ?? '', portrait: portrait(p), lines, index: 0, shown: 0 };
     // they turn to you and greet you
     p.greetT = 0;
+  }
+
+  /** What a villager might bring up: where you've been lately, a festival, the story's end. */
+  private talkContext(p: Person): { recent?: string; festival?: string; after?: boolean } {
+    const pl = this.adv.journey.places, own = this.world.world.regionAt(p.pos.x, p.pos.z);
+    const ownId = own >= 0 ? REGIONS[own]!.id : '';
+    const recent = Object.keys(pl).filter((k) => !k.startsWith('v-') && k !== ownId && pl[k]! >= clock.day - 1).pop();
+    const f = this.mystic.festivals.active;
+    return { recent, festival: f && this.mystic.festivals.spot && this.mystic.festivals.spot.distanceTo(p.pos) < 120 ? f.id : undefined, after: this.mystic.ending.done };
   }
 
   private updateDialogue(dt: number): void {

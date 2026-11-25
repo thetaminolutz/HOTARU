@@ -16,6 +16,7 @@ import { clock } from '../core/clock';
 import { litMaterial } from '../render/materials';
 import { boxUV, mergeGeoms } from '../buildings/kit';
 import type { Person } from '../people/people';
+import { GIFT_LIKED, GIFT_KIND } from '../people/dialogue';
 import type { FishDef } from '../items/data/fish';
 
 export type AdvSound = 'pick' | 'plop' | 'bite' | 'catch' | 'row' | 'gift' | 'flute' | 'shutter' | 'page' | 'chest';
@@ -125,17 +126,18 @@ export class Adventure {
     this.onSound?.('gift', p.pos);
     const mem = this.g.world.people.memory;
     mem.met[p.id] = (mem.met[p.id] ?? 0) + (d.likedBy.includes(p.job) ? 2 : 1);
+    const pick = (a: string[]) => a[(list.length * 7 + p.id.length) % a.length]!.replace('{friend}', 'my cousin');
     if (d.likedBy.includes(p.job)) {
       // a liked gift: sometimes a keepsake in return
       const back: KeepsakeId[] = ['crane', 'omamori', 'tea', 'riceBall', 'persimmon', 'seeds', 'chime'];
       const ret = back[(list.length + p.id.length) % back.length]!;
-      const lines = [`A ${d.name.toLowerCase()}! You remembered. Thank you.`];
+      const lines = [pick(GIFT_LIKED[p.personality])];
       if (list.length % 2 === 1 && this.inv.add(ret)) lines.push(`Here, take this ${keepsakeDef(ret).name.toLowerCase()}. It suits you.`);
       return lines;
     }
     if (id === 'doll' && p.age === 'child') return ['My doll! Where did you find her? I looked everywhere!', 'Thank you, thank you!'];
     if (id === 'letter') return [`A letter? ...It's for my sister across the lake. I'll make sure she gets it, ${first === 'Hayato' ? 'it is my job' : 'thank you'}.`];
-    return ['For me? How kind of you.'];
+    return [pick(GIFT_KIND[p.personality])];
   }
 
   /** An offering keepsake at a shrine nearby counts double. */
