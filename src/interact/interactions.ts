@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 
-export type InteractKind = 'sit' | 'examine' | 'open' | 'ring' | 'light' | 'pray' | 'talk' | 'read';
+export type InteractKind = 'sit' | 'examine' | 'open' | 'ring' | 'light' | 'pray' | 'talk' | 'read' | 'pet' | 'bow';
 
 export type Interactable = {
   id: string;
@@ -25,6 +25,12 @@ export class Interactions {
   target: Interactable | null = null;
 
   add(i: Interactable): void { this.items.push(i); }
+
+  remove(id: string): void {
+    const k = this.items.findIndex((i) => i.id === id);
+    if (k >= 0) this.items.splice(k, 1);
+    if (this.target?.id === id) this.target = null;
+  }
 
   /** Pick the best target in front of the camera. */
   update(eye: THREE.Vector3, dir: THREE.Vector3): void {
