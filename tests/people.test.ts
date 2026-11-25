@@ -7,7 +7,8 @@ const ctx = { name: 'Haru', job: 'farmer' as const, personality: 'cheerful' as c
 
 describe('people', () => {
   it('has 500+ distinct lines of dialogue and a voice for every wanderer', () => {
-    expect(new Set(allLines()).size).toBeGreaterThanOrEqual(500);
+    console.log("dialogue lines", new Set(allLines()).size);
+    expect(new Set(allLines()).size).toBeGreaterThanOrEqual(1500);
     for (const w of WANDERERS) expect(WANDERER_LINES[w.id]?.length).toBeGreaterThan(5);
     expect(WANDERERS.length).toBeGreaterThanOrEqual(15);
   });

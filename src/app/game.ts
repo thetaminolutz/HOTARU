@@ -27,6 +27,7 @@ import { SEASONS } from '../flora/data/seasons';
 import { Pixmap } from '../render/pixmap';
 import { Adventure } from './adventure';
 import { PhotoMode } from './photoMode';
+import { Mystic } from './mystic';
 
 let stoneImg: Pixmap | null = null;
 /** A little grey stone for the dialogue box when a tablet or shrine 'speaks'. */
@@ -88,6 +89,8 @@ export class Game {
   /** items, journal, map, fishing, boats, your house (M11) */
   readonly adv = new Adventure(this);
   readonly photo = new PhotoMode(this);
+  /** festivals, spirits, world events, the story's ending, dreams (M12) */
+  readonly mystic = new Mystic(this);
   /** 0..1 screen fade (soft landings); the UI draws it. */
   fade = 0;
   /** A fish jumped (or similar): the audio system plays a splash there. */
@@ -162,6 +165,7 @@ export class Game {
       this.interactions.add({ id, kind: 'talk', label: 'Talk to ' + p.name.split(' ')[0], pos: p.pos, reach: 3.2, use: () => this.talkTo(p) });
     };
     this.adv.init();
+    this.mystic.init();
     this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
     clock.setHour(hour);
@@ -283,6 +287,7 @@ export class Game {
     this.world.people.update(dt, cp, clock.hour, clock.day, this.weather.out);
     this.updateDialogue(dt);
     this.updateSecrets(dt);
+    this.mystic.update(dt);
     this.updateRipples(dt);
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt, this.world.people.openers());
@@ -290,6 +295,7 @@ export class Game {
     const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights, this.world.landmarks.lights as typeof this.world.dock.lights);
     const lamp = this.adv.lanternLight();
     if (lamp) lights.push(lamp);
+    lights.push(...this.mystic.festivals.lights);
     this.world.landmarks.update(dt);
     this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
@@ -397,12 +403,24 @@ export class Game {
     const season = SEASONS[W.weights.indexOf(Math.max(...W.weights))]!;
     const others = this.world.people.people.filter((o) => o.village === p.village && o.id !== p.id && !o.wanderer);
     const friend = others.length ? others[hashString(p.id + clock.day) % others.length]!.name.split(' ')[0]! : 'Akari';
-    const lines = talk({ name: p.name.split(' ')[0]!, job: p.job, personality: p.personality, age: p.age, met, nick: mem.nick[p.id] ?? 'friend', hour: clock.hour, season, weather, village: p.villageName || 'Tomoshibi', friend, wanderer: p.wanderer?.id }, createRng(hashString(p.id) + this.talkSeed++ * 7919));
+    const lines = talk({ name: p.name.split(' ')[0]!, job: p.job, personality: p.personality, age: p.age, met, nick: mem.nick[p.id] ?? 'friend', hour: clock.hour, season, weather, village: p.villageName || 'Tomoshibi', friend, wanderer: p.wanderer?.id, ...this.talkContext(p) }, createRng(hashString(p.id) + this.talkSeed++ * 7919));
     mem.met[p.id] = met + 1;
     this.adv.afterTalk(p, lines);
+    this.mystic.afterTalk(p, lines);
+    const rumour = !p.wanderer ? this.mystic.rumour() : null;
+    if (rumour && lines.length > 1 && (this.talkSeed + met) % 2 === 0) lines.splice(1, 0, rumour);
     this.dialogue = { who: p, name: p.name, title: p.wanderer?.title ?? '', portrait: portrait(p), lines, index: 0, shown: 0 };
     // they turn to you and greet you
     p.greetT = 0;
+  }
+
+  /** What a villager might bring up: where you've been lately, a festival, the story's end. */
+  private talkContext(p: Person): { recent?: string; festival?: string; after?: boolean } {
+    const pl = this.adv.journey.places, own = this.world.world.regionAt(p.pos.x, p.pos.z);
+    const ownId = own >= 0 ? REGIONS[own]!.id : '';
+    const recent = Object.keys(pl).filter((k) => !k.startsWith('v-') && k !== ownId && pl[k]! >= clock.day - 1).pop();
+    const f = this.mystic.festivals.active;
+    return { recent, festival: f && this.mystic.festivals.spot && this.mystic.festivals.spot.distanceTo(p.pos) < 120 ? f.id : undefined, after: this.mystic.ending.done };
   }
 
   private updateDialogue(dt: number): void {

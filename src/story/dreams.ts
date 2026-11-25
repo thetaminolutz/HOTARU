@@ -1,0 +1,23 @@
+/** Dreams when you sleep at home (SPEC §22 "dreams"): short, strange, kind; some carry the story. */
+export const DREAMS: string[] = [
+  'You dream of a lake made of lanterns / you walk on it barefoot / it is warm',
+  'A fox in a red scarf / asks you the time / you both forget to answer',
+  'A girl counts fireflies / she gets to a thousand / and starts again, laughing',
+  'The castle is new / its banners are bright / someone is calling a name across the water',
+  'You are a heron / standing in the rice / the sky is in the water and you in it',
+  'The temple bell rings / and every snowflake stops / to listen',
+  'You fly over the valley / all the villages wave / with their washing',
+  'A cat teaches you / how to sit in the sun / you are a slow learner',
+  'The moon comes down / to drink from the lake / and leaves a little silver behind',
+  'An old man paints lanterns / he paints your face on one / and lights it',
+  'Rain falls upward / the puddles fill the clouds / the frogs are delighted',
+  'You hear a flute / far behind the waterfall / it knows your name',
+  'The pier is endless / at the end of it / a lantern waits for you',
+  'Children build a snowman / it bows to you / and melts politely',
+  'A tea kettle sings / the steam becomes cranes / they fly to the mountains',
+  'Your journal writes itself / in a hand that is almost yours / about tomorrow',
+  'The mist opens like a door / a small hand holds a lantern / come, it says, come home',
+  'You sleep in the dream too / and in that dream / you are sleeping here',
+  'The masked stranger lifts the mask / you wake / before you see',
+  'Seeds you planted / grow into stars / and the garden is the sky',
+];

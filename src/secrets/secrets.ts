@@ -15,7 +15,7 @@ import { REGIONS } from '../world/data/regions';
 import { SHRINE_HAIKU, VIEW_HAIKU, LORE } from './data/texts';
 import type { GameWorld } from '../scene/gameWorld';
 
-export type SecretKind = 'shrine' | 'view' | 'tablet' | 'place' | 'moment';
+export type SecretKind = 'shrine' | 'view' | 'tablet' | 'place' | 'moment' | 'spirit';
 export type Secret = {
   id: string; kind: SecretKind; label: string; pos: THREE.Vector3; yaw: number;
   text: string; region: string;
@@ -23,7 +23,7 @@ export type Secret = {
   level: number; lastDay: number;
 };
 
-export const KIND_NAMES: Record<SecretKind, string> = { shrine: 'Hidden shrines', view: 'Viewpoints', tablet: 'Stone tablets', place: 'Hidden places', moment: 'Rare moments' };
+export const KIND_NAMES: Record<SecretKind, string> = { shrine: 'Hidden shrines', view: 'Viewpoints', tablet: 'Stone tablets', place: 'Hidden places', moment: 'Rare moments', spirit: 'Spirit encounters' };
 
 export class Secrets {
   readonly list: Secret[] = [];
@@ -183,6 +183,12 @@ export class Secrets {
     }
   }
 
+  /** Secrets that other systems own (spirits, festivals, events): found by `discoverId`. */
+  register(kind: SecretKind, id: string, label: string, pos: THREE.Vector3, text = ''): void {
+    if (!this.list.some((s) => s.id === id)) this.add(kind, id, label, pos, text);
+  }
+  discoverId(id: string): boolean { const s = this.list.find((o) => o.id === id); return s ? this.discover(s) : false; }
+
   /** Record a discovery (once). */
   discover(s: Secret): boolean {
     if (this.found.has(s.id)) return false;
@@ -228,7 +234,7 @@ export class Secrets {
     return c;
   }
 
-  near(p: THREE.Vector3, r: number): Secret[] { return this.list.filter((s) => s.kind !== 'place' && s.kind !== 'moment' && s.pos.distanceTo(p) < r); }
+  near(p: THREE.Vector3, r: number): Secret[] { return this.list.filter((s) => (s.kind === 'shrine' || s.kind === 'view' || s.kind === 'tablet') && s.pos.distanceTo(p) < r); }
 
   static seedOf(id: string): number { return hashString(id); }
 }

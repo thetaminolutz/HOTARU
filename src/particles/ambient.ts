@@ -158,6 +158,10 @@ export class AmbientFx {
   scale = 1;
   /** current ground-mist amount (eased) */
   mist = 0;
+  /** more fireflies (festival nights, and after the story's ending) */
+  fireflyBoost = 1;
+  /** extra mist (a sea of clouds) */
+  extraMist = 0;
   private local = new Map<string, Effect[]>();
   private b = { forest: 0, moisture: 0, autumn: 0, special: 0, specialW: 0, grass: [0, 0, 0] as [number, number, number], region: 0 };
 
@@ -191,7 +195,7 @@ export class AmbientFx {
     const [spring, summer, autumn, winter] = this.season;
     const dryAir = 1 - Math.min(1, this.rain * 1.5);
     const A = (id: string, amount: number, c = cam, gy = groundY) => this.effects.get(id)?.set(Math.min(1, Math.max(0, amount)) * s, c, gy);
-    A('fireflies', (0.3 + summer * 1.2 + spring * 0.3 + autumn * 0.4) * (1 - winter) * dryAir * Math.max(night, dusk * 0.6) * (0.25 + 0.75 * Math.max(nearWater, b.moisture * (1 - b.forest * 0.5))) * (cam.y - groundY < 30 ? 1 : 0));
+    A('fireflies', this.fireflyBoost * (0.3 + summer * 1.2 + spring * 0.3 + autumn * 0.4) * (1 - winter) * dryAir * Math.max(night, dusk * 0.6) * (0.25 + 0.75 * Math.max(nearWater, b.moisture * (1 - b.forest * 0.5))) * (cam.y - groundY < 30 ? 1 : 0));
     A('leaves', (0.15 + autumn * 0.85 + winter * 0.15) * dryAir * (b.autumn * (0.3 + 0.7 * b.forest) + (rid === 'maple' || rid === 'ginkgo' ? 0.4 : 0)) * (0.4 + wind) * 0.9);
     A('petals', (spring * 1.5 + 0.1) * (rid === 'cherry' ? 0.9 : rid === 'wisteria' ? 0.35 : 0.12) * (0.5 + wind) * dryAir);
     A('pollen', (spring + summer) * dryAir * day * (1 - b.forest) * (0.2 + 0.6 * Math.max(0, 1 - b.autumn)) * (rid === 'sunflower' || rid === 'tea' ? 1.6 : 0.6));
@@ -200,7 +204,7 @@ export class AmbientFx {
     A('snow', Math.max(this.snow, rid === 'snow' && cam.y > 650 ? 0.35 : 0));
     // mist: deep forests always, lakes and valleys in the morning, a little at dusk on the water
     const mist = (rid === 'cedar' ? 1 : rid === 'bamboo' ? 0.45 : rid === 'mirror' || rid === 'temple' ? 0.35 : 0) * (0.6 + 0.4 * morning)
-      + morning * (0.3 + 0.5 * nearWater) + dusk * nearWater * 0.15;
+      + morning * (0.3 + 0.5 * nearWater) + dusk * nearWater * 0.15 + this.extraMist;
     this.mist += (Math.min(1, mist * (1 - Math.min(0.6, wind * 0.5))) - this.mist) * (instant ? 1 : 0.02);
     U.uMist.value = this.mist * 0.75;
     U.uMistY.value = groundY;
