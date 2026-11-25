@@ -26,6 +26,7 @@ import { createRng, hashString } from '../core/rng';
 import { SEASONS } from '../flora/data/seasons';
 import { Pixmap } from '../render/pixmap';
 import { Adventure } from './adventure';
+import { PhotoMode } from './photoMode';
 
 let stoneImg: Pixmap | null = null;
 /** A little grey stone for the dialogue box when a tablet or shrine 'speaks'. */
@@ -86,6 +87,7 @@ export class Game {
   readonly interactions = new Interactions();
   /** items, journal, map, fishing, boats, your house (M11) */
   readonly adv = new Adventure(this);
+  readonly photo = new PhotoMode(this);
   /** 0..1 screen fade (soft landings); the UI draws it. */
   fade = 0;
   /** A fish jumped (or similar): the audio system plays a splash there. */
@@ -232,6 +234,7 @@ export class Game {
     this.input.poll();
     const c0 = this.controller;
     if (c0.mode === 'boat') this.adv.update(dt);
+    this.photo.update(dt);
     if (c0.mode === 'walk' || c0.mode === 'fly') {
       if (this.camera.fov !== settings.fov) { this.camera.fov = settings.fov; this.camera.updateProjectionMatrix(); }
       c0.headBob = settings.headBob;
@@ -314,7 +317,7 @@ export class Game {
       this.pipeline.reflectAngles.use = false;
     }
     this.camera.position.copy(c.position);
-    this.camera.rotation.set(pitch, yaw, c.roll, 'YXZ');
+    this.camera.rotation.set(pitch, yaw, c.roll + (this.photo.active ? this.photo.roll : 0), 'YXZ');
     this.camera.updateMatrixWorld();
 
     this.renderer.info.reset();

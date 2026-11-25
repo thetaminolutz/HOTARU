@@ -107,6 +107,7 @@ uniform float uVignette;
 uniform vec2 uDitherOffset;
 uniform vec2 uNearFar;
 uniform vec2 uSize;
+uniform float uFilter;
 varying vec2 vUv;
 
 float linDepth(vec2 uv){
@@ -160,6 +161,26 @@ void main(){
     float th = bayer4(gl_FragCoord.xy + uDitherOffset);
     float idx = (t * strength * 1.0 > th && t > 0.12) ? i2 : i1;
     c = texture2D(uPalette, vec2((idx + 0.5) / uPaletteSize, 0.5)).rgb;
+  }
+  // photo mode filters (palette swaps, SPEC §11): sepia, ukiyo-e print, monochrome ink, night blue
+  if (uFilter > 0.5) {
+    float l = dot(c, vec3(0.3, 0.55, 0.15));
+    float th = bayer4(gl_FragCoord.xy + uDitherOffset);
+    if (uFilter < 1.5) {
+      float q = floor(l * 5.0 + th) / 5.0;
+      c = mix(vec3(0.16, 0.1, 0.07), vec3(0.98, 0.9, 0.72), q);
+    } else if (uFilter < 2.5) {
+      vec3 P0 = vec3(0.11, 0.14, 0.3), P1 = vec3(0.24, 0.42, 0.6), P2 = vec3(0.78, 0.3, 0.2), P3 = vec3(0.86, 0.68, 0.38), P4 = vec3(0.95, 0.9, 0.78), P5 = vec3(0.36, 0.48, 0.3);
+      float warm = c.r - c.b, green = c.g - max(c.r, c.b);
+      vec3 o = l < 0.18 + th * 0.06 ? P0 : (l > 0.72 ? P4 : (green > 0.04 ? P5 : (warm > 0.12 ? (l > 0.45 ? P3 : P2) : P1)));
+      c = o;
+    } else if (uFilter < 3.5) {
+      float q = floor(pow(l, 0.8) * 4.0 + th * 0.9) / 4.0;
+      c = mix(vec3(0.1, 0.09, 0.1), vec3(0.95, 0.92, 0.85), q);
+    } else {
+      float q = floor(l * 6.0 + th) / 6.0;
+      c = mix(vec3(0.03, 0.05, 0.16), vec3(0.62, 0.78, 1.0), q) + vec3(1.0, 0.8, 0.4) * max(0.0, l - 0.8) * 2.0;
+    }
   }
   gl_FragColor = vec4(c, 1.0);
 }
