@@ -20,6 +20,7 @@ import { createLeaves } from '../particles/particles';
 import { AmbientFx } from '../particles/ambient';
 import { Villages, deckAt } from '../buildings/villages';
 import { Landmarks } from '../buildings/landmarks';
+import { Ruins } from '../buildings/ruins';
 import { Secrets } from '../secrets/secrets';
 import { Fauna } from '../fauna/fauna';
 import { People } from '../people/people';
@@ -46,6 +47,7 @@ export class GameWorld {
   fauna!: Fauna;
   people!: People;
   landmarks!: Landmarks;
+  ruins!: Ruins;
   secrets!: Secrets;
   rivers!: Rivers;
   kits = new Map<string, TreeKit>();
@@ -115,6 +117,12 @@ export class GameWorld {
       this.villages.clearings.rects.push([C.x - 40, C.z - 55, C.x + 40, C.z + 40]);
       registerPoi({ x: C.x, z: C.z, kind: 'landmark', name: 'Kagejō castle' });
       for (const g of this.world.sites.grottos) { this.villages.clearings.rects.push([g.x - g.r - 3, g.z - g.r - 3, g.x + g.r + 3, g.z + g.r + 3]); registerPoi({ x: g.x, z: g.z, kind: 'cave', name: g.id + ' cave' }); }
+      // ruined forts, an empty hamlet, a forgotten shrine; wayside jizo, milestones, teahouses
+      this.ruins = new Ruins(this.world, this.villages.roads.filter((r) => r.width < 3).map((r) => r.path));
+      this.scene.add(this.ruins.group);
+      this.villages.clearings.rects.push(...this.ruins.clear.rects);
+      for (const s of this.ruins.sites) registerPoi({ x: s.x, z: s.z, kind: 'ruin', name: s.name });
+      for (const s of this.ruins.wayside) registerPoi({ x: s.x, z: s.z, kind: 'wayside', name: s.kind });
       for (const v of this.villages.villages) registerPoi({ x: v.layout.def.x, z: v.layout.def.z, kind: 'village', name: v.layout.def.name });
       this.fauna = new Fauna(this, seed);
       this.scene.add(this.fauna.group);
@@ -201,7 +209,7 @@ export class GameWorld {
 
   /** Walkable height at (x, z); with `feet`, upper storeys out of reach are ignored. */
   groundHeight(x: number, z: number, feet?: number): number {
-    return Math.max(this.world.height(x, z), this.dock.deckHeight(x, z), this.villages.floorHeight(x, z, feet), this.landmarks ? deckAt(this.landmarks.decks, x, z, feet) : -Infinity);
+    return Math.max(this.world.height(x, z), this.dock.deckHeight(x, z), this.villages.floorHeight(x, z, feet), this.landmarks ? deckAt(this.landmarks.decks, x, z, feet) : -Infinity, this.ruins ? deckAt(this.ruins.decks, x, z, feet) : -Infinity);
   }
 
   normal(x: number, z: number, out = new THREE.Vector3()): THREE.Vector3 {
