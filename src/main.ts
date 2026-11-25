@@ -100,7 +100,7 @@ function resize(): void {
 async function save(): Promise<void> {
   if (state.mode !== 'play') return;
   const c = game.controller;
-  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0 });
+  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0, adv: game.adv.toJSON() as SaveData['adv'] });
   state.save = await readSave(1);
 }
 
@@ -117,6 +117,7 @@ function startPlay(continueSave: boolean): void {
     if (s.found) game.world.secrets.found = new Set(s.found);
     if (s.shrines) { game.world.secrets.shrineState = s.shrines; game.world.secrets.refresh(); }
     if (s.gate) game.world.landmarks.openGate();
+    if (s.adv) game.adv.load(s.adv as Parameters<typeof game.adv.load>[0]);
   } else {
     const S = game.world.dock.anchors.shore!;
     c.placeAt(S.x + 1, S.z + 3);
@@ -193,7 +194,9 @@ function loop(now: number): void {
   // interact prompt: the targeted thing, or sit / lie / stand where you are
   if (state.mode === 'play') {
     const c = game.controller, t = game.interactions.target;
-    ui.hud.prompt = t && !c.sitting ? { icon: t.kind === 'sit' ? 'sit' : 'hand', label: t.label }
+    const ICON: Record<string, string> = { sit: 'sit', pick: 'pick', fish: 'fish', row: 'row', give: 'gift', read: 'book' };
+    ui.hud.prompt = game.adv.boating ? { icon: 'row', label: game.adv.boat.landing() ? 'Step ashore' : '' }
+      : t && !c.sitting ? { icon: ICON[t.kind] ?? 'hand', label: t.label }
       : c.sitHint ? { icon: c.sitHint, label: '' } : null;
     ui.hud.canTimelapse = c.sitting;
   } else ui.hud.prompt = null;

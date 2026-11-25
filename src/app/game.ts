@@ -25,6 +25,7 @@ import type { Person } from '../people/people';
 import { createRng, hashString } from '../core/rng';
 import { SEASONS } from '../flora/data/seasons';
 import { Pixmap } from '../render/pixmap';
+import { Adventure } from './adventure';
 
 let stoneImg: Pixmap | null = null;
 /** A little grey stone for the dialogue box when a tablet or shrine 'speaks'. */
@@ -83,6 +84,8 @@ export class Game {
 
   private colliders: Collider[];
   readonly interactions = new Interactions();
+  /** items, journal, map, fishing, boats, your house (M11) */
+  readonly adv = new Adventure(this);
   /** 0..1 screen fade (soft landings); the UI draws it. */
   fade = 0;
   /** A fish jumped (or similar): the audio system plays a splash there. */
@@ -156,6 +159,7 @@ export class Game {
       if (!near) { this.interactions.remove(id); return; }
       this.interactions.add({ id, kind: 'talk', label: 'Talk to ' + p.name.split(' ')[0], pos: p.pos, reach: 3.2, use: () => this.talkTo(p) });
     };
+    this.adv.init();
     this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
     clock.setHour(hour);
@@ -227,12 +231,14 @@ export class Game {
     U.uTime.value = elapsed;
     this.input.poll();
     const c0 = this.controller;
+    if (c0.mode === 'boat') this.adv.update(dt);
     if (c0.mode === 'walk' || c0.mode === 'fly') {
       if (this.camera.fov !== settings.fov) { this.camera.fov = settings.fov; this.camera.updateProjectionMatrix(); }
       c0.headBob = settings.headBob;
       // interact: a targeted thing, else sit / lie / stand where you are
       const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(c0.pitch, c0.yaw, 0, 'YXZ'));
       this.interactions.update(c0.position, dir);
+      if (this.adv.update(dt)) this.input.interactPressed = false;
       if (this.input.interactPressed && this.dialogue) {
         const d = this.dialogue, line = d.lines[d.index] ?? '';
         if (d.shown < line.length) d.shown = line.length;
@@ -279,6 +285,8 @@ export class Game {
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt, this.world.people.openers());
     this.world.rivers.update(this.camera, this.tod.sunDir, 1 - this.tod.stars);
     const lights = this.world.dock.lights.concat(this.world.villages.lightsNear(this.controller.position) as typeof this.world.dock.lights, this.world.landmarks.lights as typeof this.world.dock.lights);
+    const lamp = this.adv.lanternLight();
+    if (lamp) lights.push(lamp);
     this.world.landmarks.update(dt);
     this.pipeline.uploadLights(lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
@@ -388,6 +396,7 @@ export class Game {
     const friend = others.length ? others[hashString(p.id + clock.day) % others.length]!.name.split(' ')[0]! : 'Akari';
     const lines = talk({ name: p.name.split(' ')[0]!, job: p.job, personality: p.personality, age: p.age, met, nick: mem.nick[p.id] ?? 'friend', hour: clock.hour, season, weather, village: p.villageName || 'Tomoshibi', friend, wanderer: p.wanderer?.id }, createRng(hashString(p.id) + this.talkSeed++ * 7919));
     mem.met[p.id] = met + 1;
+    this.adv.afterTalk(p, lines);
     this.dialogue = { who: p, name: p.name, title: p.wanderer?.title ?? '', portrait: portrait(p), lines, index: 0, shown: 0 };
     // they turn to you and greet you
     p.greetT = 0;

@@ -86,6 +86,10 @@ export class DockScene {
   private mooredBase = new THREE.Vector3();
   /** Pin the rowing boat to a spot (camera shots): x, z, heading. */
   rowOverride: { x: number; z: number; heading: number } | null = null;
+  /** The player rowing the moored boat (SPEC §8): it follows this instead of its post. */
+  ride: { x: number; z: number; heading: number; speed: number; stroke: number } | null = null;
+  /** Where the moored boat waits. */
+  get mooring(): THREE.Vector3 { return this.mooredBase; }
 
   constructor(height: (x: number, z: number) => number, glowTex: THREE.Texture) {
     this.group.name = 'dock';
@@ -378,6 +382,11 @@ export class DockScene {
     const bob = Math.sin(time * 1.1) * 0.04 + Math.sin(time * 2.3) * 0.015;
     this.moored.position.set(this.mooredBase.x + Math.sin(time * 0.5) * 0.08, this.mooredBase.y + bob, this.mooredBase.z);
     this.moored.rotation.set(Math.sin(time * 1.3) * 0.03, 0.12 + Math.sin(time * 0.37) * 0.05, Math.sin(time * 0.9) * 0.04);
+    if (this.ride) {
+      const R = this.ride;
+      this.moored.position.set(R.x, 0.05 + bob * 0.6 - Math.abs(R.stroke) * 0.015, R.z);
+      this.moored.rotation.set(R.stroke * 0.015, R.heading, Math.sin(time * 0.9) * 0.025);
+    }
 
     // the rowing boat crosses the lake on a long loop
     const ang = time * 0.006 + 2.2;
@@ -397,6 +406,7 @@ export class DockScene {
     rb.x = x; rb.z = z; rb.heading = heading; rb.speed = 0.8 + 0.2 * Math.max(0, stroke);
     const mb = this.boats[0]!;
     mb.x = this.moored.position.x; mb.z = this.moored.position.z;
+    if (this.ride) { mb.heading = this.ride.heading; mb.speed = Math.min(1, Math.abs(this.ride.speed) / 2); } else { mb.heading = 0.12; mb.speed = 0; }
     this.anchors.rowboat = this.rowing.position.clone();
   }
 

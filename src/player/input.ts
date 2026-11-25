@@ -27,6 +27,10 @@ export class InputState {
   mapPressed = false;
   photoPressed = false;
   toolPressed = false;
+  /** interact (or tool) is being held: reeling in a fish */
+  interactHeld = false;
+  /** touch: the interact token is being held */
+  touchInteractHeld = false;
   private keys = new Set<string>();
   private jogToggled = false;
   private padPrev: boolean[] = [];
@@ -100,6 +104,7 @@ export class InputState {
     this.jog = settings.toggleJog ? this.jogToggled : this.held('jog');
     this.slow = this.held('slow');
     this.timelapse = this.held('timelapse') || this.touchTimelapse;
+    this.interactHeld = this.held('interact') || this.held('tool') || this.touchInteractHeld;
 
     // gamepad: standard mapping
     const pads = navigator.getGamepads?.() ?? [];
@@ -118,6 +123,11 @@ export class InputState {
       if (pressed(10) || pressed(7)) this.jog = true; // L3 / RT
       if (pressed(4) || pressed(6)) this.slow = true; // LB / LT
       if (pressed(3)) this.timelapse = true;       // Y (held)
+      if (pressed(2) || pressed(1)) this.interactHeld = true;
+      if (edge(5)) this.toolPressed = true;        // RB
+      if (edge(8)) this.journalPressed = true;     // Back/Select
+      if (edge(12)) this.mapPressed = true;        // d-pad up
+      if (edge(13)) this.photoPressed = true;      // d-pad down
       this.padPrev = p.buttons.map((b) => b.pressed);
     }
 

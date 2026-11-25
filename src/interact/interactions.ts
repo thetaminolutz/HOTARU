@@ -5,7 +5,7 @@
  */
 import * as THREE from 'three';
 
-export type InteractKind = 'sit' | 'examine' | 'open' | 'ring' | 'light' | 'pray' | 'talk' | 'read' | 'pet' | 'bow';
+export type InteractKind = 'sit' | 'examine' | 'open' | 'ring' | 'light' | 'pray' | 'talk' | 'read' | 'pet' | 'bow' | 'pick' | 'fish' | 'row' | 'give';
 
 export type Interactable = {
   id: string;
