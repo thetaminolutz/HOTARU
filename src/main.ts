@@ -6,9 +6,9 @@ import { DEFAULT_SEED } from './config';
 import { clock } from './core/clock';
 import { bus } from './core/events';
 import { UIManager } from './ui/manager';
-import { settings } from './app/settings';
+import { settings, setSetting } from './app/settings';
 import { registerPwa, restartToUpdate } from './app/pwa';
-import { readSave, writeSave, requestPersistence, type SaveData } from './save/save';
+import { readSave, writeSave, requestPersistence, exportSave, importSave, type SaveData } from './save/save';
 import { installAudioUnlock, suspendAudio, audioContext } from './audio/unlock';
 import { AudioSystem } from './audio/audio';
 import { renderPiece } from './audio/music';
@@ -17,6 +17,7 @@ import { DebugPanel } from './debug/panel';
 import { Benchmark } from './debug/benchmark';
 import { shotByName } from './app/shots';
 import { wireScreens } from './app/screens';
+import { Hints } from './app/hints';
 
 const gameCanvas = document.getElementById('game') as HTMLCanvasElement;
 const uiCanvas = document.getElementById('ui') as HTMLCanvasElement;
@@ -60,7 +61,23 @@ const ui = new UIManager(uiCanvas, {
 });
 game.input.attachLookElement(uiCanvas);
 const screens = wireScreens(game, ui);
+const hints = new Hints(game, () => ui.hud.touchMode || game.input.lastDevice === 'touch' || game.input.lastDevice === 'pen');
 ui.settings.onRebind = (done) => { game.input.rebindListener = (code) => { game.input.rebindListener = null; done(code); }; };
+// save slots, export & import (SPEC §27)
+const slotInfo = new Map<number, string>();
+async function refreshSlots(): Promise<void> {
+  for (const n of [1, 2, 3]) {
+    const sv = await readSave(n);
+    slotInfo.set(n, sv ? `Day ${sv.day + 1}, ${String(Math.floor(sv.hour)).padStart(2, '0')}:${String(Math.floor((sv.hour % 1) * 60)).padStart(2, '0')}  -  ${new Date(sv.savedAt).toLocaleDateString()}` : 'empty');
+  }
+}
+ui.settings.saves = {
+  info: (n) => slotInfo.get(n) ?? '',
+  useSlot: (n) => { setSetting('saveSlot', n); void readSave(n).then((sv) => { state.save = sv; ui.settings.note = 'Slot ' + n + (sv ? ' - Wander continues it' : ' - empty, a new journey'); }); },
+  exportSave: () => { void readSave(settings.saveSlot).then((sv) => { if (sv) { exportSave(sv, settings.saveSlot); ui.settings.note = 'Saved to a file.'; } else ui.settings.note = 'This slot is empty.'; }); },
+  importSave: () => { void importSave(settings.saveSlot).then((sv) => { ui.settings.note = sv ? 'Imported into slot ' + settings.saveSlot + '.' : 'That file is not a Hotaru save.'; if (sv) state.save = sv; void refreshSlots(); }); },
+};
+void refreshSlots();
 const bench = new Benchmark(game);
 const debug = new DebugPanel(game, bench, () => { state.mode = 'gallery'; ui.show('gallery'); });
 if (params.debug) debug.show(true);
@@ -74,21 +91,29 @@ function updateAudio(dt: number): void {
     if (!ctx || ctx.state !== 'running' || state.mode === 'loading' || state.mode === 'shot' || params.shot) return;
     audio = new AudioSystem(ctx, game, audioVolumes());
     uiSound.press = () => audio?.sfx.ui('tick');
+    audio.setMono(settings.monoAudio);
+    audio.onCaption = (text) => { if (settings.subtitles) ui.hud.caption(text, performance.now() / 1000); };
     if (state.mode === 'title') audio.music.playNow();
   }
   audio.update(dt, state.mode);
 }
 
-game.onToast = (text) => ui.hud.toast(text, 5, undefined, performance.now() / 1000);
+game.onToast = (text) => ui.hud.toast(text, undefined, undefined, performance.now() / 1000);
 
 function applySettings(): void {
   if (state.mode !== 'shot') game.setClimate(settings.seasonMode === 'cycle' ? null : settings.seasonMode, settings.seasonDays, settings.weatherMode === 'fair' ? 'clear' : null);
   game.pipeline.settings.dither = settings.dither;
   game.pipeline.toggles.outlines = settings.outlines;
   ui.hud.showFps = settings.showFps;
+  ui.hud.leftHanded = settings.leftHanded;
+  ui.hud.highContrast = settings.highContrast;
+  game.reducedMotion = settings.reducedMotion;
+  audio?.setMono(settings.monoAudio);
 }
 bus.on('settings:changed', ({ key }) => {
-  if (key === 'quality') { game.setQuality(settings.quality); ui.resize(game.pipeline.scale); }
+  if (key === 'quality') { game.setQuality(settings.quality); autoQ.level = settings.quality; resize(); }
+  if (key === 'largeText') resize();
+  if (key === 'saveSlot') void refreshSlots();
   applySettings();
   audio?.setVolumes(audioVolumes());
 });
@@ -96,14 +121,14 @@ bus.on('app:update-ready', () => ui.hud.toast('A new version is ready — tap to
 
 function resize(): void {
   game.resize();
-  ui.resize(game.pipeline.scale);
+  ui.resize(game.pipeline.scale + (settings.largeText ? 1 : 0));
 }
 
 async function save(): Promise<void> {
   if (state.mode !== 'play') return;
   const c = game.controller;
-  await writeSave(1, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0, adv: game.adv.toJSON() as SaveData['adv'], story: game.mystic.toJSON() });
-  state.save = await readSave(1);
+  await writeSave(settings.saveSlot, { seed: game.world.seed, pos: [c.position.x, c.position.y, c.position.z], yaw: c.yaw, pitch: c.pitch, hour: clock.hour, day: clock.day, memory: game.world.people.memory, trust: game.world.fauna.trust, found: [...game.world.secrets.found], shrines: game.world.secrets.shrineState, gate: game.world.landmarks.gateOpen > 0, adv: game.adv.toJSON() as SaveData['adv'], story: game.mystic.toJSON() });
+  state.save = await readSave(settings.saveSlot);
 }
 
 function startPlay(continueSave: boolean): void {
@@ -171,8 +196,22 @@ gameCanvas.addEventListener('webglcontextrestored', () => {
 // ---------- main loop ----------
 let last = performance.now();
 let fps = 60;
+/** Auto quality (SPEC §3.13): step down while frames stay slow, back up when there's room. */
+const autoQ = { level: settings.quality as 'low' | 'medium' | 'high', slow: 0, fast: 0, ms: 16 };
+function autoQuality(frameMs: number, dt: number): void {
+  if (!settings.autoQuality || state.mode !== 'play' || bench.running) return;
+  autoQ.ms += (Math.min(100, frameMs) - autoQ.ms) * 0.05;
+  const order = ['low', 'medium', 'high'] as const, i = order.indexOf(autoQ.level), max = order.indexOf(settings.quality);
+  const budget = settings.fpsCap === 30 ? 36 : 20;
+  autoQ.slow = autoQ.ms > budget ? autoQ.slow + dt : 0;
+  autoQ.fast = autoQ.ms < budget * 0.55 ? autoQ.fast + dt : 0;
+  const to = autoQ.slow > 6 && i > 0 ? order[i - 1]! : autoQ.fast > 40 && i < max ? order[i + 1]! : null;
+  if (to) { autoQ.level = to; autoQ.slow = autoQ.fast = 0; game.setQuality(to); resize(); }
+}
 function loop(now: number): void {
   if (!state.running) return;
+  // frame cap: skip frames that come too early
+  if (settings.fpsCap && now - last < 1000 / settings.fpsCap - 2) { requestAnimationFrame(loop); return; }
   const dt = Math.min(0.1, Math.max(0, (now - last) / 1000));
   const frameMs = now - last;
   last = now;
@@ -190,6 +229,8 @@ function loop(now: number): void {
   if (state.mode === 'play') screens.update();
   game.input.enabled = state.mode === 'play';
   bench.update(dt, frameMs);
+  autoQuality(frameMs, dt);
+  hints.update(dt, state.mode === 'play' && ui.screen === 'play');
   if (state.mode !== 'gallery') game.frame(dt);
   ui.hud.fps = fps;
   ui.hud.dialogue = game.dialogue;
@@ -231,7 +272,7 @@ async function boot(): Promise<void> {
   ui.loading.progress = 1;
   await draw();
   resize();
-  state.save = await readSave(1);
+  state.save = await readSave(settings.saveSlot);
   state.persisted = await requestPersistence();
   ui.settings.persisted = state.persisted;
   if (!params.nosw) void registerPwa();
@@ -274,7 +315,7 @@ async function boot(): Promise<void> {
       game.renderer.readRenderTargetPixels(t, 0, 0, t.width, t.height, raw);
       return { w: t.width, h: t.height, px: Array.from(raw, (v) => Math.min(255, Math.round(Math.pow(THREE.DataUtils.fromHalfFloat(v), 1 / 2.2) * 255))) };
     },
-    save, readSave: () => readSave(1),
+    save, readSave: () => readSave(settings.saveSlot),
   };
 }
 

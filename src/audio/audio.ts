@@ -15,6 +15,13 @@ import { createRng } from '../core/rng';
 import { playNote } from './instruments';
 import { SCALES, degreeToMidi } from './composer';
 
+const CAPTIONS: Partial<Record<VoiceId, string>> = {
+  warbler: 'a bush warbler sings', tit: 'a tit calls', sparrow: 'sparrows chirp', dove: 'a dove coos', crow: 'a crow caws', owl: 'an owl hoots',
+  woodpecker: 'a woodpecker knocks', gull: 'gulls cry', frog: 'frogs croak', kajika: 'a kajika frog trills', meow: 'a cat meows', bark: 'a dog barks',
+  quack: 'ducks quack', deer: 'a deer calls', cluck: 'hens cluck', whinny: 'a horse whinnies', moo: 'a cow lows', monkey: 'monkeys chatter',
+  kite: 'a kite cries overhead', crane: 'cranes call', cricket: 'crickets sing', bellCricket: 'a bell cricket rings', higurashi: 'evening cicadas',
+};
+
 export type AudioVolumes = { master: number; music: number; ambience: number; sfx: number; musicFrequency: MusicFrequency };
 
 export class AudioSystem {
@@ -41,6 +48,7 @@ export class AudioSystem {
     c.onLand = (impact) => this.sfx.land(this.surface(), impact);
     c.onStroke = () => this.sfx.stroke();
     game.weather.onThunder = (delay, loud) => {
+      this.onCaption?.(loud > 0.6 ? 'thunder' : 'distant thunder');
       const a = this.rng.next() * Math.PI * 2;
       const out = this.mix.spatial('ambience', Math.cos(a) * 400, 300, Math.sin(a) * 400, delay + 8, 0.6);
       const g = this.mix.ctx.createGain(); g.gain.value = 0.6 + loud * 1.4; g.connect(out);
@@ -62,6 +70,7 @@ export class AudioSystem {
       const p = game.controller.position;
       if (kind === 'found') { this.music.sting(); return; }
       const out = this.mix.spatial(kind === 'bell' ? 'ambience' : 'sfx', pos.x - p.x, pos.y - p.y, pos.z - p.z, kind === 'bell' ? 14 : 3, 0.5);
+      if (kind === 'bell') this.onCaption?.('a temple bell');
       if (kind === 'bell') playVoice('templeBell', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
       else if (kind === 'offer') { playVoice('furin', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white); this.music.sting(); }
       else playVoice('bambooKnock', this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
@@ -94,8 +103,9 @@ export class AudioSystem {
       const p = game.controller.position, ctx = this.mix.ctx, t = this.mix.now + 0.02;
       const at = (bus: 'sfx' | 'ambience' | 'nature', ref: number) => this.mix.spatial(bus, pos.x - p.x, pos.y - p.y, pos.z - p.z, ref, 0.3);
       switch (kind) {
-        case 'taiko': playNote(ctx, at('ambience', 12), 'taiko', t, 41 + (this.rng.next() < 0.3 ? 5 : 0), 0.4, 0.7); break;
+        case 'taiko': if (Math.random() < 0.05) this.onCaption?.('taiko drums'); playNote(ctx, at('ambience', 12), 'taiko', t, 41 + (this.rng.next() < 0.3 ? 5 : 0), 0.4, 0.7); break;
         case 'boom': {
+          this.onCaption?.('fireworks');
           // the light comes first, the boom later (distance / speed of sound)
           const delay = Math.min(1.5, pos.distanceTo(p) / 340);
           playNote(ctx, at('ambience', 60), 'taiko', t + delay, 31, 1.2, 0.9);
@@ -119,10 +129,15 @@ export class AudioSystem {
       const p = game.controller.position;
       const dx = pos.x - p.x, dy = pos.y - p.y, dz = pos.z - p.z;
       if (dx * dx + dz * dz > 120 * 120) return;
+      if (CAPTIONS[id]) this.onCaption?.(CAPTIONS[id]!);
       const out = this.mix.spatial('nature', dx, dy, dz, 4, 0.35);
       playVoice(id, this.mix.ctx, out, this.mix.now + 0.02, this.rng, this.mix.noise.white);
     };
   }
+
+  setMono(on: boolean): void { this.mix.setMono(on); }
+  /** subtitles for the sounds around you (set by the app when enabled) */
+  onCaption: ((text: string) => void) | null = null;
 
   setVolumes(v: AudioVolumes): void {
     this.mix.setVolume('master', v.master);

@@ -73,12 +73,15 @@ export class ForestStreamer {
   private build(t: Tile, trees: Record<string, Float32Array>): void {
     const g = new THREE.Group();
     g.name = 'forest-tile';
+    // the reflection skips far tiles (they're a few pixels in the water) and trunks
+    g.userData.reflectCenter = new THREE.Vector3(t.x0 + TILE / 2, 0, t.z0 + TILE / 2);
     for (const [id, packed] of Object.entries(trees)) {
       const kit = this.kits.get(id);
       if (!kit || packed.length === 0) continue;
       const p = kit.makeTile(packed, hash3(t.x0, t.z0, id.length));
       g.add(p.near, p.far, p.trunks);
       p.near.visible = false; p.trunks.visible = false;
+      p.trunks.userData.noReflect = true;
       t.parts.push(p);
     }
     t.group = g;

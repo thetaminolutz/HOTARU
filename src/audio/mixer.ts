@@ -26,6 +26,13 @@ export class Mixer {
   private conv: [ConvolverNode, ConvolverNode];
   private convGain: [GainNode, GainNode];
   private active = 0;
+  private comp: DynamicsCompressorNode;
+  /** Mono mode (SPEC §26): everything folded down to one channel. */
+  setMono(on: boolean): void {
+    this.comp.channelCount = on ? 1 : 2;
+    this.comp.channelCountMode = on ? 'explicit' : 'max';
+    this.comp.channelInterpretation = 'speakers';
+  }
   space: Space | null = null;
   readonly noise: { white: AudioBuffer; pink: AudioBuffer; brown: AudioBuffer };
 
@@ -36,6 +43,7 @@ export class Mixer {
     this.master = ctx.createGain();
     this.master.gain.value = 0;
     this.master.connect(comp);
+    this.comp = comp;
     for (const b of ['music', 'ambience', 'nature', 'sfx', 'ui'] as Bus[]) {
       const g = ctx.createGain();
       g.connect(this.master);
