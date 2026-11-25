@@ -56,7 +56,7 @@ export class GameWorld {
     this.world = createWorld(seed);
     const workers = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 4) - 1));
     this.pool = new WorkerPool(workers);
-    const atlas = toTexture(leafAtlas());
+    const atlas = toTexture(leafAtlas(), { mips: false, repeat: false }); // mipmaps blur the 2×2 cells together → square clusters
     const gAtlas = toTexture(groundAtlas(), { repeat: false, mips: false });
     const glow = toTexture(glowSprite(), { repeat: false, mips: false });
 

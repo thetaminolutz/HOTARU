@@ -29,6 +29,7 @@ import { Adventure } from './adventure';
 import { PhotoMode } from './photoMode';
 import { Mystic } from './mystic';
 import { CollisionWorld } from '../player/collision';
+import { FishSchools } from '../fauna/fishSchools';
 
 let stoneImg: Pixmap | null = null;
 /** A little grey stone for the dialogue box when a tablet or shrine 'speaks'. */
@@ -47,7 +48,7 @@ export class Game {
   readonly renderer: THREE.WebGLRenderer;
   readonly pipeline: PixelPipeline;
   readonly world: GameWorld;
-  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.2, 22000);
+  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.12, 22000);
   readonly tod: TodState = createTodState();
   readonly input: InputState;
   readonly controller: Controller;
@@ -90,6 +91,7 @@ export class Game {
   private colliders: Collider[];
   /** everything you can bump into (walls, trunks, posts, people, animals) */
   readonly collision = new CollisionWorld();
+  fish: FishSchools | null = null;
   readonly interactions = new Interactions();
   /** items, journal, map, fishing, boats, your house (M11) */
   readonly adv = new Adventure(this);
@@ -174,6 +176,9 @@ export class Game {
     this.adv.init();
     this.mystic.init();
     this.buildCollision();
+    // fish under the water near you
+    this.fish = new FishSchools(w.world, (x, z) => Math.max(0, w.world.hydro.waterAt(x, z)), (x, z) => w.world.hydro.ponds.some((p) => Math.hypot(p.x - x, p.z - z) < p.r));
+    w.scene.add(this.fish.mesh);
     this.controller.placeAt(S.x + 1, S.z + 3);
     this.controller.lookAt(w.dock.anchors.pierEnd!.clone().add(new THREE.Vector3(-10, 1, -20)));
     clock.setHour(hour);
@@ -326,6 +331,7 @@ export class Game {
     this.updateDialogue(dt);
     this.updateSecrets(dt);
     this.mystic.update(dt);
+    this.fish?.update(dt, this.controller.position);
     this.updateRipples(dt);
     this.world.fx.update(cp, this.world.groundHeight(cp.x, cp.z), this.tod, clock.hour, this.windStrength, this.frozenElapsed !== null);
     this.world.villages.update(this.camera.position, this.controller.position, clock.hour, dt, this.world.people.openers());

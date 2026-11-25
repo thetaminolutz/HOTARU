@@ -35,9 +35,9 @@ const WATER = 0;
 const GRAVITY = 13;
 const JUMP_V = 4.4;
 const STEP_UP = 0.6;
-const MAX_CLIMB = 0.95;
-/** the player's body radius for collisions (m) */
-const BODY_R = 0.28; // rise per metre of travel that can still be walked up (~43°)
+const MAX_CLIMB = 0.95; // rise per metre of travel that can still be walked up (~43°)
+/** the player's body radius for collisions (m): wide enough that the near plane never reaches a wall */
+const BODY_R = 0.36;
 
 export class Controller {
   readonly position = new THREE.Vector3();

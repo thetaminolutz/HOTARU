@@ -179,7 +179,7 @@ function clusterLayout(sp: TreeSpecies, seed: number): { c: THREE.Vector3; size:
   return out;
 }
 
-function trunkGeometry(sp: TreeSpecies): THREE.BufferGeometry {
+function trunkGeometry(sp: TreeSpecies, layout: { c: THREE.Vector3; size: number }[] = []): THREE.BufferGeometry {
   const parts: THREE.BufferGeometry[] = [];
   const top = sp.shape === 'cone' ? sp.height * 0.75 : sp.height * 0.7;
   const g = new THREE.CylinderGeometry(sp.trunkRadius * 0.45, sp.trunkRadius, top, 8, 3);
@@ -194,15 +194,32 @@ function trunkGeometry(sp: TreeSpecies): THREE.BufferGeometry {
   }
   g.computeVertexNormals();
   parts.push(g);
-  if (sp.shape === 'dome' || sp.shape === 'pads' || sp.shape === 'weep') {
-    for (let b = 0; b < 3; b++) {
-      const br = new THREE.CylinderGeometry(sp.trunkRadius * 0.2, sp.trunkRadius * 0.45, sp.radius * 0.9, 4, 1);
-      br.translate(0, sp.radius * 0.45, 0);
-      br.rotateZ(0.9 + b * 0.1);
-      br.rotateY(b * 2.1);
-      br.translate(0, sp.trunkHeight * 0.9 + b * 0.4, 0);
-      parts.push(br);
-    }
+  // branches grow from the trunk into the leaf clusters, so every clump of leaves sits on a branch
+  // (and bare winter trees show a real branch structure)
+  if (sp.shape !== 'bush' && sp.shape !== 'cone') {
+    const bend = (y: number) => Math.sin(y * 0.5) * 0.15 * (sp.shape === 'pads' ? 3 : 1);
+    const limb = (a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number) => {
+      const d = b.clone().sub(a), len = d.length();
+      if (len < 0.2) return;
+      const c = new THREE.CylinderGeometry(r1, r0, len, 5, 1);
+      c.translate(0, len / 2, 0);
+      c.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()));
+      c.translate(a.x, a.y, a.z);
+      parts.push(c);
+    };
+    const sorted = [...layout].sort((p, q) => Math.hypot(q.c.x, q.c.z) - Math.hypot(p.c.x, p.c.z)).slice(0, 14);
+    sorted.forEach((cl, i) => {
+      const reach = Math.hypot(cl.c.x, cl.c.z);
+      if (reach < 0.35) return;
+      const y0 = Math.min(top * 0.95, Math.max(sp.trunkHeight * 0.85, cl.c.y - reach * (sp.shape === 'weep' ? 0.2 : 0.65)));
+      const a = new THREE.Vector3(bend(y0), y0, 0);
+      // end a little inside the cluster so the tip is hidden by the leaves
+      const tip = cl.c.clone().multiplyScalar(0.82);
+      const mid = a.clone().lerp(tip, 0.5).add(new THREE.Vector3(0, 0.25 + (i % 3) * 0.1, 0));
+      const r0 = sp.trunkRadius * (0.55 - Math.min(0.3, i * 0.02)), r1 = sp.trunkRadius * 0.18;
+      limb(a, mid, r0, (r0 + r1) / 2);
+      limb(mid, tip, (r0 + r1) / 2, r1);
+    });
   }
   const [r, gg, bb] = hexToLinear(sp.trunkColor);
   for (const p of parts) ensureColor(p, [r * 3.6, gg * 3.6, bb * 3.6]);
@@ -294,7 +311,7 @@ export class TreeKit {
     };
     this.mat = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide });
     this.mat.userData.depth = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: DEPTH_FRAG, side: THREE.DoubleSide });
-    this.trunkGeo = trunkGeometry(sp);
+    this.trunkGeo = trunkGeometry(sp, layout);
     this.trunkMat = litMaterial({ outline: false, map: barkTexture() });
     this.colors = sp.colors.map((c) => hexToLinear(c));
   }
