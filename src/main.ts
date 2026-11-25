@@ -16,6 +16,7 @@ import { uiSound } from './ui/widgets';
 import { DebugPanel } from './debug/panel';
 import { Benchmark } from './debug/benchmark';
 import { shotByName } from './app/shots';
+import { wireScreens } from './app/screens';
 
 const gameCanvas = document.getElementById('game') as HTMLCanvasElement;
 const uiCanvas = document.getElementById('ui') as HTMLCanvasElement;
@@ -58,6 +59,7 @@ const ui = new UIManager(uiCanvas, {
   penLook: (dx, dy) => { game.input.lastDevice = 'pen'; game.input.addLook(dx, dy, 0.006); },
 });
 game.input.attachLookElement(uiCanvas);
+const screens = wireScreens(game, ui);
 ui.settings.onRebind = (done) => { game.input.rebindListener = (code) => { game.input.rebindListener = null; done(code); }; };
 const bench = new Benchmark(game);
 const debug = new DebugPanel(game, bench, () => { state.mode = 'gallery'; ui.show('gallery'); });
@@ -183,7 +185,8 @@ function loop(now: number): void {
   if (ui.hud.jumpTap) { game.input.touchJump = true; ui.hud.jumpTap = false; }
   if (ui.hud.actTap) { game.input.touchInteract = true; ui.hud.actTap = false; }
   game.input.touchTimelapse = ui.hud.timelapseHeld;
-  if (game.input.menuPressed) { game.input.menuPressed = false; if (state.mode === 'play') openMenu(); }
+  if (game.input.menuPressed) { game.input.menuPressed = false; if (state.mode === 'play' && !screens.close()) openMenu(); }
+  if (state.mode === 'play') screens.update();
   game.input.enabled = state.mode === 'play';
   bench.update(dt, frameMs);
   if (state.mode !== 'gallery') game.frame(dt);

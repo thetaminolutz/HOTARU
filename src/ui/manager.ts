@@ -7,8 +7,11 @@ import { SettingsScreen } from './screens/settings';
 import { Hud } from './screens/hud';
 import { GalleryScreen } from './screens/gallery';
 import { brushCursor } from './art';
+import type { JournalScreen } from './screens/journal';
+import type { MapScreen } from './screens/map';
+import type { PhotoScreen } from './screens/photo';
 
-export type ScreenName = 'loading' | 'title' | 'settings' | 'play' | 'gallery';
+export type ScreenName = 'loading' | 'title' | 'settings' | 'play' | 'gallery' | 'journal' | 'map' | 'photo';
 
 export type UIActions = {
   wander: () => void;
@@ -32,6 +35,10 @@ export class UIManager {
   readonly hud: Hud;
   readonly gallery = new GalleryScreen();
   hidden = false;
+  /** M11 screens, attached once the game exists */
+  journal: JournalScreen | null = null;
+  map: MapScreen | null = null;
+  photo: PhotoScreen | null = null;
   private t = 0;
   /** Brush cursor position (mouse in menus, Apple Pencil anywhere); null = hidden. */
   private cursor: { x: number; y: number; until: number } | null = null;
@@ -49,7 +56,7 @@ export class UIManager {
       const kind = e.pointerType === 'pen' ? 'pen' : e.pointerType === 'touch' ? 'touch' : 'mouse';
       if (kind === 'pen' || (kind === 'mouse' && !document.pointerLockElement)) this.cursor = { x, y, until: this.t + (kind === 'pen' ? 1.5 : 1e9) };
       if (kind === 'pen' && this.screen === 'play') { this.penPointer(type, x, y, e.pointerId); return; }
-      this.pointer({ type, x, y, id: e.pointerId, kind });
+      this.pointer({ type, x, y, id: e.pointerId, kind, pressure: e.pressure });
     };
     canvas.addEventListener('pointerleave', () => { this.cursor = null; });
     canvas.style.cursor = 'none';
@@ -61,6 +68,7 @@ export class UIManager {
     canvas.addEventListener('pointermove', (e) => send('move', e));
     canvas.addEventListener('pointerup', (e) => send('up', e));
     canvas.addEventListener('pointercancel', (e) => send('up', e));
+    canvas.addEventListener('wheel', (e) => { if (this.screen === 'map') { e.preventDefault(); this.map?.wheel(e.deltaY); } }, { passive: false });
   }
 
   show(s: ScreenName): void { this.screen = s; }
@@ -80,8 +88,16 @@ export class UIManager {
     }
   }
 
-  private pointer(p: Pointer): void {
+  private pointer(p: Pointer & { pressure?: number }): void {
     switch (this.screen) {
+      case 'journal': this.journal?.pointer(p); break;
+      case 'map': this.map?.pointer(p); break;
+      case 'photo': {
+        if (this.photo?.pointer(p)) break;
+        const used = this.hud.pointer(p, this.ui, this.t);
+        if (!used && p.type === 'down' && !this.hud.touchMode) this.actions.gameClick();
+        break;
+      }
       case 'title': this.title.pointer(p); break;
       case 'settings': this.settings.pointer(p); break;
       case 'gallery': this.gallery.pointer(p); break;
@@ -107,9 +123,12 @@ export class UIManager {
         case 'settings': this.settings.draw(ui, t); break;
         case 'gallery': this.gallery.draw(ui, t, dt); break;
         case 'play': this.hud.draw(ui, t); break;
+        case 'journal': this.journal?.draw(ui, t); break;
+        case 'map': this.map?.draw(ui, t); break;
+        case 'photo': this.photo?.draw(ui, t, dt); break;
       }
       this.hud.drawFade(ui);
-      if (this.cursor && t < this.cursor.until && (this.screen !== 'play' || !document.pointerLockElement)) ui.sprite(this.cursorArt, this.cursor.x, this.cursor.y);
+      if (this.cursor && t < this.cursor.until && ((this.screen !== 'play' && this.screen !== 'photo') || !document.pointerLockElement)) ui.sprite(this.cursorArt, this.cursor.x, this.cursor.y);
     }
     ui.present();
   }

@@ -35,6 +35,8 @@ export class InputState {
   private jogToggled = false;
   private padPrev: boolean[] = [];
   enabled = false;
+  /** a journal or the map is open: the world ignores movement and actions */
+  frozen = false;
   /** Radians per mouse pixel at sensitivity 1. */
   mouseSensitivity = 0.0022;
   /** Touch & Pencil writers. */
@@ -143,6 +145,7 @@ export class InputState {
     this.moveX = len > 1 ? x / len : x;
     this.moveZ = len > 1 ? z / len : z;
     this.up = up;
+    if (this.frozen) { this.moveX = this.moveZ = this.up = 0; this.jumpPressed = this.interactPressed = this.toolPressed = this.interactHeld = false; this.lookDX = this.lookDY = 0; }
   }
 
   /** Clear edge-triggered actions after the frame consumed them. */
