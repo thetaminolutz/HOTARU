@@ -59,11 +59,10 @@ export function wireScreens(game: Game, ui: UIManager): { close(): boolean; upda
     hold: (t) => { adv.inv.current = t; game.onToast?.('In hand: ' + toolDef(t).name); },
     day: () => clock.day,
   }, () => close());
-  const dock = w.dock.anchors.shore!;
   const map = new MapScreen({
     world: w.world, journey: adv.journey,
     player: () => ({ x: game.controller.position.x, z: game.controller.position.z, yaw: game.controller.yaw }),
-    dock: { x: dock.x, z: dock.z },
+    get dock() { const d = w.dock.anchors.shore!; return { x: d.x, z: d.z }; },
     villages: VILLAGES.map((v) => ({ id: v.id, name: v.name, x: v.x, z: v.z })),
     info: () => `day ${clock.day + 1}  ${String(Math.floor(clock.hour)).padStart(2, '0')}:${String(Math.floor((clock.hour % 1) * 60)).padStart(2, '0')}  ${adv.seasonName}`,
   }, () => close());

@@ -25,6 +25,19 @@ export class Fishing {
   note = '';
   readonly mesh: THREE.Mesh;
   private waitFor = 5;
+  private line: THREE.Line;
+  /** rod tip in world space (set by the game each frame) */
+  readonly tip = new THREE.Vector3();
+
+  /** Bend the line from the rod tip down to the float. */
+  private drawLine(): void {
+    const a = this.line.geometry.getAttribute('position') as THREE.BufferAttribute, m = this.mesh.position;
+    for (let i = 0; i < 9; i++) {
+      const k = i / 8, sag = Math.sin(k * Math.PI) * 0.4 * (this.state === 'reel' ? 0.2 : 1);
+      a.setXYZ(i, (this.tip.x - m.x) * (1 - k), (this.tip.y - m.y) * (1 - k) * (1 - k) - sag * (1 - k) + 0.1 * k, (this.tip.z - m.z) * (1 - k));
+    }
+    a.needsUpdate = true;
+  }
   private nibbleT = 0;
   private from = new THREE.Vector3();
   /** splash / plop hooks */
@@ -36,9 +49,15 @@ export class Fishing {
       boxUV(0.08, 0.05, 0.08, 1, [0.95, 0.95, 0.9]).translate(0, -0.025, 0),
       boxUV(0.015, 0.1, 0.015, 1, [0.2, 0.2, 0.2]).translate(0, 0.1, 0),
     ]);
-    this.mesh = new THREE.Mesh(g, litMaterial({ outline: true }));
+    this.mesh = new THREE.Mesh(g.scale(2, 2, 2), litMaterial({ outline: true }));
     this.mesh.name = 'fishing-float';
     this.mesh.visible = false;
+    // the line: rod tip → float, sagging a little
+    const lg = new THREE.BufferGeometry();
+    lg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(9 * 3), 3));
+    this.line = new THREE.Line(lg, new THREE.LineBasicMaterial({ color: 0xe8e0d0, transparent: true, opacity: 0.7 }));
+    this.line.frustumCulled = false;
+    this.mesh.add(this.line);
   }
 
   get active(): boolean { return this.state !== 'idle'; }
@@ -61,6 +80,7 @@ export class Fishing {
       case 'cast': {
         const k = Math.min(1, this.t / 0.8);
         this.mesh.position.lerpVectors(this.from, this.float, k).setY(THREE.MathUtils.lerp(this.from.y, this.float.y, k) + Math.sin(k * Math.PI) * 2.5);
+        this.drawLine();
         if (k >= 1) { this.state = 'wait'; this.t = 0; this.onPlop?.(this.float, false); this.note = 'Wait, and watch the float.'; }
         return null;
       }
@@ -102,6 +122,7 @@ export class Fishing {
       default: return null;
     }
     this.mesh.position.copy(this.float).setY(this.float.y + bob);
+    this.drawLine();
     return null;
   }
 }

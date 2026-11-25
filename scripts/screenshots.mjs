@@ -99,7 +99,47 @@ const M13_SHOTS = [
   { name: 'settings-sound', q: '', wait: 1500, action: setup(() => { const u = window.__hotaru.ui; u.show('settings'); u.settings.tab = 'sound'; }) },
 ];
 
-const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M10: M10_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
+
+// M11: items, journal, map, photo mode, sketchbook, fishing, rowing, your garden
+const prep = `
+  const h = window.__hotaru, g = h.game, c = g.controller, d = g.world.dock, A = g.adv, inv = A.inv, ui = h.ui;
+  const hour = (x) => { h.clock.setHour(x); h.clock.paused = true; g.pipeline.buildLutNow(x); };
+  for (const t of ['lantern', 'rod', 'flute', 'boat', 'umbrella']) inv.give(t);
+  for (const k of ['shell', 'feather', 'flower', 'persimmon', 'crane', 'omamori', 'foxMask', 'tea']) inv.add(k);
+  inv.stored.push('stone', 'coin', 'chime');
+  for (const s of ['sikaDeer', 'tanuki', 'fox', 'macaque']) A.journey.see(s, 0);
+  A.journey.caught('carp', 62, 0); A.journey.caught('ayu', 18, 1); A.journey.caught('lanternFish', 9, 2);
+`;
+const act = (body) => setup(new Function(prep + body));
+const M11_SHOTS = [
+  { name: 'journal-items', q: 'play=1', wait: 3000, action: act(`hour(18); const e = d.anchors.pierEnd; c.placeAt(e.x, e.z + 2); inv.current = 'lantern'; g.input.journalPressed = true;
+    setTimeout(() => { ui.journal.sel = { kind: 'slot', i: 6 }; }, 300);`) },
+  { name: 'journal-creatures', q: 'play=1', wait: 3000, action: act(`hour(18); g.input.journalPressed = true; setTimeout(() => { ui.journal.tab = 'Creatures'; }, 300);`) },
+  { name: 'map', q: 'play=1', wait: 9000, action: act(`hour(18);
+    const path = [[0, 300], [400, 300], [900, 600], [1500, 1500], [1500, 2400], [-200, 3050], [-200, 1200], [-150, -900], [-150, -1250], [-1200, -800], [-1800, -1400]];
+    for (let i = 1; i < path.length; i++) for (let k = 0; k <= 40; k++) { const [x0, z0] = path[i - 1], [x1, z1] = path[i]; A.journey.revealAt(x0 + (x1 - x0) * k / 40, z0 + (z1 - z0) * k / 40, 220); }
+    for (const id of ['lake', 'market', 'rice', 'castle', 'wisteria']) A.journey.visit(id, 0);
+    A.journey.visit('v-ichiba', 0); A.journey.visit('v-inaho', 1);
+    A.journey.stamps.push({ x: 1500, z: 1500, icon: 6 }, { x: -150, z: -1250, icon: 2 }, { x: 200, z: 40, icon: 3 }, { x: -1800, z: -1400, icon: 4 });
+    A.journey.strokes.push({ pts: [300, 200, 500, 260, 700, 420, 820, 520], w: [1, 1.6, 2.2, 1.4], color: 0x2a1e24 });
+    g.input.mapPressed = true;`) },
+  { name: 'fishing-bite', q: 'play=1', wait: 4000, action: act(`hour(18.2); const e = d.anchors.pierEnd; c.placeAt(e.x + 1.2, e.z - 1.5); c.yaw = 0.15; c.pitch = -0.28; inv.current = 'rod'; A.useTool();
+    setTimeout(() => { const F = A.fishing; F.state = 'bite'; F.t = 0.3; F.fish = null; F.note = 'A bite!'; const orig = F.update.bind(F); F.update = (...a) => { F.t = 0.3; return orig(...a); }; }, 1500);`) },
+  { name: 'fish-landed', q: 'play=1', wait: 3000, action: act(`hour(7.5); const e = d.anchors.pierEnd; c.placeAt(e.x + 1.2, e.z - 1.5); c.yaw = 0.15; c.pitch = -0.1; inv.current = 'rod';
+    const f = { id: 'lanternFish', name: 'Lantern fish', text: 'A little light swims under the pier at night.', colors: ['#3a4a6a', '#ffd070'] }; A.landed = { fish: f, size: 11, best: true, t: -60 };`) },
+  { name: 'rowing-dusk', q: 'play=1', wait: 4000, action: act(`hour(17.6); A.boardBoat(); A.boat.x -= 30; A.boat.z -= 60; A.boat.heading = Math.PI * 0.9; c.yaw = A.boat.heading + Math.PI + 0.3; c.pitch = -0.15; inv.current = 'lantern';`) },
+  { name: 'lantern-night', q: 'play=1', wait: 4000, action: act(`hour(22.5); const s = d.anchors.shore; c.placeAt(s.x + 22, s.z + 40); c.yaw = 2.6; c.pitch = -0.12; inv.current = 'lantern';`) },
+  { name: 'photo-ukiyoe', q: 'play=1', wait: 4000, action: act(`hour(17.2); const s = d.anchors.shore; c.placeAt(s.x + 1, s.z + 3); c.lookAt(d.anchors.pierEnd.clone().setY(2)); g.input.photoPressed = true;
+    setTimeout(() => { g.photo.filter = 2; g.photo.frame = 2; }, 300);`) },
+  { name: 'photo-self-portrait', q: 'play=1', wait: 4000, action: act(`hour(16.5); const s = d.anchors.shore; c.placeAt(s.x + 1, s.z + 3); c.lookAt(d.anchors.pierEnd.clone().setY(2)); g.input.photoPressed = true;
+    setTimeout(() => { g.photo.selfie = true; c.position.x += 3.2; c.position.z -= 3.5; c.position.y += 0.3; c.yaw += 2.4; c.pitch = -0.1; }, 300);`) },
+  { name: 'album-sketch', q: 'play=1', wait: 6000, action: act(`hour(16); const s = d.anchors.shore; c.placeAt(s.x + 1, s.z + 3); c.lookAt(d.anchors.pierEnd.clone().setY(2));
+    setTimeout(() => { g.photo.enter(); g.photo.shoot('sketch'); g.photo.shoot('photo'); g.photo.exit(); g.input.journalPressed = true; }, 1500);
+    setTimeout(() => { ui.journal.tab = 'Album'; }, 2000);`) },
+  { name: 'garden-chest', q: 'play=1', wait: 4000, action: act(`hour(10); A.garden = [0, 0, 1, 2]; h.clock.day = 4; const G = A.gardenPos; c.placeAt(G.x + 5, G.z + 4); c.lookAt(G.clone().setY(G.y + 1.6));`) },
+];
+
+const SHOTS = { M1: M1_SHOTS, M2: M2_SHOTS, M3: M3_SHOTS, M4: M4_SHOTS, M5: M5_SHOTS, M6: M6_SHOTS, M7: M7_SHOTS, M8: M8_SHOTS, M9: M9_SHOTS, M10: M10_SHOTS, M11: M11_SHOTS, M13: M13_SHOTS }[milestone] ?? M3_SHOTS;
 
 const server = await serve();
 const browser = await launch();

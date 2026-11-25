@@ -58,7 +58,7 @@ export class MapScreen {
     const s = ui.safe, j = this.src.journey;
     ui.rect(0, 0, ui.w, ui.h, C.indigoDark, 200);
     const side = 46;
-    const H = ui.h - s.top - s.bottom - 12, W = Math.min(ui.w - s.left - s.right - side - 16, Math.round(H * 1.25));
+    const H = ui.h - s.top - s.bottom - 12, W = Math.min(ui.w - s.left - s.right - side - 16, H);
     const x0 = Math.round((ui.w - W - side) / 2), y0 = s.top + 6;
     panel(ui, 'washi', x0 - 4, y0 - 4, W + 8, H + 8);
     const base = Math.min(W, H) / MAP_PX;

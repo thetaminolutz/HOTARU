@@ -198,7 +198,8 @@ function loop(now: number): void {
   if (state.mode === 'play') {
     const c = game.controller, t = game.interactions.target;
     const ICON: Record<string, string> = { sit: 'sit', pick: 'pick', fish: 'fish', row: 'row', give: 'gift', read: 'book' };
-    ui.hud.prompt = game.adv.boating ? { icon: 'row', label: game.adv.boat.landing() ? 'Step ashore' : '' }
+    const shore = game.adv.boating && game.adv.boat.landing();
+    ui.hud.prompt = game.adv.fishing.active ? null : game.adv.boating ? (shore ? { icon: 'row', label: 'Step ashore' } : null)
       : t && !c.sitting ? { icon: ICON[t.kind] ?? 'hand', label: t.label }
       : c.sitHint ? { icon: c.sitHint, label: '' } : null;
     ui.hud.canTimelapse = c.sitting;

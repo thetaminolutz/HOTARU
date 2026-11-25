@@ -270,7 +270,7 @@ export class JournalScreen {
     }
     ui.text(bodyFont, `${al.length} pictures`, A.x, A.y, C.vermilion);
     if (!al.length) { ui.textBlock(bodyFont, 'Press P (or the camera token) to take photos and sketches.', A.x, A.y + 16, A.w / 2 - 8, C.inkSoft); return; }
-    const tw = 56, th = 38, cols = Math.floor(A.w / (tw + 6)), rows = Math.floor((A.h - 34) / (th + 6)), per = cols * rows;
+    const tw = 84, th = 56, cols = Math.floor(A.w / (tw + 6)), rows = Math.floor((A.h - 34) / (th + 6)), per = cols * rows;
     const pages = Math.ceil(al.length / per);
     this.page = Math.min(this.page, pages - 1);
     const list = [...al].reverse().slice(this.page * per, this.page * per + per);

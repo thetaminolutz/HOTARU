@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import type { Game } from './game';
 import { clock } from '../core/clock';
-import { FILTERS, FRAMES, fromGL, frame, inkWash, encode, travellerMesh, type Img } from '../items/photo';
+import { FILTERS, FRAMES, fromGL, frame, inkWash, encode, shrink, travellerMesh, type Img } from '../items/photo';
 import { REGIONS } from '../world/data/regions';
 
 const RANGE = 15;
@@ -90,7 +90,7 @@ export class PhotoMode {
   /** Take the picture (or ink a sketch of the view). */
   shoot(kind: 'photo' | 'sketch'): Img {
     const [w, h] = this.g.pipeline.pixelSize;
-    const raw = fromGL(this.g.pipeline.readPixels(), w, h);
+    const raw = shrink(fromGL(this.g.pipeline.readPixels(), w, h), 300);
     const img = kind === 'sketch' ? frame(inkWash(raw, clock.day * 31 + Math.floor(clock.hour * 10)), 'scroll') : frame(raw, FRAMES[this.frame]!);
     this.g.adv.journey.addAlbum({ kind, day: clock.day, hour: clock.hour, place: this.place(), w: img.w, h: img.h, data: encode(img) });
     this.last = { img, t: 0, kind };

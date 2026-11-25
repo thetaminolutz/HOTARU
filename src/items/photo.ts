@@ -25,6 +25,15 @@ const paperAt = (x: number, y: number) => {
   return 236 + ((n >> 5) % 12) - ((x + y * 3) % 7 === 0 ? 6 : 0);
 };
 
+/** Shrink by a whole factor so the longest side fits `max` (keeps crisp pixels). */
+export function shrink(img: Img, max = 300): Img {
+  const k = Math.ceil(Math.max(img.w, img.h) / max);
+  if (k <= 1) return img;
+  const w = Math.floor(img.w / k), h = Math.floor(img.h / k), px = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) px.set(img.px.subarray(((y * k) * img.w + x * k) * 4, ((y * k) * img.w + x * k) * 4 + 4), (y * w + x) * 4);
+  return { w, h, px };
+}
+
 /** Put a frame around an image (returns a new, larger image). */
 export function frame(img: Img, kind: (typeof FRAMES)[number]): Img {
   if (kind === 'none') return img;
@@ -51,6 +60,12 @@ export function frame(img: Img, kind: (typeof FRAMES)[number]): Img {
 export function inkWash(img: Img, seed = 1): Img {
   const { w, h, px } = img, L = new Float32Array(w * h), out = new Uint8ClampedArray(w * h * 4);
   for (let i = 0; i < w * h; i++) L[i] = (px[i * 4]! * 0.3 + px[i * 4 + 1]! * 0.55 + px[i * 4 + 2]! * 0.15) / 255;
+  // soften first: the dither pattern isn't something an ink brush would draw
+  const tmp = new Float32Array(w * h);
+  for (let pass = 0; pass < 2; pass++) {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s = 0, n = 0; for (let d = -2; d <= 2; d++) { const xx = x + d; if (xx >= 0 && xx < w) { s += L[y * w + xx]!; n++; } } tmp[y * w + x] = s / n; }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { let s = 0, n = 0; for (let d = -2; d <= 2; d++) { const yy = y + d; if (yy >= 0 && yy < h) { s += tmp[yy * w + x]!; n++; } } L[y * w + x] = s / n; }
+  }
   const at = (x: number, y: number) => L[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))]!;
   const r = createRng(seed);
   const drift = Array.from({ length: 8 }, () => r.range(-1, 1));
@@ -64,8 +79,8 @@ export function inkWash(img: Img, seed = 1): Img {
     const pool = nb > tone ? 0.08 : 0;
     const wobble = drift[(x >> 4) & 7]! * 0.02 + drift[(y >> 4) & 7]! * 0.02;
     let ink = [0, 0.22, 0.42, 0.7][tone]! + pool + wobble;
-    if (edge > 0.32) ink = Math.max(ink, 0.88);
-    else if (edge > 0.18) ink = Math.max(ink, 0.6);
+    if (edge > 0.22) ink = Math.max(ink, 0.9);
+    else if (edge > 0.12) ink = Math.max(ink, 0.55);
     const p = paperAt(x, y);
     const i = (y * w + x) * 4;
     out[i] = p - ink * (p - 34); out[i + 1] = p - 6 - ink * (p - 6 - 30); out[i + 2] = p - 22 - ink * (p - 22 - 36); out[i + 3] = 255;

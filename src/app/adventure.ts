@@ -202,6 +202,8 @@ export class Adventure {
     this.boat.board(m.x, m.z, Math.PI + 0.12);
     this.boating = true;
     this.g.controller.mode = 'boat';
+    this.g.controller.yaw = this.boat.heading + Math.PI;
+    this.g.controller.pitch = -0.12;
     this.g.controller.pose = 'sit';
     this.status = 'Row with forward/back, steer left/right. Interact near a shore to step out.';
   }
@@ -276,6 +278,7 @@ export class Adventure {
     if (inp.toolPressed && c.mode === 'walk' && !g.dialogue) { this.useTool(); inp.toolPressed = false; }
     // fishing takes the interact button while the line is out
     if (this.fishing.active) {
+      this.fishing.tip.copy(c.position).add(new THREE.Vector3(-Math.sin(c.yaw) * 1.6 + Math.cos(c.yaw) * 0.35, 0.5, -Math.cos(c.yaw) * 1.6 - Math.sin(c.yaw) * 0.35));
       const W = g.weather.out, season = W.weights.indexOf(Math.max(...W.weights));
       const press = inp.interactPressed;
       const got = this.fishing.update(dt, press, inp.interactHeld, clock.hour, season, W.rain > 0.2);

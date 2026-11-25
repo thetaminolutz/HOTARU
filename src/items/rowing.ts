@@ -45,7 +45,7 @@ export class Rowboat {
 
   /** Eye position (seated in the middle). */
   eye(out: THREE.Vector3, t: number): THREE.Vector3 {
-    return out.set(this.x, this.q.water(this.x, this.z) + 0.95 + Math.sin(t * 1.1) * 0.03, this.z);
+    return out.set(this.x, this.q.water(this.x, this.z) + 1.15 + Math.sin(t * 1.1) * 0.03, this.z);
   }
 
   /** A spot to step ashore near the boat, or null (piers and gentle banks). */
