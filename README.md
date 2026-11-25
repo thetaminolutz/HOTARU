@@ -59,6 +59,8 @@ Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ do
 | Check | Result |
 |---|---|
 | Unit tests | ✅ 63 passed (lore and haiku, castle plateau, walkable grotto ramps) |
+| All e2e | ✅ offline, stability, controls, audio, houses, fauna, water, people, secrets |
+| Draw calls · triangles | Low 307 · 1.30 M — Medium 356 · 1.66 M — High 404 · 1.97 M (High just over the 400 budget; M14 trims) |
 | Secrets e2e (`npm run e2e:secrets`) | ✅ 85 secrets; shrine restores 1→3 over days (once per day); viewpoint pan with haiku; tablet; cave found on entering; hidden gate; 5 keep storeys (standing on the ground floor stays there) |
 
 ### M9 at a glance (villagers)
