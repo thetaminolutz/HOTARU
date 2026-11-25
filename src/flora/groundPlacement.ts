@@ -10,6 +10,8 @@ import { GV } from './groundAtlas';
 import { REGIONS } from '../world/data/regions';
 
 const PAMPAS = REGIONS.findIndex((r) => r.id === 'pampas');
+const SUNFLOWER = REGIONS.findIndex((r) => r.id === 'sunflower');
+const HYDRANGEA = REGIONS.findIndex((r) => r.id === 'hydrangea');
 
 export const STRIDE = 8;
 let noise: Noise | null = null;
@@ -31,6 +33,7 @@ export function placeGround(w: World, x0: number, z0: number, size: number, dens
   for (let z = z0; z < z0 + size; z += cell) for (let x = x0; x < x0 + size; x += cell) {
     const px = x + r.next() * cell, pz = z + r.next() * cell;
     const u = r.next(), u2 = r.next(), u3 = r.next();
+    if (px >= x0 + size || pz >= z0 + size) continue; // jitter must not spill into the next tile
     if (exclude.some(([ax, az, bx, bz]) => px > ax && px < bx && pz > az && pz < bz)) continue;
     const b = bio[Math.min(G - 1, Math.round(((pz - z0) / size) * (G - 1))) * G + Math.min(G - 1, Math.round(((px - x0) / size) * (G - 1)))]!;
     const h = w.height(px, pz);
@@ -54,16 +57,18 @@ export function placeGround(w: World, x0: number, z0: number, size: number, dens
     } else if (b.region === PAMPAS || (b.special === 0 && b.autumn > 0.75 && moist < 0.4 && big > 0.1)) { // pampas moor
       if (u > 0.75) continue;
       variant = u2 < 0.6 ? GV.pampas : GV.tallGrass; height = 1.0 + u3 * 0.8;
-    } else if (b.special === 7 && b.specialW > 0.4) { // marsh
-      if (u > 0.8) continue;
-      variant = u2 < 0.6 ? GV.reeds : u2 < 0.8 ? GV.tallGrass : GV.cattails; height = 1.0 + u3 * 0.9;
+    } else if (b.special === 7 && b.specialW > 0.4) { // marsh: reed beds in clumps, open water meadows between
+      if (u > (patch > 0.1 ? 0.6 : 0.25)) continue;
+      variant = patch > 0.1 ? (u2 < 0.75 ? GV.reeds : GV.cattails) : (u2 < 0.6 ? GV.tallGrass : GV.horsetail);
+      height = patch > 0.1 ? 0.9 + u3 * 0.7 : 0.4 + u3 * 0.4;
     } else if (forest > 0.55 && patch + big * 0.5 < 0.35) { // forest floor: ferns, moss, sasa, a few flowers
       if (u > 0.55 + moist * 0.25) continue;
       variant = u2 < 0.45 ? GV.fern : u2 < 0.7 ? GV.moss : u2 < 0.9 ? GV.sasa : GV.bellflower;
       height = variant === GV.moss ? 0.25 : 0.45 + u3 * 0.5;
     } else { // meadow: grass with flower patches
       if (h > 950 && u > 0.3) continue;
-      const flowers = patch > 0.28 && u < 0.35;
+      const fieldFlowers = b.region === SUNFLOWER || b.region === HYDRANGEA;
+      const flowers = fieldFlowers ? patch > -0.2 && u < 0.6 : patch > 0.28 && u < 0.35;
       if (flowers) {
         const kind = (Math.floor((big + 1) * 3) + Math.floor(patch * 7)) % 5;
         variant = [GV.cosmos, GV.daisy, GV.dandelion, GV.spiderLily, GV.bellflower][kind]!;

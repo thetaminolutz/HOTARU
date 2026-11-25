@@ -35,6 +35,13 @@ export const SHOTS: Shot[] = [
   { name: 'snow-pass', label: 'Snowy high pass', hour: 14, elapsed: 1200, pos: (w) => at(w, -300, -3300, 25), look: (w) => at(w, -400, -4300, 300), fov: 70 },
   { name: 'flyover', label: 'High over the world', hour: 16.5, elapsed: 1200, pos: () => new THREE.Vector3(1200, 1400, 2600), look: () => new THREE.Vector3(-600, 200, -1500), fov: 70 },
   { name: 'rice-valley', label: 'Rice-terrace valley', hour: 10.5, elapsed: 1200, pos: (w) => at(w, -200, 2500, 30), look: (w) => at(w, -200, 3300, 20), fov: 70 },
+  // M5: vegetation, wind & particles
+  { name: 'meadow-flowers', label: 'Cosmos fields', hour: 15.5, elapsed: 1200, wind: 0.7, pos: (w) => at(w, 2900, 3000, 1.6), look: (w) => at(w, 2960, 2940, 1), fov: 70 },
+  { name: 'cherry-hills', label: 'Cherry hills, falling leaves', hour: 16.5, elapsed: 1200, wind: 0.8, pos: (w) => at(w, 2300, -400, 1.7), look: (w) => at(w, 2380, -460, 4), fov: 70 },
+  { name: 'bamboo-grove', label: 'Bamboo grove', hour: 9, elapsed: 1200, pos: (w) => at(w, -2700, 1700, 1.7), look: (w) => at(w, -2760, 1640, 5), fov: 75 },
+  { name: 'pampas-moor', label: 'The pampas moor', hour: 17.2, elapsed: 1200, wind: 0.9, pos: (w) => at(w, 600, -2600, 1.7), look: (w) => at(w, 700, -2680, 2), fov: 70 },
+  { name: 'reed-marsh', label: 'Reed marsh at dusk', hour: 19.6, elapsed: 1200, wind: 0.3, pos: (w) => at(w, 3700, 1700, 1.7), look: (w) => at(w, 3790, 1650, 1), fov: 70 },
+  { name: 'hydrangea-hills', label: 'Hydrangea hills', hour: 11, elapsed: 1200, pos: (w) => at(w, -1300, 2300, 1.7), look: (w) => at(w, -1370, 2240, 3), fov: 70 },
 ];
 
 export const shotByName = (n: string | undefined) => SHOTS.find((s) => s.name === n);
