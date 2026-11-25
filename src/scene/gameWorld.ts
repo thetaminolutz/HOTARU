@@ -128,6 +128,7 @@ export class GameWorld {
       const kits = new Map(TREE_SPECIES.map((sp, i) => [sp.id, new TreeKit(sp, atlas, seed + i * 101)]));
       this.kits = kits;
       this.forest = new ForestStreamer(this.pool, seed, kits);
+      this.setQuality(this.quality);
       this.forest.clearings = this.villages.clearings;
       this.forest.radius = quality.name === 'low' ? 450 : quality.name === 'high' ? 1000 : 700;
       this.terrainMaterial.uniforms.uTreeRadius!.value = this.forest.radius;

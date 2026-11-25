@@ -295,6 +295,9 @@ export class Water {
   }
 
   /** Render the mirrored scene into the reflection target. */
+  /** forest tiles beyond this (m) are left out of the reflection */
+  static reflectForest = 420;
+
   renderReflection(renderer: THREE.WebGLRenderer, scene: THREE.Scene, cam: THREE.PerspectiveCamera, sky: THREE.Object3D): void {
     const rc = this.reflCam;
     rc.copy(cam, false);
@@ -323,7 +326,15 @@ export class Water {
     // small near-camera detail (grass, particles) is skipped in the mirror: cheaper, and it
     // never reads well at reflection resolution
     const skipped: THREE.Object3D[] = [];
-    scene.traverse((o) => { if (o.userData.noReflect && o.visible) { o.visible = false; skipped.push(o); } });
+    // ...and terrain entirely below the water line (the lake bed) can never show in a reflection
+    const far2 = Water.reflectForest * Water.reflectForest;
+    scene.traverse((o) => {
+      if (!o.visible) return;
+      const rc0 = o.userData.reflectCenter as THREE.Vector3 | undefined;
+      const skip = o.userData.noReflect || (o.userData.maxY !== undefined && o.userData.maxY < this.level - 0.05)
+        || (rc0 && (rc0.x - camPos.x) ** 2 + (rc0.z - camPos.z) ** 2 > far2);
+      if (skip) { o.visible = false; skipped.push(o); }
+    });
     U.uClipPlane.value.set(0, 1, 0, -this.level + 0.08);
     U.uReflectPass.value = 1;
     const prevCam = U.uCamPos.value.clone();

@@ -54,10 +54,21 @@ export class Hud {
   status = '';
   reel: number | null = null;
   landed: { name: string; text: string; size: number; best: boolean; colors: [string, string] } | null = null;
+  /** comfort: touch controls mirrored; outlined text; subtitles for the sounds around you */
+  leftHanded = false;
+  highContrast = false;
+  private toastY: [number, number][] = [];
+  private captions: { text: string; until: number }[] = [];
+  caption(text: string, now: number): void {
+    if (this.captions.some((c) => c.text === text && c.until > now)) return;
+    this.captions.push({ text, until: now + 3.5 });
+    if (this.captions.length > 3) this.captions.shift();
+  }
+  private txt(): { shadow?: number; outline?: number } { return this.highContrast ? { outline: C.ink } : { shadow: C.indigoDark }; }
 
   constructor(private onMenu: () => void) {}
 
-  toast(text: string, seconds = 5, onTap?: () => void, now = performance.now() / 1000): void {
+  toast(text: string, seconds = Math.max(5, text.length / 14), onTap?: () => void, now = performance.now() / 1000): void {
     this.toasts.push({ text, until: now + seconds, onTap });
   }
 
@@ -100,7 +111,10 @@ export class Hud {
       if (this.held.glow) { ui.disc(x + 12, y + 12, 16, C.amber, 40); ui.disc(x + 12, y + 12, 10, C.amberCore, 50); }
       ui.sprite(itemIcon(this.held.id, this.held.color), x, y, 2);
     }
-    if (this.status) ui.text(bodyFont, this.status, ui.w / 2, ui.h - s.bottom - (this.dialogue ? 84 : 30), C.paperLight, { align: 'center', shadow: C.indigoDark });
+    if (this.status) ui.text(bodyFont, this.status, ui.w / 2, ui.h - s.bottom - (this.dialogue ? 84 : 30), C.paperLight, { align: 'center', ...this.txt() });
+    // subtitles: what you can hear
+    this.captions = this.captions.filter((c) => c.until > t);
+    this.captions.forEach((c, i) => ui.text(bodyFont, '[' + c.text + ']', s.left + 8, ui.h - s.bottom - (this.touchMode ? 70 : 14) - i * 11, C.paperLight, { ...this.txt(), alpha: Math.min(1, c.until - t) }));
     if (this.reel !== null) {
       const w = 90, x = Math.round(ui.w / 2 - w / 2), y = ui.h - s.bottom - 44;
       ui.rect(x - 1, y - 1, w + 2, 6, C.woodDark);
@@ -135,21 +149,27 @@ export class Hud {
     }
     // toasts: small washi scrolls at the top centre
     this.toasts = this.toasts.filter((q) => q.until > t);
-    this.toasts.forEach((q, i) => {
-      const w = Math.min(ui.w - 20, bodyFont.measure(q.text) + 20), h = 19;
-      const x = Math.round(ui.w / 2 - w / 2), y = s.top + 6 + i * 23;
+    let ty = s.top + 6;
+    this.toastY = [];
+    this.toasts.forEach((q) => {
+      const maxW = Math.min(ui.w - 20, 300), text = cleanText(q.text);
+      const lines = bodyFont.wrap(text, maxW - 20);
+      const w = Math.min(maxW, Math.max(...lines.map((l) => bodyFont.measure(l))) + 20), h = 8 + lines.length * bodyFont.lineHeight;
+      const x = Math.round(ui.w / 2 - w / 2), y = ty;
+      this.toastY.push([y, h]);
+      ty += h + 4;
       const fade = Math.min(1, (q.until - t) / 0.6);
       if (fade < 0.3) return;
       panel(ui, 'washi', x, y, w, h);
       ui.vline(x - 1, y + 1, y + h - 2, C.woodDark); ui.vline(x + w, y + 1, y + h - 2, C.woodDark);
-      ui.text(bodyFont, q.text, ui.w / 2, y + 5, C.ink, { align: 'center' });
+      lines.forEach((l, k) => ui.text(bodyFont, l, ui.w / 2, y + 5 + k * bodyFont.lineHeight, C.ink, { align: 'center' }));
     });
     // interact prompt: a tiny paper bubble with a pixel icon (no big text, SPEC §9)
     if (this.prompt && !this.touchMode) {
       const bx = Math.round(ui.w / 2) + 8, by = Math.round(ui.h / 2) - 6;
       panel(ui, 'washi', bx, by, 15, 15);
       ui.sprite(icon(this.prompt.icon, C.ink), bx + 3, by + 3);
-      ui.text(bodyFont, this.prompt.label, bx + 19, by + 3, C.paperLight, { shadow: C.indigoDark, alpha: 0.9 });
+      ui.text(bodyFont, this.prompt.label, bx + 19, by + 3, C.paperLight, { ...this.txt(), alpha: this.highContrast ? 1 : 0.9 });
     }
     if (this.hint && t < this.hintUntil) {
       const a = Math.min(1, (this.hintUntil - t) / 1.5);
@@ -162,17 +182,17 @@ export class Hud {
         ui.disc(this.stick.x, this.stick.y, 4, C.paperLight, 200);
         ui.disc(this.stick.x, this.stick.y, 2, C.vermilion, 220);
       } else {
-        ui.sprite(this.stickArt, s.left + 18, ui.h - s.bottom - 52, 1, idle * 0.6);
+        ui.sprite(this.stickArt, this.leftHanded ? ui.w - s.right - 50 : s.left + 18, ui.h - s.bottom - 52, 1, idle * 0.6);
       }
       this.menuRect = { x: ui.w - s.right - 25, y: s.top + 6, w: 19, h: 19 };
       ui.sprite(this.tokenArt, this.menuRect.x, this.menuRect.y, 1, idle);
       for (let i = 0; i < 3; i++) ui.hline(this.menuRect.x + 6, this.menuRect.x + 12, this.menuRect.y + 6 + i * 3, C.gold, 255 * idle);
       // right-hand tokens: jump, and the contextual interact token above it
-      const rx = ui.w - s.right - 30, ry = ui.h - s.bottom - 30;
+      const rx = this.leftHanded ? s.left + 11 : ui.w - s.right - 30, ry = ui.h - s.bottom - 30;
       this.jumpRect = { x: rx, y: ry, w: 19, h: 19 };
       ui.sprite(this.tokenArt, rx, ry, 1, idle);
       ui.sprite(icon('jump', C.gold), rx + 5, ry + 5, 1, idle);
-      this.actRect = { x: rx - 26, y: ry - 14, w: 19, h: 19 };
+      this.actRect = { x: this.leftHanded ? rx + 26 : rx - 26, y: ry - 14, w: 19, h: 19 };
       if (this.prompt || this.reel !== null || this.status) {
         ui.sprite(this.tokenArt, this.actRect.x, this.actRect.y, 1, 0.95);
         ui.sprite(icon(this.prompt?.icon ?? 'fish', C.amberCore), this.actRect.x + 5, this.actRect.y + 5);
@@ -204,9 +224,8 @@ export class Hud {
     if (p.type === 'down') {
       const s = ui.safe;
       for (let i = 0; i < this.toasts.length; i++) {
-        const q = this.toasts[i]!;
-        const y = s.top + 6 + i * 23;
-        if (q.onTap && p.y >= y && p.y < y + 19) { q.onTap(); return true; }
+        const q = this.toasts[i]!, [y, h] = this.toastY[i] ?? [s.top + 6 + i * 23, 19];
+        if (q.onTap && p.y >= y && p.y < y + h) { q.onTap(); return true; }
       }
     }
     if (!this.touchMode) return false;
@@ -222,7 +241,7 @@ export class Hud {
     if (p.type === 'up' && p.id === this.timeId) { this.timelapseHeld = false; this.timeId = -1; return true; }
     const R = 16;
     if (p.type === 'down') {
-      if (p.x < ui.w * 0.45 && !this.stick.active) {
+      if ((this.leftHanded ? p.x > ui.w * 0.55 : p.x < ui.w * 0.45) && !this.stick.active) {
         Object.assign(this.stick, { active: true, id: p.id, cx: p.x, cy: p.y, x: p.x, y: p.y });
         return true;
       }

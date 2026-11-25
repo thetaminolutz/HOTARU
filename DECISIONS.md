@@ -434,3 +434,21 @@ Non-obvious decisions and why. Newest at the bottom.
   lines.
 - **The aurora uses clear-weather cloud cover (0.45).** It first required < 0.4 and so could
   never appear.
+
+## M14 (polish, performance & release)
+
+- **The triangle budget is measured on the visible pass.** The bench's per-frame total
+  also counts the shadow and reflection passes, which re-draw the scene. The visible pass
+  at Medium peaks at about 615 k (dock), within the 1.5 M budget.
+- **The reflection is where draws and triangles were cut:** submerged terrain nodes (their
+  max height is stored per node), far forest tiles (beyond 420 m) and trunks are left out.
+  Raising the terrain split factor was tried and reverted: it added nodes.
+- **Auto quality never goes above the chosen preset.** It steps down after about 6 s of
+  frames over budget (20 ms, or 36 ms with a 30 fps cap) and up after about 40 s of
+  headroom. It is paused during the benchmark.
+- **Large text raises the UI pixel scale by one step,** instead of switching fonts, so
+  the UI stays pixel-perfect.
+- **Hints are spoken by villagers as toasts,** once each, remembered per device (not per
+  save). Toasts wrap and stay up longer for long text.
+- **Save robustness:** atomic swap plus a `.prev` backup. `readSave` validates the seed
+  and position and falls back to the backup. Export and import are plain JSON files.

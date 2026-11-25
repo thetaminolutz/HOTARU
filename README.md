@@ -8,6 +8,20 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 - Decision log: [`DECISIONS.md`](DECISIONS.md)
 - Reference look: [`reference/`](reference/)
 
+## A quick tour
+
+Walk out onto the lantern pier at dusk, row across a mirror lake, talk with villagers who
+remember you, find 112 secrets, fish, take photos and ink sketches, and, if you piece the old
+castle's story together, float the thousandth lantern on festival night. There is no
+combat, no health and no way to fail. Everything is pixel art, generated in code, and it
+runs offline on an iPad.
+
+| | | |
+|---|---|---|
+| ![Lantern festival](docs/screenshots/M12/lantern-festival.png) | ![Tsukimi](docs/screenshots/M12/tsukimi.png) | ![Pier at night](docs/screenshots/M1/dock-night.png) |
+| ![Fishing at dusk](docs/screenshots/M11/fishing-bite.png) | ![Ukiyo-e photo](docs/screenshots/M11/photo-ukiyoe.png) | ![The map](docs/screenshots/M11/map.png) |
+| ![Kumoji temple](docs/screenshots/M10/temple-stair.png) | ![Aurora](docs/screenshots/M12/aurora.png) | ![Journal](docs/screenshots/M11/album-sketch.png) |
+
 ## Status
 
 | # | Milestone | Status | Screenshots | iPad benchmark (Medium) |
@@ -25,11 +39,37 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M11 | Items, journal, map, photo, boats, fishing | ✅ Done | [M11](docs/screenshots/M11/) | pending (run on iPad) |
 | M12 | Lore, spirits & festivals | ✅ Done | [M12](docs/screenshots/M12/) | pending (run on iPad) |
 | M13 | Audio | ✅ Done | [M13](docs/screenshots/M13/) · [listen](docs/audio/) | pending (run on iPad) |
-| M14 | Polish, performance & release | ⬜ Not started | — | — |
+| M14 | Polish, performance & release | ✅ Done | [M14](docs/screenshots/M14/) | pending (run on iPad) |
 
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M14 at a glance (polish & release)
+
+- **Performance:**
+  - The water reflection now skips terrain under the water line (the lake bed), forest
+    tiles beyond 420 m, and tree trunks.
+  - The Medium preset at the busiest spot (the dock) is under 400 draw calls. The visible
+    pass is at most about 615 k triangles, against a budget of 1.5 M.
+  - `scripts/perf-breakdown.mjs` lists triangles and draws per pass and per group.
+  - Headless bench, all passes summed along the benchmark route:
+    - Low: 310 draws, 1.30 M triangles
+    - Medium: 359 draws, 1.68 M triangles
+    - High: 405 draws, 1.92 M triangles
+  - Real frame times still need the iPad benchmark (debug panel).
+- **Auto quality and a frame cap.**
+- **Comfort & accessibility:** reduced motion, large text, high contrast, subtitles, mono
+  sound, a left-handed touch layout.
+- **Saves:** three slots, a backup of the previous save with automatic fallback, export
+  and import as a file. New Journey confirms before replacing, and starts from a clean world.
+- **Gentle diegetic hints:** Akari, Old Genzō and others mention things once, when they
+  become useful (talking, the journal and map, the lantern at dusk, sitting and
+  time-lapse, the rod at the water, the boat, full pockets, photos, the tablets, gifts).
+  - Hints follow your input device.
+  - They can be turned off.
+- Long toasts wrap onto several lines.
+- More loading-screen haiku.
 
 ### M12 at a glance (the story, spirits, festivals)
 
@@ -459,8 +499,6 @@ triangles); frame times need the iPad run.
 
 ## Controls
 
-| | Desktop | iPad |
-|---|---|---|
 | | Desktop | iPad (touch) | Apple Pencil | Gamepad |
 |---|---|---|---|---|
 | Look | click, then mouse | drag on the right side | drag (fine) | right stick |
@@ -475,6 +513,34 @@ triangles); frame times need the iPad run.
 | Debug panel | `` ` `` | three-finger tap | — | — |
 
 All keys can be rebound in Settings → Keys. In photo mode Q / E roll the camera.
+
+## Settings
+
+- **Graphics:** quality preset (Low / Medium / High), auto quality, frame cap (30 / 60 /
+  none), dithering, outlines, FPS counter.
+  - Auto quality steps down one preset while frames stay slow, and back up when there's
+    room again.
+- **Camera:** field of view, look sensitivity, invert Y, head bob, tap-to-jog.
+- **Sound:** master, music, nature & places, and footsteps & UI volumes; how often music
+  plays.
+- **World:** seasons cycling (3, 7 or 14 days each) or locked to one season; changing or
+  always-fair weather.
+- **Comfort:** reduced motion, large text, high-contrast text, subtitles for the sounds
+  around you, mono sound, left-handed touch layout, villager hints.
+  - Reduced motion means no head bob and no lightning flashes.
+- **Keys:** every action can be rebound.
+- **Saves:** three slots, plus export and import as a file.
+
+## Saving
+
+Hotaru saves on its own: every minute, when you open the menu, when you sleep, and when
+the iPad switches away from the app.
+- Each save is written with an atomic swap (temp key, then the real key).
+- The previous save is kept as a backup, so a broken save falls back to the one before it.
+- Saves live in IndexedDB. Ask Safari to keep them (the game requests persistent
+  storage), and use **Settings → Saves → Export save** now and then to keep a copy.
+- Photos and sketches are stored in the save.
+- **New Journey** asks once before it replaces the slot's save.
 
 ## Benchmark on the iPad
 
@@ -498,6 +564,11 @@ npm run e2e:fauna      # animals: presence, fleeing, petting, bowing
 npm run e2e:water      # swim in a river, ripples
 npm run e2e:people     # villagers through a day, lantern round, talking
 npm run e2e:secrets    # shrines, viewpoints, tablets, caves, the keep
+npm run e2e:items      # keepsakes, gifts, fishing, rowing, journal, map, photos
+npm run e2e:story      # festivals, the ending, kodama, dreams, 100+ secrets
+npm run e2e:release    # save backup, auto quality, hints, comfort settings
+node scripts/perf.mjs  # headless benchmark (all presets)
+node scripts/perf-breakdown.mjs  # triangles & draws per pass and per group
 npm run audio:samples  # render music samples → docs/audio/
 npm run icons          # regenerate app icons & launch images
 ```

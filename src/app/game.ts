@@ -116,6 +116,8 @@ export class Game {
   private lastSeason = -1;
   /** Bow gesture timer (s); the camera dips and comes back up. */
   bowT = 0;
+  /** comfort: no head bob, no lightning flashes, a gentler bow and view pan */
+  reducedMotion = false;
   /** Time-lapse is active (sitting + holding the button/key). */
   timelapse = false;
 
@@ -241,7 +243,7 @@ export class Game {
     this.photo.update(dt);
     if (c0.mode === 'walk' || c0.mode === 'fly') {
       if (this.camera.fov !== settings.fov) { this.camera.fov = settings.fov; this.camera.updateProjectionMatrix(); }
-      c0.headBob = settings.headBob;
+      c0.headBob = settings.headBob && !this.reducedMotion;
       // interact: a targeted thing, else sit / lie / stand where you are
       const dir = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(c0.pitch, c0.yaw, 0, 'YXZ'));
       this.interactions.update(c0.position, dir);
@@ -483,7 +485,7 @@ export class Game {
     w.fx.rain = W.rain; w.fx.snow = W.snow; w.fx.season = W.weights;
     w.water.material.uniforms.uRain!.value = W.rain;
     // overcast light: dimmer sun, greyer sky and ambient; lightning lifts everything for a moment
-    const s = this.tod, d = W.dark, f = W.flash;
+    const s = this.tod, d = W.dark, f = this.reducedMotion ? 0 : W.flash;
     const grey = (c: THREE.Color, k: number) => { const l = c.r * 0.3 + c.g * 0.55 + c.b * 0.15; c.lerp(new THREE.Color(l, l, l * 1.05), k); };
     s.keyColor.multiplyScalar(1 - d * 0.8);
     s.sunGlow.multiplyScalar(1 - d);

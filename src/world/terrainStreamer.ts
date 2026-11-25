@@ -69,6 +69,7 @@ export class TerrainStreamer {
     m.updateMatrix();
     m.userData.castShadow = false;
     m.name = 'terrain-node';
+    m.userData.maxY = d.maxY;
     m.visible = false;
     this.group.add(m);
     return m;

@@ -70,6 +70,8 @@ export class PixelPipeline {
   readonly renderCam = new THREE.PerspectiveCamera();
   /** Draw calls per pass in the last frame (debug panel / benchmark). */
   passDraws = { shadow: 0, reflection: 0, main: 0, post: 0 };
+  /** triangles per pass (perf breakdown) */
+  readonly passTris = { shadow: 0, reflection: 0, main: 0 };
   /** Reflection camera angles, snapped to whole reflection texels (set by the game). */
   readonly reflectAngles = { yaw: 0, pitch: 0, use: false };
   private reflSrc = new THREE.PerspectiveCamera();
@@ -284,11 +286,12 @@ export class PixelPipeline {
     U.uCamPos.value.copy(rc.position);
     sky.position.copy(rc.position);
 
-    const calls = () => r.info.render.calls;
-    let c0 = calls();
+    const calls = () => r.info.render.calls, tris = () => r.info.render.triangles;
+    let c0 = calls(), t0 = tris();
     U.uShadowOn.value = this.toggles.shadows ? 1 : 0;
     if (this.toggles.shadows) this.renderShadows(scene, rc, tod);
     this.passDraws.shadow = calls() - c0; c0 = calls();
+    this.passTris.shadow = tris() - t0; t0 = tris();
 
     if (water) {
       water.update(rc);
@@ -309,11 +312,13 @@ export class PixelPipeline {
     }
 
     this.passDraws.reflection = calls() - c0; c0 = calls();
+    this.passTris.reflection = tris() - t0; t0 = tris();
     r.setRenderTarget(this.sceneRT);
     r.setClearColor(0x000000, 0);
     r.clear();
     r.render(scene, rc);
     this.passDraws.main = calls() - c0; c0 = calls();
+    this.passTris.main = tris() - t0; t0 = tris();
 
     // bloom
     const sceneTex = this.sceneRT.texture;

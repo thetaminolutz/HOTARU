@@ -29,6 +29,19 @@ export type Settings = {
   seasonDays: number;
   /** Changing weather, or always fair. */
   weatherMode: 'dynamic' | 'fair';
+  /** Lower the quality while frames stay slow; come back up when there's room (SPEC §3.13). */
+  autoQuality: boolean;
+  fpsCap: 30 | 60 | 0;
+  /** Comfort & accessibility (SPEC §26) */
+  reducedMotion: boolean;
+  largeText: boolean;
+  highContrast: boolean;
+  subtitles: boolean;
+  monoAudio: boolean;
+  leftHanded: boolean;
+  hints: 'gentle' | 'off';
+  /** active save slot (1–3) */
+  saveSlot: number;
 };
 
 const KEY = 'hotaru.settings.v1';
@@ -38,6 +51,8 @@ const DEFAULTS: Settings = {
   bindings: structuredClone(DEFAULT_BINDINGS),
   volMaster: 0.8, volMusic: 0.7, volAmbience: 0.8, volSfx: 0.7, musicFrequency: 'occasional',
   seasonMode: 'cycle', seasonDays: 7, weatherMode: 'dynamic',
+  autoQuality: true, fpsCap: 60, reducedMotion: false, largeText: false, highContrast: false, subtitles: false,
+  monoAudio: false, leftHanded: false, hints: 'gentle', saveSlot: 1,
 };
 
 function load(): Settings {
