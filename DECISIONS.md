@@ -412,3 +412,25 @@ Non-obvious decisions and why. Newest at the bottom.
 - **The tiny font gained a full set of capitals** for the journal tabs and map labels.
 - **Hands are shown as the held tool's pixel icon** in the lower right (lantern glow at
   night), not as a 3D arm, for now.
+
+## M12 (lore, spirits & festivals)
+
+- **The festival calendar is pure** (`src/events/calendar.ts`, unit-tested). There is one
+  festival on the 4th day of each season, plus New Year on the first night of spring. A new
+  journey (autumn) reaches Tsukimi on day 3; the summer Lantern Festival falls on day 24.
+  With a locked season, that season's festival repeats every `seasonDays`.
+- **Festival crowds don't walk across the valley.** Guests are everyone from the host village
+  plus every third person from elsewhere; they appear at the festival spot when you are
+  near and are simply home again afterwards.
+- **Floating lanterns and fireworks are CPU-updated glowing points** (a few hundred, one draw
+  each), not meshes. Point size stays 1–2 px so they read as pixel lights.
+- **The ending is gated by 15 of the 30 tablets, not all of them.** The story stays optional
+  and gentle, and the garden blooms step by step before the ending.
+- **New secrets are registered by the systems that own them** (`secrets.register`), so the
+  journal's "n of N" counts spirits, festivals, events and melodies without the secrets
+  module knowing about them.
+- **Dialogue grew through new banks** (lines2–5) mixed into the same weighted pools, with
+  context for recent places, festivals and the ending. The test now requires 1500+ unique
+  lines.
+- **The aurora uses clear-weather cloud cover (0.45).** It first required < 0.4 and so could
+  never appear.

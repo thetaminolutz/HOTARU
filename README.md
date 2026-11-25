@@ -23,13 +23,59 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M9 | Villagers & wanderers | ✅ Done | [M9](docs/screenshots/M9/) | pending (run on iPad) |
 | M10 | Castle, shrines, caves & secrets | ✅ Done | [M10](docs/screenshots/M10/) | pending (run on iPad) |
 | M11 | Items, journal, map, photo, boats, fishing | ✅ Done | [M11](docs/screenshots/M11/) | pending (run on iPad) |
-| M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
+| M12 | Lore, spirits & festivals | ✅ Done | [M12](docs/screenshots/M12/) | pending (run on iPad) |
 | M13 | Audio | ✅ Done | [M13](docs/screenshots/M13/) · [listen](docs/audio/) | pending (run on iPad) |
 | M14 | Polish, performance & release | ⬜ Not started | — | — |
 
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M12 at a glance (the story, spirits, festivals)
+
+- **Five festivals from the calendar:** one on the fourth day of each season, plus New Year.
+  Villagers announce each one in the days before, and guests from every village gather.
+  - **Hanami:** blankets and lantern poles under the Sakuraoka blossoms.
+  - **Lantern & Firefly Festival** on the Tomoshibi shore:
+    - food stalls, a yagura with a taiko and a ring of lanterns
+    - about 90 floating lanterns drifting out on the lake
+    - fireworks reflected in the water, their boom arriving after the flash
+  - **Tsukimi:** a big harvest moon, dumplings and pampas grass on the hill above Inaho.
+  - **Snow Lantern Night:** candle-lit snow lanterns along every street of Yukemuri.
+  - **New Year:** the Kumoji bell rings 108 times.
+- **Spirits, gentle and never scary:**
+  - lantern spirits drifting toward the island shrine every third night
+  - kodama that click their heads around you when you stand still in the cedar, bamboo or
+    maple woods, and vanish when you move
+  - a white fox that leads you to a shrine you haven't found
+  - the great forest guardian in the cedar mist at dawn
+  - soft blue "echoes" of happy moments in the castle at dusk
+  - spirit lights (aurora curtains) on clear winter nights
+  - the old umbrella by your chest that hops when you're not looking
+- **Rare world events** (about two days in five):
+  - cranes flying south, a meteor shower, a red-moon eclipse
+  - a lantern crossing the lake alone, a whale in the bay, a sea of clouds below the temple
+  - a deer and her fawn, monkeys stealing persimmons
+- **The ending moment:** once you've read 15 stone tablets, the masked stranger gives you
+  the thousandth lantern. On the night of the Lantern Festival you float it from the pier:
+  - the fireflies gather into a path across the lake to the castle
+  - the sister's spirit walks it home
+  - the stranger takes off the mask (Haruto, the last lantern keeper)
+  - the castle garden blooms
+  - Afterwards the world is brighter: more fireflies, more lanterns, lantern spirits every
+    night, and people talk about it.
+- **The castle garden blooms step by step** as the story is pieced together.
+- **Dreams** when you sleep at home at night: 20 short dream-haiku, some carrying the story.
+- **Flute melodies:** the waterfall, the secret garden and the island shrine answer them.
+- **112 secrets:** 23 shrines, 24 viewpoints, 30 tablets, 5 hidden places, 19 rare moments
+  (festivals, world events, melodies) and 11 spirit encounters.
+- **Dialogue: 1500+ unique lines.** People now:
+  - remember where you've been ("your sandals have that red dust")
+  - pass on rumours that hint at secrets, and news of what you found
+  - talk about the coming festival, and about the world after the ending
+  - react to gifts by personality, and say goodbye
+  - The new lines also cover proverbs, food, spirits, Japanese words explained, late-night
+    talk, children's games and ten more lines per wanderer.
 
 ### M11 at a glance (items, journal, map, photos, boats, fishing)
 

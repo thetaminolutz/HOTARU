@@ -177,7 +177,7 @@ restoration, viewpoints with pan + haiku.
 Inventory (12 + tools), keepsakes/gifts, journal tabs, painted map reveal, photo mode,
 sketchbook, fishing, ferry, your house with garden & storage.
 
-### M12 — Lore, spirits & festivals
+### M12 — Lore, spirits & festivals ✅
 Lore pieces & ending moment, spirits, 5 festivals, world events, dreams, secrets to
 100+, dialogue to 1500+.
 
