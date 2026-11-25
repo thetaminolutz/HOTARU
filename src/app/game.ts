@@ -328,7 +328,7 @@ export class Game {
     const cp = this.controller.position;
     const pv = this.controller.vel;
     this.world.fauna.update(dt, cp, Math.hypot(pv.x, pv.z), clock.hour);
-    this.world.people.update(dt, cp, clock.hour, clock.day, this.weather.out);
+    this.world.people.update(dt, cp, clock.hour, clock.day, this.weather.out, SEASONS[this.weather.out.weights.indexOf(Math.max(...this.weather.out.weights))]);
     this.updateDialogue(dt);
     this.updateSecrets(dt);
     this.mystic.update(dt);

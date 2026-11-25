@@ -28,6 +28,10 @@ export type Person = {
   pos: THREE.Vector3; yaw: number; path: THREE.Vector3[]; act: Activity; place: Place; target: THREE.Vector3;
   inside: boolean; visible: boolean; phase: number; gait: number; pose: number; arm: number; armT: number;
   umbrella: boolean; greetT: number; r: Rng; slotKey: string; lanternIdx: number; actT: number;
+  /** look: hairstyle (0 bun, 1 topknot, 2 ponytail, 3 bob), everyday outfit (0 kimono, 1 work clothes), headband */
+  hairStyle: number; outfit: number; headband: boolean;
+  /** live look: outfit now (3 bath wrap, 4 summer clothes), smile 0..1, body pose (1 lying, 2 swimming), rain cape */
+  outfitNow: number; smile: number; body: number; cape: boolean;
 };
 
 const H2 = new THREE.Vector3();
@@ -62,7 +66,7 @@ export class People {
     const base = personGeometry();
     const g = new THREE.InstancedBufferGeometry();
     for (const k of ['position', 'normal', 'aPart', 'aSlot', 'aPivot']) g.setAttribute(k, base.getAttribute(k));
-    for (const k of ['iPos', 'iAnim', 'iColA', 'iColB', 'iColC']) g.setAttribute(k, new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage));
+    for (const k of ['iPos', 'iAnim', 'iColA', 'iColB', 'iColC', 'iStyle']) g.setAttribute(k, new THREE.InstancedBufferAttribute(new Float32Array(MAX * 4), 4).setUsage(THREE.DynamicDrawUsage));
     g.instanceCount = 0;
     this.geo = g;
     this.mesh = new THREE.Mesh(g, peopleMaterial());
@@ -132,7 +136,15 @@ export class People {
       wanderer: o.wanderer,
       pos: new THREE.Vector3(), yaw: r.next() * 6.28, path: [], act: 'walk', place: 'street', target: new THREE.Vector3(),
       inside: false, visible: false, phase: r.next() * 6, gait: 0, pose: 0, arm: 0, armT: 0, umbrella: false, greetT: 0, r: createRng(hashString(o.id) ^ 0x51), slotKey: '', lanternIdx: 0, actT: 0,
+      hairStyle: 0, outfit: 0, headband: false, outfitNow: 0, smile: 0, body: 0, cape: false,
     };
+    // how they look: hair, everyday clothes (work clothes for those who work outdoors or with their hands)
+    const hr = createRng(hashString(o.id) ^ 0x4a12);
+    p.hairStyle = o.age === 'child' ? (hr.next() < 0.7 ? 3 : 2) : o.job === 'monk' ? 1 : hr.next() < 0.42 ? 0 : hr.next() < 0.7 ? 1 : 2;
+    const workP: Partial<Record<Job, number>> = { farmer: 0.65, fisher: 0.7, carpenter: 0.85, potter: 0.75, lanternMaker: 0.3 };
+    p.outfit = hr.next() < (workP[o.job] ?? 0) ? 1 : 0;
+    p.headband = p.outfit === 1 && (o.job === 'carpenter' || o.job === 'fisher' || hr.next() < 0.4);
+    p.outfitNow = p.outfit;
     this.people.push(p);
     return p;
   }
@@ -160,6 +172,23 @@ export class People {
     }
     out.river = rb < Infinity ? river : (this.streets.get(id)?.[0] ?? out.plaza!);
     out.field = H(d.x + Math.cos(hashString(id)) * d.r * 1.3, d.z + Math.sin(hashString(id)) * d.r * 1.3);
+    // a swimming hole: the deepest water of the stream or river near the village
+    const hy = this.w.world.hydro;
+    let sb = -Infinity;
+    for (const r of hy.rivers) for (let i = 0; i < r.pts.length; i += 2) {
+      const p = r.pts[i]!, dd = Math.hypot(p.x - d.x, p.z - d.z);
+      if (dd > d.r + 120) continue;
+      const depth = hy.waterAt(p.x, p.z) - this.w.world.height(p.x, p.z);
+      if (depth > 0.55 && depth - dd * 0.004 > sb) { sb = depth - dd * 0.004; out.swim = new THREE.Vector3(p.x, hy.waterAt(p.x, p.z), p.z); }
+    }
+    // the bath of the village onsen
+    const on = v.layout.houses.find((h) => h.type === 'onsen');
+    if (on) {
+      const a = (on.rot * Math.PI) / 2, c = Math.round(Math.cos(a)), s = Math.round(Math.sin(a)), lz = -on.d * 0.15;
+      out.onsen = new THREE.Vector3(on.x + lz * s, on.floorY + 0.46, on.z + lz * c);
+      (out.onsen as THREE.Vector3 & { w?: number; d?: number }).w = on.w * 0.6 - 0.8;
+      (out.onsen as THREE.Vector3 & { w?: number; d?: number }).d = on.d * 0.45 - 0.8;
+    }
     return out;
   }
 
@@ -170,8 +199,17 @@ export class People {
     let cur = S[0]!;
     for (const s of S) if (hour >= s.at) cur = s;
     if (storm && cur.act !== 'sleep' && !['work'].includes(cur.act)) return { act: 'eat', place: 'home' };
+    if (cur.act === 'sleep') return cur;
+    // a freer life (owner request): swimming in the stream on summer afternoons, an evening soak
+    // at the onsen, a nap in the grass after the midday meal
+    const P = this.places.get(p.village), hsh = hashString(p.id), fair = !this.wet;
+    if (P?.swim && fair && this.season === 'summer' && p.age === 'child' && hour >= 12 && hour < 16.5 && hsh % 4 !== 0) return { act: 'swim', place: 'swim' };
+    if (P?.onsen && p.age !== 'child' && ((hour >= 18.6 && hour < 20.8 && hsh % 3 !== 0) || (p.age === 'elder' && hour >= 6 && hour < 7.2))) return { act: 'soak', place: 'onsen' };
+    if (fair && this.season !== 'winter' && (p.age === 'elder' || p.job === 'farmer') && hour >= 13 && hour < 14.4 && hsh % 3 === 0) return { act: 'nap', place: 'field' };
     return cur;
   }
+  private season = 'autumn';
+  private wet = false;
 
   private placePoint(p: Person, place: Place, act: Activity): { pos: THREE.Vector3; inside: boolean } {
     const P = this.places.get(p.village)!;
@@ -187,8 +225,24 @@ export class People {
       case 'teahouse': return { pos: jit(P.teahouse!, 3), inside: false };
       case 'shrine': return { pos: jit(P.shrine!, 2), inside: false };
       case 'river': return { pos: jit(P.river!, 6), inside: false };
+      case 'swim': return { pos: P.swim ? this.swimSpot(P.swim, r) : jit(P.river!, 6), inside: false };
+      case 'onsen': {
+        const o = P.onsen as (THREE.Vector3 & { w?: number; d?: number }) | undefined;
+        if (!o) return { pos: jit(P.plaza!, 6), inside: false };
+        return { pos: o.clone().add(H2.set((r.next() - 0.5) * (o.w ?? 1), 0, (r.next() - 0.5) * (o.d ?? 1))), inside: true };
+      }
       default: { const st = this.streets.get(p.village)!; return { pos: st[r.int(0, st.length)]!.clone(), inside: false }; }
     }
+  }
+
+  /** Somewhere in deep enough water near the swimming hole. */
+  private swimSpot(c: THREE.Vector3, r: Rng): THREE.Vector3 {
+    const hy = this.w.world.hydro;
+    for (let k = 0; k < 10; k++) {
+      const x = c.x + (r.next() - 0.5) * 9, z = c.z + (r.next() - 0.5) * 9;
+      if (hy.waterAt(x, z) - this.w.world.height(x, z) > 0.5) return new THREE.Vector3(x, hy.waterAt(x, z), z);
+    }
+    return c.clone();
   }
 
   /** A route over the village streets (nearest street points, then along), ending at `to`. */
@@ -216,9 +270,10 @@ export class People {
   }
 
   // ---------- per frame ----------
-  update(dt: number, player: THREE.Vector3, hour: number, day: number, weather: { rain: number; snow: number; storm: number }): void {
+  update(dt: number, player: THREE.Vector3, hour: number, day: number, weather: { rain: number; snow: number; storm: number }, season = 'autumn'): void {
     const storm = weather.storm > 0.5;
     const wet = weather.rain > 0.15 || weather.snow > 0.35;
+    this.season = season; this.wet = wet || weather.storm > 0.3;
     // which villages are near enough to live
     for (const v of this.w.villages.villages) {
       const d = v.layout.def, near = Math.hypot(player.x - d.x, player.z - d.z) < ACTIVE_R + d.r;
@@ -243,7 +298,9 @@ export class People {
         (p as Person & { goingInside?: boolean }).goingInside = pt.inside;
       }
       p.actT += dt;
-      p.umbrella = wet && !p.inside;
+      // in the rain, field and boat folk wear a straw cape and hat; others take an umbrella
+      p.cape = wet && !p.inside && (p.job === 'farmer' || p.job === 'fisher') && p.act !== 'swim';
+      p.umbrella = wet && !p.inside && !p.cape && p.act !== 'swim' && p.act !== 'soak';
       this.live(p, dt, player);
     }
     this.lanternRound(dt, hour);
@@ -284,7 +341,7 @@ export class People {
     if (p.path.length) {
       const t = p.path[0]!;
       const dx = t.x - p.pos.x, dz = t.z - p.pos.z, d = Math.hypot(dx, dz);
-      const v = p.age === 'child' ? (p.act === 'play' ? 2.6 : 1.6) : p.age === 'elder' ? 0.8 : 1.25;
+      const v = p.body === 2 ? 0.9 : p.age === 'child' ? (p.act === 'play' ? 2.6 : 1.6) : p.age === 'elder' ? 0.8 : 1.25;
       if (d < 0.4) {
         p.path.shift();
         if (!p.path.length && (p as Person & { goingInside?: boolean }).goingInside) { p.inside = true; }
@@ -297,17 +354,32 @@ export class People {
         const fy = this.w.groundHeight(p.pos.x, p.pos.z);
         p.pos.y += (fy - p.pos.y) * Math.min(1, dt * 10);
       }
+    } else if (p.act === 'swim' && p.r.next() < dt * 0.25) {
+      const P = this.places.get(p.village);
+      if (P?.swim) p.path = [this.swimSpot(P.swim, p.r)];
     } else if (p.act === 'play' && p.r.next() < dt * 0.4) {
       p.path = [p.target.clone().add(H2.set((p.r.next() - 0.5) * 10, 0, (p.r.next() - 0.5) * 10))];
       p.path[0]!.y = this.w.groundHeight(p.path[0]!.x, p.path[0]!.z);
     }
-    p.gait += (Math.min(1, speed / 1.3) - p.gait) * Math.min(1, dt * 6);
+    // in the water: swimming at the surface; at the onsen: sitting in the bath up to the shoulders
+    const hy = this.w.world.hydro, wl = hy.waterAt(p.pos.x, p.pos.z);
+    const scale = p.age === 'child' ? 0.64 : p.age === 'elder' ? 0.95 : 1;
+    p.body = 0; p.outfitNow = p.outfit;
+    if (p.act === 'swim') {
+      p.outfitNow = 4;
+      if (wl - this.w.world.height(p.pos.x, p.pos.z) > 0.45) { p.body = 2; p.pos.y = wl - 0.1 * scale; }
+    }
+    const atBath = p.act === 'soak' && !p.path.length;
+    if (p.act === 'soak') p.outfitNow = 3;
+    if (atBath) p.pos.y = p.target.y - 0.62 * scale;
+    if (p.act === 'nap' && !p.path.length) p.body = 1;
+    p.gait += (Math.min(1, (p.body === 2 ? 0 : speed) / 1.3) - p.gait) * Math.min(1, dt * 6);
     p.phase += dt * speed * 5;
     // what they're doing once there
     const arrived = !p.path.length;
     let pose = 0, arm = 0;
     if (arrived) {
-      if (p.act === 'eat' || p.act === 'tea' || (p.act === 'sit') || (p.act === 'fish')) pose = 1;
+      if (p.act === 'eat' || p.act === 'tea' || (p.act === 'sit') || (p.act === 'fish') || p.act === 'soak') pose = 1;
       if (p.act === 'work' && (p.place === 'field' || p.job === 'potter' || p.job === 'weaver' || p.job === 'carpenter')) { arm = 2; if (p.place === 'field') pose = 2.55; }
       if (p.act === 'sweep') arm = 2;
       if (p.act === 'pray') pose = 2 + 0.5 + 0.5 * Math.sin(p.actT * 0.8);
@@ -316,7 +388,7 @@ export class People {
     // greeting: turn to you; a bow the first time, a wave afterwards
     const dp = Math.hypot(player.x - p.pos.x, player.z - p.pos.z);
     p.greetT = Math.max(0, p.greetT - dt);
-    if (p.visible && !p.inside && dp < 6 && arrived && pose < 0.5) {
+    if (p.visible && !p.inside && dp < 6 && arrived && pose < 0.5 && p.body === 0) {
       const want = Math.atan2(player.x - p.pos.x, player.z - p.pos.z);
       let da = want - p.yaw; while (da > Math.PI) da -= Math.PI * 2; while (da < -Math.PI) da += Math.PI * 2;
       p.yaw += da * Math.min(1, dt * 3);
@@ -324,6 +396,9 @@ export class People {
       if (p.greetT > 38) { if ((this.memory.met[p.id] ?? 0) === 0) pose = 2.8; else arm = 1; }
     }
     p.pose += (pose - p.pose) * Math.min(1, dt * 4);
+    // a smile for you, for friends, at play, in the water and in the bath
+    const happy = p.greetT > 30 || p.act === 'play' || p.act === 'swim' || p.act === 'soak' || (p.act === 'chat' && Math.sin(p.actT * 0.5 + p.phase) > 0.2) || p.personality === 'cheerful';
+    p.smile += ((happy ? 1 : 0) - p.smile) * Math.min(1, dt * 3);
     if (p.armT > 0) { p.armT -= dt; arm = 1; }
     p.arm = arm;
     const can = p.visible && dp < 3 && Math.abs(player.y - p.pos.y) < 2.5;
@@ -399,22 +474,24 @@ export class People {
   private upload(): void {
     const g = this.geo;
     const A = (k: string) => g.getAttribute(k).array as Float32Array;
-    const P = A('iPos'), N = A('iAnim'), CA = A('iColA'), CB = A('iColB'), CC = A('iColC');
+    const P = A('iPos'), N = A('iAnim'), CA = A('iColA'), CB = A('iColB'), CC = A('iColC'), ST = A('iStyle');
     let i = 0;
     for (const p of this.people) {
       if (!p.visible || i >= MAX) continue;
       const scale = p.age === 'child' ? 0.64 : p.age === 'elder' ? 0.95 : 1;
-      const flags = (p.hat && !p.umbrella ? 1 : 0) + (p.umbrella ? 2 : 0) + (p.basket ? 4 : 0) + (p.age === 'elder' ? 8 : 0);
+      const bare = p.outfitNow >= 3;
+      const flags = ((p.hat || p.cape) && !p.umbrella && !bare && p.body === 0 ? 1 : 0) + (p.umbrella ? 2 : 0) + (p.basket && !bare && p.body === 0 ? 4 : 0) + (p.age === 'elder' ? 8 : 0) + (p.cape ? 16 : 0) + (p.headband && !bare ? 32 : 0);
       P.set([p.pos.x, p.pos.y, p.pos.z, p.yaw], i * 4);
       N.set([p.phase, p.gait, p.pose, p.arm], i * 4);
       CA.set([p.clothes[0].r, p.clothes[0].g, p.clothes[0].b, scale], i * 4);
       CB.set([p.clothes[1].r, p.clothes[1].g, p.clothes[1].b, flags], i * 4);
       CC.set([p.hair.r, p.hair.g, p.hair.b, p.skin], i * 4);
+      ST.set([p.hairStyle, p.outfitNow, p.smile, p.body], i * 4);
       i++;
     }
     g.instanceCount = i;
     this.mesh.visible = i > 0;
-    for (const k of ['iPos', 'iAnim', 'iColA', 'iColB', 'iColC']) {
+    for (const k of ['iPos', 'iAnim', 'iColA', 'iColB', 'iColC', 'iStyle']) {
       const at = g.getAttribute(k) as THREE.InstancedBufferAttribute;
       at.clearUpdateRanges(); at.addUpdateRange(0, i * 4); at.needsUpdate = true;
     }
