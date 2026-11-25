@@ -5,12 +5,14 @@
  */
 import { createWorld, type World } from './heightfield';
 import { placeTrees } from '../flora/placement';
+import { placeGround, type Rect } from '../flora/groundPlacement';
 
 export const RES = 64;
 
 type NodeReq = { kind: 'node'; id: number; seed: number; x0: number; z0: number; size: number };
 type TreeReq = { kind: 'trees'; id: number; seed: number; x0: number; z0: number; size: number };
-type Req = NodeReq | TreeReq;
+type GroundReq = { kind: 'ground'; id: number; seed: number; x0: number; z0: number; size: number; density: number; exclude: Rect[] };
+type Req = NodeReq | TreeReq | GroundReq;
 
 let world: World | null = null;
 
@@ -92,6 +94,9 @@ if (scope && typeof (globalThis as { document?: unknown }).document === 'undefin
     if (r.kind === 'node') {
       const d = buildNode(world, r.x0, r.z0, r.size);
       scope.postMessage({ kind: 'node', id: r.id, ...d }, [d.pos.buffer, d.nor.buffer, d.bio.buffer, d.grass.buffer, d.spec.buffer]);
+    } else if (r.kind === 'ground') {
+      const g = placeGround(world, r.x0, r.z0, r.size, r.density, r.exclude);
+      scope.postMessage({ kind: 'ground', id: r.id, data: g }, [g.buffer]);
     } else {
       const t = placeTrees(world, r.x0, r.z0, r.size);
       scope.postMessage({ kind: 'trees', id: r.id, trees: t }, Object.values(t).map((a) => a.buffer));

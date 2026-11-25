@@ -12,14 +12,12 @@ import { Water } from '../water/water';
 import { createSky, createBackdrop } from '../sky/sky';
 import { TreeKit } from '../flora/trees';
 import { ForestStreamer } from '../flora/forestStreamer';
-import { createGrass, type GrassInstance } from '../flora/grass';
+import { GrassField } from '../flora/grass';
+import { groundAtlas } from '../flora/groundAtlas';
 import { TREE_SPECIES } from '../flora/data/trees';
 import { DockScene } from '../buildings/dockScene';
 import { createFireflies, createLeaves } from '../particles/particles';
-import { toTexture, leafAtlas, grassAtlas, glowSprite } from '../render/textures';
-import { createNoise } from '../core/noise';
-import { createRng } from '../core/rng';
-import { srgbToLinear } from '../render/color';
+import { toTexture, leafAtlas, glowSprite } from '../render/textures';
 import type { Quality } from '../config';
 import { registerPoi } from '../secrets/poi';
 import { REGIONS } from '../world/data/regions';
@@ -34,15 +32,15 @@ export class GameWorld {
   sky!: ReturnType<typeof createSky>;
   dock!: DockScene;
   terrainMaterial!: THREE.ShaderMaterial;
+  grass!: GrassField;
   private steps: (() => void | Promise<void>)[] = [];
 
   constructor(readonly seed: number, private quality: Quality) {
     this.world = createWorld(seed);
     const workers = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 4) - 1));
     this.pool = new WorkerPool(workers);
-    const n = createNoise(seed ^ 0x7ee5);
     const atlas = toTexture(leafAtlas());
-    const gAtlas = toTexture(grassAtlas());
+    const gAtlas = toTexture(groundAtlas(), { repeat: false, mips: false });
     const glow = toTexture(glowSprite(), { repeat: false, mips: false });
 
     this.steps.push(() => {
@@ -85,28 +83,10 @@ export class GameWorld {
     this.steps.push(() => {
       const H = this.world.height;
       const S = this.dock.anchors.shore!;
-      const r = createRng(seed ^ 0x6a55);
-      const lin = (r0: number, g0: number, b0: number): [number, number, number] => [srgbToLinear(r0), srgbToLinear(g0), srgbToLinear(b0)];
-      const grassCols = [lin(0.46, 0.45, 0.22), lin(0.58, 0.5, 0.25), lin(0.36, 0.38, 0.2), lin(0.62, 0.42, 0.2)];
-      const reedCols = [lin(0.36, 0.34, 0.2), lin(0.44, 0.38, 0.22), lin(0.3, 0.3, 0.2)];
-      const inst: GrassInstance[] = [];
-      const density = this.quality.grassDensity;
-      const R = 75;
-      for (let z = -R; z < R; z += 0.8) for (let x = -R * 1.4; x < R * 1.4; x += 0.8) {
-        if (r.next() > density) continue;
-        const px = S.x + x + r.next() * 0.8, pz = S.z + z + r.next() * 0.8;
-        const h = H(px, pz);
-        if (this.dock.deckHeight(px, pz) > -Infinity) continue;
-        const patch = n.fbm2(px / 14, pz / 14, 3);
-        if (h > -0.7 && h < 0.5) {
-          if (patch < -0.05 || r.next() < 0.35) continue;
-          inst.push({ x: px, y: h, z: pz, h: 1.2 + r.next() * 1.0, variant: r.next() < 0.3 ? 3 : 2, color: r.pick(reedCols) });
-        } else if (h >= 0.5 && h < 10) {
-          if (patch < 0.0 && r.next() < 0.75) continue;
-          inst.push({ x: px, y: h - 0.05, z: pz, h: 0.45 + r.next() * 0.5, variant: r.next() < 0.6 ? 0 : 1, color: r.pick(grassCols) });
-        }
-      }
-      this.scene.add(createGrass(inst, gAtlas));
+      this.grass = new GrassField(this.pool, seed, gAtlas);
+      this.grass.exclude = this.dock.decks.map(([x0, z0, x1, z1]) => [x0 - 0.2, z0 - 0.2, x1 + 0.2, z1 + 0.2]);
+      this.applyGrassQuality(this.quality);
+      this.scene.add(this.grass.mesh);
       this.scene.add(createFireflies(new THREE.Vector3(S.x + 10, 0, S.z - 2), 28, Math.round(180 * this.quality.particles), H));
       const m = this.dock.anchors.maple!;
       this.scene.add(createLeaves(new THREE.Vector3(m.x + 3, m.y + 9, m.z - 3), new THREE.Vector3(12, 9, 12), Math.round(90 * this.quality.particles), 0.1));
@@ -122,6 +102,7 @@ export class GameWorld {
     for (;;) {
       const done = this.terrain.update(pos);
       this.forest.update(pos);
+      this.grass.update(pos, pos);
       onProgress?.(Math.min(1, (performance.now() - t0) / 4000));
       if ((done && this.pool.queued === 0) || performance.now() - t0 > timeoutMs) return;
       await new Promise((r) => setTimeout(r, 50));
@@ -134,12 +115,22 @@ export class GameWorld {
     this.forest.radius = q.name === 'low' ? 450 : q.name === 'high' ? 1000 : 700;
     this.terrainMaterial.uniforms.uTreeRadius!.value = this.forest.radius;
     this.terrain.splitFactor = q.name === 'low' ? 0.8 : q.name === 'high' ? 1.3 : 1.0;
+    this.applyGrassQuality(q);
+  }
+
+  private applyGrassQuality(q: Quality): void {
+    const g = this.grass;
+    if (!g) return;
+    const r = q.name === 'low' ? 35 : q.name === 'high' ? 80 : 55;
+    if (g.density !== q.grassDensity) { g.density = q.grassDensity; g.reset(); }
+    g.radius = r;
   }
 
   /** Per-frame streaming around the camera. */
-  update(cam: THREE.Vector3): void {
+  update(cam: THREE.Vector3, player: THREE.Vector3 = cam): void {
     this.terrain.update(cam);
     this.forest.update(cam);
+    this.grass.update(cam, player);
   }
 
   height(x: number, z: number): number { return this.world.height(x, z); }
