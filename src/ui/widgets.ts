@@ -4,6 +4,9 @@ import { bodyFont } from './font';
 import { C, plaque, lanternIcon, bead, washi, lacquer, indigoCloth } from './art';
 import type { Pixmap } from '../render/pixmap';
 
+/** Sound hook for presses (set by the audio system). */
+export const uiSound = { press: (): void => undefined };
+
 export type Pointer = { type: 'down' | 'move' | 'up'; x: number; y: number; id: number; kind?: 'mouse' | 'touch' | 'pen' };
 
 export abstract class Widget {
@@ -49,7 +52,7 @@ export class Button extends Widget {
     if (p.type === 'up') {
       const was = this.pressed;
       this.pressed = false;
-      if (was && inside) { this.onTap(); return true; }
+      if (was && inside) { uiSound.press(); this.onTap(); return true; }
     }
     return false;
   }
@@ -66,7 +69,7 @@ export class Toggle extends Widget {
     ui.text(bodyFont, this.label, this.x + 17, this.y + 4, this.value ? C.amberCore : C.moon, { shadow: C.indigoDark });
   }
   override pointer(p: Pointer): boolean {
-    if (p.type === 'down' && this.hit(p.x, p.y)) { this.value = !this.value; this.onChange(this.value); return true; }
+    if (p.type === 'down' && this.hit(p.x, p.y)) { uiSound.press(); this.value = !this.value; this.onChange(this.value); return true; }
     return false;
   }
 }

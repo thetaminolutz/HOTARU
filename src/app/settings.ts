@@ -17,6 +17,13 @@ export type Settings = {
   /** Hold Shift to jog (false) or toggle jog with a tap (true). */
   toggleJog: boolean;
   bindings: Record<Action, string[]>;
+  /** Volumes 0..1 (SPEC §26 audio). */
+  volMaster: number;
+  volMusic: number;
+  volAmbience: number;
+  volSfx: number;
+  /** How often music arcs come between stretches of pure ambience. */
+  musicFrequency: 'often' | 'occasional' | 'rare' | 'off';
 };
 
 const KEY = 'hotaru.settings.v1';
@@ -24,6 +31,7 @@ const DEFAULTS: Settings = {
   quality: 'medium', dither: 0.85, outlines: true, showFps: false, headBob: true,
   fov: 75, sensitivity: 1, invertY: false, toggleJog: false,
   bindings: structuredClone(DEFAULT_BINDINGS),
+  volMaster: 0.8, volMusic: 0.7, volAmbience: 0.8, volSfx: 0.7, musicFrequency: 'occasional',
 };
 
 function load(): Settings {

@@ -9,7 +9,10 @@ import { UIManager } from './ui/manager';
 import { settings } from './app/settings';
 import { registerPwa, restartToUpdate } from './app/pwa';
 import { readSave, writeSave, requestPersistence, type SaveData } from './save/save';
-import { installAudioUnlock, suspendAudio } from './audio/unlock';
+import { installAudioUnlock, suspendAudio, audioContext } from './audio/unlock';
+import { AudioSystem } from './audio/audio';
+import { renderPiece } from './audio/music';
+import { uiSound } from './ui/widgets';
 import { DebugPanel } from './debug/panel';
 import { Benchmark } from './debug/benchmark';
 import { shotByName } from './app/shots';
@@ -60,6 +63,20 @@ const bench = new Benchmark(game);
 const debug = new DebugPanel(game, bench, () => { state.mode = 'gallery'; ui.show('gallery'); });
 if (params.debug) debug.show(true);
 
+let audio: AudioSystem | null = null;
+const audioVolumes = () => ({ master: settings.volMaster, music: settings.volMusic, ambience: settings.volAmbience, sfx: settings.volSfx, musicFrequency: settings.musicFrequency });
+/** Audio starts on the first gesture (iOS); the title screen opens with the main theme. */
+function updateAudio(dt: number): void {
+  if (!audio) {
+    const ctx = audioContext();
+    if (!ctx || ctx.state !== 'running' || state.mode === 'loading' || state.mode === 'shot' || params.shot) return;
+    audio = new AudioSystem(ctx, game, audioVolumes());
+    uiSound.press = () => audio?.sfx.ui('tick');
+    if (state.mode === 'title') audio.music.playNow();
+  }
+  audio.update(dt, state.mode);
+}
+
 function applySettings(): void {
   game.pipeline.settings.dither = settings.dither;
   game.pipeline.toggles.outlines = settings.outlines;
@@ -68,6 +85,7 @@ function applySettings(): void {
 bus.on('settings:changed', ({ key }) => {
   if (key === 'quality') { game.setQuality(settings.quality); ui.resize(game.pipeline.scale); }
   applySettings();
+  audio?.setVolumes(audioVolumes());
 });
 bus.on('app:update-ready', () => ui.hud.toast('A new version is ready — tap to restart', 1e9, restartToUpdate, performance.now() / 1000));
 
@@ -124,7 +142,7 @@ function openMenu(): void {
 // ---------- lifecycle (SPEC §2): pause & save when hidden, resume on return ----------
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { void save(); suspendAudio(); state.running = false; bus.emit('app:pause', { reason: 'hidden' }); }
-  else { state.running = true; last = performance.now(); bus.emit('app:resume'); requestAnimationFrame(loop); }
+  else { state.running = true; void audioContext()?.resume(); last = performance.now(); bus.emit('app:resume'); requestAnimationFrame(loop); }
 });
 addEventListener('pagehide', () => { void save(); });
 setInterval(() => { void save(); }, 60_000);
@@ -171,6 +189,7 @@ function loop(now: number): void {
   } else ui.hud.prompt = null;
   ui.frame(now / 1000, dt);
   debug.update(fps);
+  updateAudio(dt);
   requestAnimationFrame(loop);
 }
 
@@ -227,6 +246,8 @@ async function boot(): Promise<void> {
   requestAnimationFrame(loop);
   (window as unknown as { __hotaru: unknown }).__hotaru = {
     ready: true, game, ui, state, clock, bench, THREE,
+    get audio() { return audio; },
+    renderPiece: async (region: string, hour: number, title: boolean, sec: number) => Array.from(await renderPiece(region, hour, title, sec)),
     readInternal: () => Array.from(game.pipeline.readPixels()),
     readReflection: () => {
       const t = game.world.water.target;

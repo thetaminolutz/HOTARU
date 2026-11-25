@@ -18,18 +18,52 @@ living pixel-art painting. Runs offline on iPad as a PWA.
 | M4 | Water | ⬜ Not started | — | — |
 | M5 | Vegetation, wind & particles | ✅ Done | [M5](docs/screenshots/M5/) | pending (run on iPad) |
 | M6 | Regions, weather & seasons | ⬜ Not started | — | — |
-| M7 | Buildings, villages & interiors | ⬜ Not started | — | — |
+| M7 | Buildings, villages & interiors | 🔨 In progress | — | — |
 | M8 | Fauna | ⬜ Not started | — | — |
 | M9 | Villagers & wanderers | ⬜ Not started | — | — |
 | M10 | Castle, shrines, caves & secrets | ⬜ Not started | — | — |
 | M11 | Items, journal, map, photo, boats, fishing | ⬜ Not started | — | — |
 | M12 | Lore, spirits & festivals | ⬜ Not started | — | — |
-| M13 | Audio | 🔨 In progress | — | — |
+| M13 | Audio | ✅ Done | [M13](docs/screenshots/M13/) · [listen](docs/audio/) | pending (run on iPad) |
 | M14 | Polish, performance & release | ⬜ Not started | — | — |
 
 Build order (owner's revision): M2 → M3 → M5 → M13 → M7 → M8 → M4 → M6 → M9 → M10 → M11 → M12 → M14.
 
 Legend: ⬜ not started · 🔨 in progress · 👀 waiting for review · ✅ done
+
+### M13 at a glance (audio)
+
+Everything you hear is synthesised in the browser: no sound files.
+
+- **Music** comes now and then, like in Minecraft: a generated piece of 2–4 minutes, then long
+  stretches of just the world. Koto, shakuhachi, shamisen, soft piano, music box, pads and bells
+  on Japanese scales. Each region has its own motif, and the Lantern Lake theme comes back in
+  variations.
+- **Ambience** follows the place, the hour and the wind:
+  - dawn chorus in the woods (bush warbler, tits, doves, woodpeckers)
+  - creaking cedars, dripping leaves and bamboo knocks in the deep forests
+  - crickets, bell crickets, frogs and owls at night
+  - gulls and surf at the coast
+  - a wind chime at the dock, the temple bell at 6 and 18 h
+- **Sound is placed in 3D** around your head, with reverb that changes between forest, valley
+  and open land.
+- **Footsteps** change with the ground: grass, dry leaves, wood boards, gravel, sand, snow and
+  shallow water.
+- **Settings → Sound** has volume sliders and how often music plays (often / occasional /
+  rare / off).
+
+Listen (rendered offline from the game's own synths):
+[main theme](docs/audio/main-theme-title.wav) ·
+[cedar forest](docs/audio/cedar-forest-day.wav) ·
+[rice valley](docs/audio/rice-valley-day.wav) ·
+[lake at night](docs/audio/lake-night.wav)
+
+| Check | Result |
+|---|---|
+| Unit tests | ✅ 41 passed (composer: determinism, 2–4 min arcs, notes in scale, main theme, sparse nights) |
+| Audio e2e (`npm run e2e:audio`) | ✅ unlock on first tap, real output level, music plays, and each of 6 places gets its own mix (forest reverb, surf at the coast, dawn chorus, night insects/frogs, bamboo) |
+
+![](docs/screenshots/M13/settings-sound.png)
 
 ### M5 at a glance
 
@@ -172,6 +206,9 @@ npm run build          # production build + service worker in dist/
 npm run shots -- M5    # milestone screenshots → docs/screenshots/M5/
 npm run e2e:offline    # offline boot test (builds must exist)
 npm run e2e:stability  # pixel stability test
+npm run e2e:controls   # walking, swimming, sitting, Pencil tap
+npm run e2e:audio      # audio unlock, output and per-place mix
+npm run audio:samples  # render music samples → docs/audio/
 npm run icons          # regenerate app icons & launch images
 ```
 
