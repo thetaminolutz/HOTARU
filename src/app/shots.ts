@@ -1,6 +1,6 @@
 /** Fixed camera shots for screenshots, teleports and the title-screen drift. */
 import * as THREE from 'three';
-import type { TestWorld } from '../scene/testWorld';
+import type { GameWorld } from '../scene/gameWorld';
 
 export type Shot = {
   name: string;
@@ -8,15 +8,15 @@ export type Shot = {
   hour: number;
   /** Fixed animation time for deterministic screenshots. */
   elapsed: number;
-  pos: (w: TestWorld) => THREE.Vector3;
-  look: (w: TestWorld) => THREE.Vector3;
+  pos: (w: GameWorld) => THREE.Vector3;
+  look: (w: GameWorld) => THREE.Vector3;
   fov?: number;
   wind?: number;
   /** Rowing boat position relative to the shore point: [x, z, heading]. */
   boat?: [number, number, number];
 };
 
-const off = (w: TestWorld, x: number, y: number, z: number) => w.dock.anchors.shore!.clone().add(new THREE.Vector3(x, y, z));
+const off = (w: GameWorld, x: number, y: number, z: number) => w.dock.anchors.shore!.clone().add(new THREE.Vector3(x, y, z));
 
 export const SHOTS: Shot[] = [
   { name: 'dock-night', label: 'Dock at night', hour: 21.6, elapsed: 4200, pos: (w) => off(w, 8, 3, 3), look: (w) => off(w, -8, 1.8, -18), fov: 70 },

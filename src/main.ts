@@ -1,4 +1,5 @@
 /** Boot: renderer, loading screen, world build, title screen, game loop, lifecycle. */
+import * as THREE from 'three';
 import { Game } from './app/game';
 import { params } from './core/params';
 import { DEFAULT_SEED } from './config';
@@ -158,11 +159,13 @@ async function boot(): Promise<void> {
   await draw();
   const steps = game.world.stepCount;
   for (let i = 0; i < steps; i++) {
-    game.world.runStep(i);
-    ui.loading.progress = (i + 1) / (steps + 1);
+    await game.world.runStep(i);
+    ui.loading.progress = ((i + 1) / steps) * 0.4;
     await draw();
   }
   game.finishInit(params.hour ?? 21.4);
+  // stream the terrain and forest around the start (and the title drift) before showing it
+  await game.world.preload(game.controller.position, (f) => { ui.loading.progress = 0.4 + 0.6 * f; ui.frame(performance.now() / 1000, 0.016); });
   applySettings();
   ui.loading.progress = 1;
   await draw();
@@ -191,6 +194,7 @@ async function boot(): Promise<void> {
   } else if (params.play) startPlay(state.save !== null);
   else { state.mode = 'title'; game.startDrift(); ui.show('title'); }
   if (params.freeze !== undefined) game.frozenElapsed = params.freeze;
+  for (const name of params.hide) game.world.scene.traverse((o) => { if (o.name === name) o.visible = false; });
   for (const k of params.off) if (k in game.pipeline.toggles) (game.pipeline.toggles as Record<string, boolean>)[k] = false;
 
   last = performance.now();
@@ -198,6 +202,12 @@ async function boot(): Promise<void> {
   (window as unknown as { __hotaru: unknown }).__hotaru = {
     ready: true, game, ui, state, clock, bench,
     readInternal: () => Array.from(game.pipeline.readPixels()),
+    readReflection: () => {
+      const t = game.world.water.target;
+      const raw = new Uint16Array(t.width * t.height * 4);
+      game.renderer.readRenderTargetPixels(t, 0, 0, t.width, t.height, raw);
+      return { w: t.width, h: t.height, px: Array.from(raw, (v) => Math.min(255, Math.round(Math.pow(THREE.DataUtils.fromHalfFloat(v), 1 / 2.2) * 255))) };
+    },
     save, readSave: () => readSave(1),
   };
 }

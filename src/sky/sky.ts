@@ -159,9 +159,9 @@ void main(){
 export function createBackdrop(seed: number, center = new THREE.Vector2(0, 0)): THREE.Mesh {
   const n = createNoise(seed ^ 0xbac);
   const layers = [
-    { r: 3300, h: 260, v: 380 },
-    { r: 4300, h: 380, v: 520 },
-    { r: 5600, h: 520, v: 700 },
+    { r: 11500, h: 900, v: 1300 },
+    { r: 14000, h: 1300, v: 1700 },
+    { r: 17000, h: 1700, v: 2200 },
   ];
   const SEG = 360;
   const pos: number[] = [], layerA: number[] = [], topA: number[] = [], idx: number[] = [];
@@ -173,9 +173,9 @@ export function createBackdrop(seed: number, center = new THREE.Vector2(0, 0)): 
       const ridge = n.ridged2(Math.cos(a) * 3 + li * 7, Math.sin(a) * 3 + li * 3, 5);
       // taller to the north, a gap towards the sea in the east (SPEC §6.15)
       const north = 0.6 + 0.6 * Math.max(0, -Math.sin(a));
-      const east = 1 - 0.65 * Math.exp(-(((a - 0) / 0.5) ** 2)) - 0.65 * Math.exp(-(((a - Math.PI * 2) / 0.5) ** 2));
+      const east = 1 - 0.95 * Math.exp(-(((a - 0) / 0.5) ** 2)) - 0.95 * Math.exp(-(((a - Math.PI * 2) / 0.5) ** 2));
       const top = (L.h + L.v * ridge * north) * east + 30;
-      pos.push(x, -80, z, x, top, z);
+      pos.push(x, -200, z, x, top, z);
       layerA.push(li, li); topA.push(0, 1);
     }
     for (let s = 0; s < SEG; s++) {

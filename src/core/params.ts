@@ -19,5 +19,7 @@ export const params = {
   look: q.get('look')?.split(',').map(Number),
   /** Disable render passes: off=reflections,bloom,quantize,... */
   off: (q.get('off') ?? '').split(',').filter(Boolean),
+  /** Hide scene objects by name (debug): hide=grass,forest,dock,terrain,leaves */
+  hide: (q.get('hide') ?? '').split(',').filter(Boolean),
   fov: q.has('fov') ? Number(q.get('fov')) : undefined,
 };

@@ -1,7 +1,7 @@
 /** The game: renderer, world, time of day, camera and the per-frame update. */
 import * as THREE from 'three';
 import { PixelPipeline } from '../render/pipeline';
-import { TestWorld } from '../scene/testWorld';
+import { GameWorld } from '../scene/gameWorld';
 import { Controller } from '../player/controller';
 import { InputState } from '../player/input';
 import { createTodState, evaluateTod, type TodState } from '../sky/timeOfDay';
@@ -14,8 +14,8 @@ import { srgbToLinear } from '../render/color';
 export class Game {
   readonly renderer: THREE.WebGLRenderer;
   readonly pipeline: PixelPipeline;
-  readonly world: TestWorld;
-  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.1, 9000);
+  readonly world: GameWorld;
+  readonly camera = new THREE.PerspectiveCamera(75, 16 / 9, 0.2, 22000);
   readonly tod: TodState = createTodState();
   readonly input: InputState;
   readonly controller: Controller;
@@ -35,12 +35,12 @@ export class Game {
     this.renderer.autoClear = false;
     this.renderer.info.autoReset = false;
     this.pipeline = new PixelPipeline(this.renderer, this.quality);
-    this.world = new TestWorld(seed, this.quality);
+    this.world = new GameWorld(seed, this.quality);
     this.input = new InputState(canvas);
     const w = this.world;
     this.controller = new Controller(
       (x, z) => w.groundHeight(x, z),
-      (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.terrain.height(x, z) > -0.3,
+      (x, z) => w.dock.deckHeight(x, z) > -Infinity || w.height(x, z) > -0.3,
     );
   }
 
@@ -57,6 +57,7 @@ export class Game {
 
   setQuality(name: QualityName): void {
     this.quality = QUALITY[name];
+    this.world.setQuality(this.quality);
     this.resize();
   }
 
@@ -120,6 +121,7 @@ export class Game {
     waterU.uWaves!.value = 0.04 + this.windStrength * 1.7;
 
     this.world.dock.update(elapsed, w);
+    this.world.update(this.controller.position);
     this.pipeline.uploadLights(this.world.dock.lights, this.controller.position, this.quality.maxPointLights, this.tod.lamps);
     this.pipeline.updatePalette(clock.hour);
 

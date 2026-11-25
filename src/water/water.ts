@@ -91,7 +91,7 @@ void main(){
 
   // depth below the surface from the baked height texture
   vec2 huv = (P.xz - uHeightRect.xy) / uHeightRect.z;
-  float ground = texture2D(uHeightTex, huv).r;
+  float ground = (huv.x < 0.0 || huv.y < 0.0 || huv.x > 1.0 || huv.y > 1.0) ? -30.0 : texture2D(uHeightTex, huv).r;
   float depth = max(-ground, 0.0);
 
   // reflection lookup with vertical displacement
@@ -177,10 +177,11 @@ export class Water {
       vertexShader: VERT,
       fragmentShader: FRAG,
     });
-    const g = new THREE.PlaneGeometry(2400, 1800, 1, 1);
+    const g = new THREE.PlaneGeometry(40000, 40000, 1, 1);
     g.rotateX(-Math.PI / 2);
     this.mesh = new THREE.Mesh(g, this.material);
-    this.mesh.position.set(0, level, -20);
+    this.mesh.position.set(0, level, 0);
+    this.mesh.frustumCulled = false;
     this.mesh.name = 'water';
   }
 
@@ -192,8 +193,10 @@ export class Water {
   renderReflection(renderer: THREE.WebGLRenderer, scene: THREE.Scene, cam: THREE.PerspectiveCamera, sky: THREE.Object3D): void {
     const rc = this.reflCam;
     rc.copy(cam, false);
-    rc.projectionMatrix.copy(cam.projectionMatrix);
-    rc.projectionMatrixInverse.copy(cam.projectionMatrixInverse);
+    // a wider frustum than the main camera, so rippled lookups near the screen edges never
+    // fall outside the reflection (clamping would smear the edge into vertical bars)
+    rc.fov = Math.min(150, cam.fov * 1.35);
+    rc.updateProjectionMatrix();
     const camPos = new THREE.Vector3().setFromMatrixPosition(cam.matrixWorld);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(cam.quaternion);
     const up = new THREE.Vector3(0, 1, 0).applyQuaternion(cam.quaternion);
@@ -212,6 +215,10 @@ export class Water {
     const prevSky = sky.position.clone();
     sky.position.copy(rc.position);
     this.mesh.visible = false;
+    // small near-camera detail (grass, particles) is skipped in the mirror: cheaper, and it
+    // never reads well at reflection resolution
+    const skipped: THREE.Object3D[] = [];
+    scene.traverse((o) => { if (o.userData.noReflect && o.visible) { o.visible = false; skipped.push(o); } });
     U.uClipPlane.value.set(0, 1, 0, -this.level + 0.08);
     U.uReflectPass.value = 1;
     const prevCam = U.uCamPos.value.clone();
@@ -223,6 +230,7 @@ export class Water {
     U.uReflectPass.value = 0;
     U.uClipPlane.value.set(0, 0, 0, 1);
     this.mesh.visible = true;
+    for (const o of skipped) o.visible = true;
     sky.position.copy(prevSky);
   }
 

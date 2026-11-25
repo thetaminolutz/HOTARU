@@ -160,9 +160,9 @@ function trunkGeometry(sp: TreeSpecies): THREE.BufferGeometry {
       parts.push(br);
     }
   }
-  const merged = mergeSimple(parts);
   const [r, gg, bb] = hexToLinear(sp.trunkColor);
-  return ensureColor(merged, [r * 2.2, gg * 2.2, bb * 2.2]);
+  for (const p of parts) ensureColor(p, [r * 2.2, gg * 2.2, bb * 2.2]);
+  return mergeSimple(parts);
 }
 
 /** Minimal non-indexed merge (avoids pulling in BufferGeometryUtils). */
@@ -191,11 +191,8 @@ export function mergeSimple(parts: THREE.BufferGeometry[]): THREE.BufferGeometry
  * near = true: trunks + shadow casting (trees around the player).
  * near = false: crowns only, no shadows — distant trees never show their trunks or shadows.
  */
-export function createTrees(sp: TreeSpecies, instances: TreeInstance[], atlas: THREE.Texture, seed: number, near = true): THREE.Group {
-  const group = new THREE.Group();
-  group.name = 'trees-' + sp.id;
-  if (instances.length === 0) return group;
-  const layout = clusterLayout(sp, seed);
+/** Cluster quads for a layout (shared by every tile of a species). */
+function clusterGeometryAttributes(layout: { c: THREE.Vector3; size: number }[], seed: number) {
   const quad = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
   const aCenter: number[] = [], aCorner: number[] = [], aSize: number[] = [], aAtlas: number[] = [], idx: number[] = [];
   const r = createRng(seed ^ 77);
@@ -205,53 +202,102 @@ export function createTrees(sp: TreeSpecies, instances: TreeInstance[], atlas: T
     const b = k * 4;
     idx.push(b, b + 1, b + 2, b, b + 2, b + 3);
   });
-  // Draw outer/upper clusters last-ish isn't needed: alpha-tested, depth sorted by z-buffer.
-  const g = new THREE.InstancedBufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(aCenter, 3)); // placeholder for three
-  g.setAttribute('aCenter', new THREE.Float32BufferAttribute(aCenter, 3));
-  g.setAttribute('aCorner', new THREE.Float32BufferAttribute(aCorner, 2));
-  g.setAttribute('aSize', new THREE.Float32BufferAttribute(aSize, 1));
-  g.setAttribute('aAtlas', new THREE.Float32BufferAttribute(aAtlas, 1));
-  g.setIndex(idx);
-  const iPos = new Float32Array(instances.length * 4), iCol = new Float32Array(instances.length * 4);
-  const cr = createRng(seed ^ 991);
-  instances.forEach((t, i) => {
-    iPos.set([t.x, t.y, t.z, t.scale], i * 4);
-    const [rr, gg, bb] = hexToLinear(t.color ?? cr.pick(sp.colors));
-    iCol.set([rr, gg, bb, t.rot / (Math.PI * 2)], i * 4);
-  });
-  g.setAttribute('iPos', new THREE.InstancedBufferAttribute(iPos, 4));
-  g.setAttribute('iColor', new THREE.InstancedBufferAttribute(iCol, 4));
-  g.instanceCount = instances.length;
-
-  const uniforms = {
-    ...U,
-    uAtlas: { value: atlas },
-    uCrownY: { value: sp.trunkHeight + (sp.height - sp.trunkHeight) * 0.5 },
-    uHeight: { value: sp.height },
-    uSwayAmt: { value: sp.sway },
+  return {
+    position: new THREE.Float32BufferAttribute(aCenter, 3),
+    aCenter: new THREE.Float32BufferAttribute(aCenter, 3),
+    aCorner: new THREE.Float32BufferAttribute(aCorner, 2),
+    aSize: new THREE.Float32BufferAttribute(aSize, 1),
+    aAtlas: new THREE.Float32BufferAttribute(aAtlas, 1),
+    index: new THREE.Uint16BufferAttribute(idx, 1),
   };
-  const mat = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide });
-  mat.userData.depth = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: DEPTH_FRAG, side: THREE.DoubleSide });
-  const crowns = new THREE.Mesh(g, mat);
-  crowns.frustumCulled = false;
-  crowns.userData.castShadow = near;
-  crowns.name = 'crowns-' + sp.id;
-  group.add(crowns);
-  if (!near) return group;
+}
 
-  const trunkMat = litMaterial({ outline: false, sway: 0 });
-  const trunks = new THREE.InstancedMesh(trunkGeometry(sp), trunkMat, instances.length);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3();
-  instances.forEach((t, i) => {
-    q.setFromAxisAngle(new THREE.Object3D().up, t.rot);
-    sc.setScalar(t.scale);
-    m.compose(new THREE.Vector3(t.x, t.y - 0.2, t.z), q, sc);
-    trunks.setMatrixAt(i, m);
-  });
-  trunks.computeBoundingSphere();
-  trunks.userData.castShadow = true;
-  trunks.name = 'trunks-' + sp.id;
-  group.add(trunks);
-  return group;
+/**
+ * Everything needed to draw one species: near and far cluster layouts, materials and the
+ * trunk geometry. Tiles of the forest streamer create cheap instanced meshes from it.
+ */
+export class TreeKit {
+  private near: ReturnType<typeof clusterGeometryAttributes>;
+  private far: ReturnType<typeof clusterGeometryAttributes>;
+  private mat: THREE.ShaderMaterial;
+  private trunkGeo: THREE.BufferGeometry;
+  private trunkMat: THREE.ShaderMaterial;
+  private colors: [number, number, number][];
+
+  constructor(readonly sp: TreeSpecies, atlas: THREE.Texture, seed: number) {
+    const layout = clusterLayout(sp, seed);
+    this.near = clusterGeometryAttributes(layout, seed);
+    // far LOD: a third of the clusters, bigger (painterly blobs)
+    const farLayout = layout.filter((_, i) => i % 3 === 0).map((c) => ({ c: c.c, size: c.size * 1.75 }));
+    this.far = clusterGeometryAttributes(farLayout, seed + 1);
+    const uniforms = {
+      ...U,
+      uAtlas: { value: atlas },
+      uCrownY: { value: sp.trunkHeight + (sp.height - sp.trunkHeight) * 0.5 },
+      uHeight: { value: sp.height },
+      uSwayAmt: { value: sp.sway },
+    };
+    this.mat = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: FRAG, side: THREE.DoubleSide });
+    this.mat.userData.depth = new THREE.ShaderMaterial({ uniforms, vertexShader: VERT, fragmentShader: DEPTH_FRAG, side: THREE.DoubleSide });
+    this.trunkGeo = trunkGeometry(sp);
+    this.trunkMat = litMaterial({ outline: false });
+    this.colors = sp.colors.map((c) => hexToLinear(c));
+  }
+
+  /**
+   * Instanced meshes for a list of trees packed as [x, y, z, scale, rot]*.
+   * Returns crowns (near & far LOD share the instance data) and trunks.
+   */
+  makeTile(packed: Float32Array, seed: number): { near: THREE.Mesh; far: THREE.Mesh; trunks: THREE.InstancedMesh; sphere: THREE.Sphere } {
+    const count = packed.length / 5;
+    const iPos = new Float32Array(count * 4), iCol = new Float32Array(count * 4);
+    const r = createRng(seed);
+    const box = new THREE.Box3();
+    const v = new THREE.Vector3();
+    for (let i = 0; i < count; i++) {
+      const x = packed[i * 5]!, y = packed[i * 5 + 1]!, z = packed[i * 5 + 2]!, s = packed[i * 5 + 3]!, rot = packed[i * 5 + 4]!;
+      iPos.set([x, y, z, s], i * 4);
+      const c = this.colors[r.int(0, this.colors.length)]!;
+      iCol.set([c[0], c[1], c[2], rot / (Math.PI * 2)], i * 4);
+      box.expandByPoint(v.set(x, y, z));
+    }
+    box.max.y += this.sp.height * 1.4;
+    box.expandByScalar(this.sp.radius * 1.5);
+    const sphere = box.getBoundingSphere(new THREE.Sphere());
+    const posAttr = new THREE.InstancedBufferAttribute(iPos, 4);
+    const colAttr = new THREE.InstancedBufferAttribute(iCol, 4);
+    const build = (a: ReturnType<typeof clusterGeometryAttributes>) => {
+      const g = new THREE.InstancedBufferGeometry();
+      g.setAttribute('position', a.position);
+      g.setAttribute('aCenter', a.aCenter);
+      g.setAttribute('aCorner', a.aCorner);
+      g.setAttribute('aSize', a.aSize);
+      g.setAttribute('aAtlas', a.aAtlas);
+      g.setIndex(a.index);
+      g.setAttribute('iPos', posAttr);
+      g.setAttribute('iColor', colAttr);
+      g.instanceCount = count;
+      g.boundingSphere = sphere.clone();
+      const m = new THREE.Mesh(g, this.mat);
+      m.name = 'crowns-' + this.sp.id;
+      return m;
+    };
+    const near = build(this.near), far = build(this.far);
+    near.userData.castShadow = true;
+    far.userData.castShadow = false;
+    const trunks = new THREE.InstancedMesh(this.trunkGeo, this.trunkMat, count);
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), up = new THREE.Vector3(0, 1, 0);
+    for (let i = 0; i < count; i++) {
+      q.setFromAxisAngle(up, packed[i * 5 + 4]!);
+      sc.setScalar(packed[i * 5 + 3]!);
+      m.compose(v.set(packed[i * 5]!, packed[i * 5 + 1]! - 0.2, packed[i * 5 + 2]!), q, sc);
+      trunks.setMatrixAt(i, m);
+    }
+    trunks.boundingSphere = sphere.clone();
+    trunks.userData.castShadow = true;
+    trunks.name = 'trunks-' + this.sp.id;
+    return { near, far, trunks, sphere };
+  }
+
+  dispose(): void { this.mat.dispose(); this.trunkMat.dispose(); }
 }
