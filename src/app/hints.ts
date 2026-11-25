@@ -23,6 +23,8 @@ const RULES: Rule[] = [
   { id: 'pockets', who: 'Akari', when: (g) => g.adv.inv.free === 0, say: () => 'Your pockets are full! The chest on your boathouse engawa keeps the rest.' },
   { id: 'photo', who: 'Fumiko the painter', when: (g) => [...g.world.secrets.found].some((s) => s.startsWith('view-')), say: (k) => `A fine view, isn't it? Keep it: ${k('photo', 'the camera token')} takes a picture.` },
   { id: 'tablet', who: 'an old woman', when: (g) => [...g.world.secrets.found].some((s) => s.startsWith('tablet-')), say: () => 'Thirty old stones tell the castle story, they say. Read enough of them and someone may come to find you.' },
+  { id: 'ruins', who: 'a travelling monk', when: (_g, t) => t > 900, say: () => 'Out in the hills the old times are still standing, if you look: forts on the maple mountains and the hydrangea hills, a watchtower on the moor, a sea fort on the cliffs, a hamlet the cedars took back. Follow the jizo along the roads.' },
+  { id: 'relic', who: 'a travelling monk', when: (g) => [...g.world.secrets.found].some((s) => s.startsWith('place-ruin-')), say: (k) => `Ruins keep things for whoever looks closely - a helmet on the keep stones, words on a gate. When something catches your eye, ${k('interact', 'tap the hand')}.` },
   { id: 'gift', who: 'Akari', when: (g) => g.adv.inv.free < 10, say: (k) => `Found something nice? Give it to someone who likes it - open your notebook (${k('journal', 'the book')}) next to them.` },
 ];
 
